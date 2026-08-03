@@ -12,6 +12,7 @@ let tableFilter = 'all';
 let stockFilter = 'all';
 let payState = null;
 let statsFrom = iso(), statsTo = iso(), statsCustom = false;
+let sidebarOpen = false;
 
 function getTable(id){return db.tables.find(t=>t.id===id)}
 function menuCats(){return [...new Set(db.menu.map(m=>m.cat))]}

@@ -10,12 +10,13 @@ function navItems(){
   if(r==='admin') items.push(['menu','🍽️','Menü'],['users','👥','Kullanıcılar']);
   return items;
 }
-function navTo(v){view=v; render()}
+function navTo(v){view=v; sidebarOpen=false; render()}
+function toggleSidebar(open){ sidebarOpen=open; render() }
 function layoutHTML(){
   const items=navItems().map(([v,ic,lb])=>
     `<button class="nav-i ${view===v?'on':''}" onclick="navTo('${v}')"><span class="ic">${ic}</span>${lb}</button>`).join('');
   const gunsonu=(user.role==='garson'||user.role==='admin')
-    ? `<button class="nav-i" onclick="openGunSonu()"><span class="ic">🌙</span>Gün Sonu</button>` : '';
+    ? `<button class="nav-i" onclick="sidebarOpen=false;openGunSonu()"><span class="ic">🌙</span>Gün Sonu</button>` : '';
   let content='';
   if(view==='tables') content=viewTables();
   else if(view==='stock') content=viewStock();
@@ -24,8 +25,13 @@ function layoutHTML(){
   else if(view==='menu') content=viewMenu();
   else if(view==='users') content=viewUsers();
   return `<div class="layout">
-    <aside class="sidebar">
-      <div class="sb-brand">${PLATE}<span class="nm">WALKY</span></div>
+    <div class="mtopbar">
+      <button class="icon-b" style="font-size:19px" onclick="toggleSidebar(true)">☰</button>
+      <span class="mtopbar-nm">${PLATE}<span class="nm">WALKY</span></span>
+    </div>
+    <div class="sb-overlay ${sidebarOpen?'show':''}" onclick="toggleSidebar(false)"></div>
+    <aside class="sidebar ${sidebarOpen?'open':''}">
+      <div class="sb-brand">${PLATE}<span class="nm">WALKY</span><button class="icon-b sb-close" onclick="toggleSidebar(false)">✕</button></div>
       <nav class="nav">${items}${gunsonu}</nav>
       <div class="sb-foot">
         <div class="avatar">${esc(user.name[0].toUpperCase())}</div>

@@ -4,9 +4,9 @@
    ============================================================ */
 function viewUsers(){
   const rows=db.users.map(u=>`<tr>
-    <td><b>${esc(u.name)}</b></td><td class="muted">${esc(u.username)}</td>
-    <td><span class="badge ${u.role==='admin'?'cur':'gray'}">${ROLES[u.role]}</span></td>
-    <td class="right">${u.id!==user.id?`<button class="btn sm red" onclick="delUser('${u.id}')">Sil</button>`:'<span class="muted tiny">aktif oturum</span>'}</td>
+    <td><b>${esc(u.name)}</b></td><td class="muted" data-lbl="Kullanıcı Adı">${esc(u.username)}</td>
+    <td data-lbl="Rol"><span class="badge ${u.role==='admin'?'cur':'gray'}">${ROLES[u.role]}</span></td>
+    <td class="right tdact">${u.id!==user.id?`<button class="btn sm red" onclick="delUser('${u.id}')">Sil</button>`:'<span class="muted tiny">aktif oturum</span>'}</td>
   </tr>`).join('');
   return `<div class="page-head">
       <div><h1>Kullanıcılar</h1><div class="sub">Personel hesapları ve rolleri</div></div>

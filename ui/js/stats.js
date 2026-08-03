@@ -22,10 +22,10 @@ function viewStats(){
   const listF=statsCustom?statsFrom:today, listT=statsCustom?statsTo:today;
   const stR=computeStats(listF,listT);
   const orders=stR.sales.slice().reverse().map(s=>`<tr>
-      <td>${trDate(s.bd)}</td><td><b>${esc(s.table)}</b></td><td class="muted">${esc(s.waiter||'')}</td>
-      <td>${trTime(s.openedAt)}</td><td>${trTime(s.closedAt)}</td>
-      <td class="num">${fmt(s.totalTL)}</td><td>${payLabel(s)}</td>
-      <td class="right"><button class="rowbtn" onclick="orderDetail('${s.id}')">Detay</button></td></tr>`).join('');
+      <td>${trDate(s.bd)}</td><td data-lbl="Masa"><b>${esc(s.table)}</b></td><td class="muted" data-lbl="Garson">${esc(s.waiter||'')}</td>
+      <td data-lbl="Açılış">${trTime(s.openedAt)}</td><td data-lbl="Kapanış">${trTime(s.closedAt)}</td>
+      <td class="num" data-lbl="Tutar">${fmt(s.totalTL)}</td><td data-lbl="Ödeme">${payLabel(s)}</td>
+      <td class="right tdact"><button class="rowbtn" onclick="orderDetail('${s.id}')">Detay</button></td></tr>`).join('');
   // en çok satanlar
   const agg={};
   stR.sales.forEach(s=>s.items.forEach(i=>{
@@ -35,13 +35,13 @@ function viewStats(){
   const top=Object.entries(agg).sort((a,b)=>b[1].r-a[1].r).slice(0,8)
     .map(([n,v],ix)=>`<div class="mini-row"><span><span class="muted">${ix+1}.</span> ${esc(n)}</span><span><span class="muted small">${fmtQ(v.q)} adet</span> &nbsp;<b>${fmt(v.r)}</b></span></div>`).join('');
   const zRows=db.dayHistory.slice().reverse().map(z=>`<tr>
-      <td>${trDate(z.date)}</td><td class="num">${fmt(z.ciro)}</td><td>${fmt(z.nakitTL+z.nakitDvTL)}</td>
-      <td>${fmt(z.kart)}</td><td>${fmt(z.cari)}</td><td>${z.count}</td>
-      <td>${fmt(z.openingFloat)} → ${fmt(z.nextFloat)}</td><td class="muted">${esc(z.closedBy)}</td></tr>`).join('');
+      <td>${trDate(z.date)}</td><td class="num" data-lbl="Ciro">${fmt(z.ciro)}</td><td data-lbl="Nakit">${fmt(z.nakitTL+z.nakitDvTL)}</td>
+      <td data-lbl="Kart">${fmt(z.kart)}</td><td data-lbl="Cari">${fmt(z.cari)}</td><td data-lbl="Masa">${z.count}</td>
+      <td data-lbl="Kasa">${fmt(z.openingFloat)} → ${fmt(z.nextFloat)}</td><td class="muted" data-lbl="Kapatan">${esc(z.closedBy)}</td></tr>`).join('');
   const fcRows=(db.floatChecks||[]).slice().reverse().map(c=>`<tr>
-      <td>${trDate(c.date)}</td><td>${fmt(c.expected)}</td><td>${fmt(c.actual)}</td>
-      <td>${c.match?'<span class="green">✓ Uyumlu</span>':'<span class="red">⚠ Uyuşmuyor</span>'}</td>
-      <td class="muted">${esc(c.by)}</td><td class="muted">${trDT(c.at)}</td></tr>`).join('');
+      <td>${trDate(c.date)}</td><td data-lbl="Beklenen">${fmt(c.expected)}</td><td data-lbl="Girilen">${fmt(c.actual)}</td>
+      <td data-lbl="Durum">${c.match?'<span class="green">✓ Uyumlu</span>':'<span class="red">⚠ Uyuşmuyor</span>'}</td>
+      <td class="muted" data-lbl="Açan">${esc(c.by)}</td><td class="muted" data-lbl="Saat">${trDT(c.at)}</td></tr>`).join('');
   return `<div class="page-head">
       <div><h1>İstatistikler</h1><div class="sub">${db.day.open?'Açık iş günü: '+trDate(db.day.date):'Kasa kapalı · Son gün: '+trDate(today)}</div></div>
     </div>

@@ -7,10 +7,10 @@ function viewMenu(){
   const sections=cats.map(cat=>{
     const rows=db.menu.filter(m=>m.cat===cat).map(m=>`<tr>
       <td style="width:30%"><b>${esc(m.name)}</b><div class="muted tiny">${rcpSummary(m)}</div></td>
-      <td><input class="inp" style="max-width:150px" value="${String(m.price.TL).replace('.',',')}" onchange="setPrice('${m.id}','TL',this.value)"></td>
-      <td><input class="inp" style="max-width:150px" value="${String(m.price.USD).replace('.',',')}" onchange="setPrice('${m.id}','USD',this.value)"></td>
-      <td><input class="inp" style="max-width:150px" value="${String(m.price.EUR).replace('.',',')}" onchange="setPrice('${m.id}','EUR',this.value)"></td>
-      <td class="right" style="white-space:nowrap"><button class="rowbtn" onclick="prodModal('${m.id}')">Düzenle</button>&nbsp;<button class="btn sm red" onclick="askDelProduct('${m.id}')">Sil</button></td>
+      <td data-lbl="TL (₺)"><input class="inp" style="max-width:150px" value="${String(m.price.TL).replace('.',',')}" onchange="setPrice('${m.id}','TL',this.value)"></td>
+      <td data-lbl="Dolar ($)"><input class="inp" style="max-width:150px" value="${String(m.price.USD).replace('.',',')}" onchange="setPrice('${m.id}','USD',this.value)"></td>
+      <td data-lbl="Euro (€)"><input class="inp" style="max-width:150px" value="${String(m.price.EUR).replace('.',',')}" onchange="setPrice('${m.id}','EUR',this.value)"></td>
+      <td class="right tdact" style="white-space:nowrap"><button class="rowbtn" onclick="prodModal('${m.id}')">Düzenle</button>&nbsp;<button class="btn sm red" onclick="askDelProduct('${m.id}')">Sil</button></td>
     </tr>`).join('');
     return `<div class="sect"><div class="st">${esc(cat)}</div>
       <table class="dt"><thead><tr><th>Ürün</th><th>TL (₺)</th><th>Dolar ($)</th><th>Euro (€)</th><th></th></tr></thead>

@@ -11,10 +11,10 @@ function viewStock(){
     const rows=db.stock.filter(s=>s.cat===cat && (stockFilter==='all'||stockStatus(s)===stockFilter))
       .map(s=>`<tr>
         <td>${esc(s.name)}</td>
-        <td class="num right">${fmtQ(s.qty)}</td>
-        <td class="muted">${esc(s.unit)}</td>
-        <td><span class="badge ${stockStatus(s)}">${ST_LBL[stockStatus(s)]}</span></td>
-        <td class="right">
+        <td class="num right" data-lbl="Stok">${fmtQ(s.qty)}</td>
+        <td class="muted" data-lbl="Birim">${esc(s.unit)}</td>
+        <td data-lbl="Durum"><span class="badge ${stockStatus(s)}">${ST_LBL[stockStatus(s)]}</span></td>
+        <td class="right tdact">
           <button class="btn sm" onclick="openStockAdd('${s.id}')">+ Sayım</button>
           ${canEdit?`<button class="btn sm ghost" onclick="openStockEdit('${s.id}')">Düzenle</button>`:''}
         </td></tr>`).join('');

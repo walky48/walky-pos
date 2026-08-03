@@ -6,7 +6,7 @@
   --green:#2ecc71; --green-d:#1e9e54; --red:#ef4444; --amber:#f59e0b; --blue:#60a5fa; --purple:#c084fc;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%}
+html,body{height:100%;overflow-x:hidden}
 body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;font-size:14px;
   background-image:radial-gradient(1200px 600px at 60% -10%, rgba(245,166,35,.05), transparent 60%);}
 button{font-family:inherit;color:inherit;background:none;border:none;cursor:pointer}
@@ -68,6 +68,9 @@ label.fl{display:block;font-size:13px;color:#c6cddd;margin:14px 0 6px}
 .sidebar{width:228px;min-width:228px;background:#0e1420;border-right:1px solid var(--border);display:flex;flex-direction:column}
 .sb-brand{display:flex;align-items:center;gap:10px;padding:20px 18px 16px;border-bottom:1px solid #1a2338}
 .sb-brand .nm{font-weight:800;letter-spacing:5px;color:var(--accent);font-size:17px}
+.sb-close{display:none}
+.mtopbar{display:none}
+.sb-overlay{display:none}
 .nav{flex:1;padding:14px 10px;overflow:auto}
 .nav-i{display:flex;align-items:center;gap:11px;width:100%;padding:11px 13px;border-radius:9px;color:#aab2c8;font-weight:600;font-size:13.5px;margin-bottom:4px;text-align:left}
 .nav-i:hover{background:#161e31}
@@ -217,3 +220,68 @@ label.fl{display:block;font-size:13px;color:#c6cddd;margin:14px 0 6px}
 .rc-sub{text-align:right;font-size:10.5px}
 .rc-tot{font-size:14px;font-weight:bold}
 .rc-k-item{font-size:15px;font-weight:bold;padding:2px 0}
+
+/* ============================================================
+   MOBİL (telefon genişliği) — sol menü hamburger çekmecesine
+   döner, geniş tablolar kart listesine, sipariş ekranı tek
+   sütuna döner. Sağa/sola kaydırma hiçbir yerde olmamalı.
+   ============================================================ */
+@media(max-width:760px){
+  h1{font-size:19px}
+
+  /* --- üst çubuk + çekmece menü --- */
+  .mtopbar{display:flex;align-items:center;gap:12px;padding:12px 14px;background:#0e1420;border-bottom:1px solid var(--border);flex:0 0 auto}
+  .mtopbar-nm{display:flex;align-items:center;gap:8px;font-weight:800;letter-spacing:4px;color:var(--accent);font-size:15px}
+  .mtopbar-nm svg{width:22px;height:22px}
+  .layout{flex-direction:column}
+  .sidebar{position:fixed;top:0;left:0;bottom:0;width:250px;min-width:0;max-width:82vw;
+    transform:translateX(-100%);transition:transform .22s ease;z-index:70;box-shadow:24px 0 60px rgba(0,0,0,.5)}
+  .sidebar.open{transform:translateX(0)}
+  .sb-close{display:inline-flex;margin-left:auto}
+  .sb-overlay{display:block;position:fixed;inset:0;background:rgba(4,7,13,.6);opacity:0;pointer-events:none;transition:opacity .2s;z-index:65}
+  .sb-overlay.show{opacity:1;pointer-events:auto}
+  .main{padding:14px 12px 40px}
+
+  /* --- genel grid yoğunluğu (2 sütuna düşür, hiçbir zaman taşmaz) --- */
+  .tgrid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+  .prod-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:9px}
+  .stat-row{grid-template-columns:repeat(auto-fit,minmax(135px,1fr))}
+  .cur-grid,.pay-grid{gap:8px}
+
+  /* --- modal & kartlar: daha az dolgu --- */
+  #modalWrap{padding:12px}
+  .modal-box{padding:16px 15px}
+  .login-card{padding:28px 20px}
+  .kasa-card{padding:24px 18px 20px}
+
+  /* --- veri tabloları: yatay kaydırma yerine kart listesi --- */
+  .dt{display:block;background:none;border:none;border-radius:0}
+  .dt thead{display:none}
+  .dt tbody{display:block}
+  .dt tr{display:block;background:var(--panel);border:1px solid var(--border);border-radius:11px;padding:12px 14px;margin-bottom:9px}
+  .dt tr:hover td{background:none}
+  .dt td{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;padding:4px 0;border:none;font-size:13px}
+  .dt td::before{content:attr(data-lbl);color:var(--muted);font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;flex:0 0 auto}
+  .dt td input.inp{width:110px;flex:0 0 auto}
+  .dt td:first-child{display:block;font-weight:800;font-size:14.5px;padding:0 0 8px;margin-bottom:4px;border-bottom:1px solid var(--border)}
+  .dt td:first-child::before{content:none}
+  .dt td.tdact{justify-content:flex-start;flex-wrap:wrap;gap:8px;padding-top:8px;margin-top:2px;border-top:1px solid var(--border)}
+  .dt td.tdact::before{content:none}
+
+  /* --- sipariş ekranı: tek sütun, dikey akış --- */
+  .ord{height:auto;min-height:100vh}
+  .ord-head{position:sticky;top:0;z-index:30;padding:10px 12px;gap:10px}
+  .ord-head .mi,.ord-head .sep{display:none}
+  .ord-body{display:block;overflow:visible}
+  .ord-cats{display:flex;flex-wrap:wrap;gap:7px;border-right:none;border-bottom:1px solid var(--border);padding:10px 12px;overflow:visible}
+  .ord-cats .cat-b{width:auto;display:inline-flex;padding:8px 14px;border-radius:999px;background:var(--panel2);border:1px solid var(--border);margin-bottom:0}
+  .ord-cats .cat-b.on{border-color:var(--accent)}
+  .ord-mid{padding:12px}
+  .ord-right{display:block;border-left:none;border-top:1px solid var(--border)}
+  .ord-right .olines{overflow:visible;padding:0 12px}
+  .ord-foot{padding:13px 12px 26px}
+}
+
+@media(max-width:380px){
+  .cur-grid,.pay-grid{grid-template-columns:1fr 1fr}
+}

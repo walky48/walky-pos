@@ -8,9 +8,9 @@ function viewCari(){
   const rows=db.cari.map(c=>{
     const b=cariBalance(c);
     return `<tr><td><b>${esc(c.name)}</b></td>
-      <td class="num">${fmt(b.borc)}</td><td class="num green">${fmt(b.tah)}</td>
-      <td class="num ${b.bal>0?'red':'green'}">${fmt(b.bal)}</td>
-      <td class="right">
+      <td class="num" data-lbl="Toplam Borç">${fmt(b.borc)}</td><td class="num green" data-lbl="Tahsilat">${fmt(b.tah)}</td>
+      <td class="num ${b.bal>0?'red':'green'}" data-lbl="Bakiye">${fmt(b.bal)}</td>
+      <td class="right tdact">
         <button class="rowbtn" onclick="cariDetail('${c.id}')">Hareketler</button>&nbsp;
         <button class="btn sm green" onclick="openTahsilat('${c.id}')" ${b.bal>0?'':'disabled'}>Tahsilat Al</button>
       </td></tr>`;}).join('');
