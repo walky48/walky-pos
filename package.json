@@ -1,0 +1,9 @@
+{
+  "name": "walky-pos",
+  "version": "1.0.0",
+  "private": true,
+  "description": "WALKY POS - Restoran Yonetim Sistemi",
+  "scripts": {
+    "dev": "node server.js"
+  }
+}

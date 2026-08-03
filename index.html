@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WALKY — Restoran Yönetim Sistemi</title>
+<meta name="theme-color" content="#0b0f17">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="WALKY">
+<link rel="stylesheet" href="ui/styles.css">
+</head>
+<body>
+<div id="app"></div>
+<div id="modalWrap"><div id="modalBox" class="modal-box"></div></div>
+<div id="toastWrap"></div>
+<div id="printArea"></div>
+
+<!-- backend: sabitler, yardımcılar, veri katmanı, iş kuralları -->
+<script src="backend/constants.js"></script>
+<script src="backend/helpers.js"></script>
+<script src="backend/seed.js"></script>
+<script src="backend/store.js"></script>
+<script src="backend/state.js"></script>
+<script src="backend/logic.js"></script>
+
+<!-- ui: ekranlar ve bileşenler -->
+<script src="ui/js/common.js"></script>
+<script src="ui/js/login.js"></script>
+<script src="ui/js/kasa.js"></script>
+<script src="ui/js/layout.js"></script>
+<script src="ui/js/tables.js"></script>
+<script src="ui/js/order.js"></script>
+<script src="ui/js/print.js"></script>
+<script src="ui/js/stock.js"></script>
+<script src="ui/js/stats.js"></script>
+<script src="ui/js/cari.js"></script>
+<script src="ui/js/menu.js"></script>
+<script src="ui/js/users.js"></script>
+<script src="ui/js/gunsonu.js"></script>
+
+<!-- kök: render + başlatma -->
+<script src="app.js"></script>
+<script>
+if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
+</script>
+</body>
+</html>
