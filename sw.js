@@ -3,7 +3,7 @@
    WALKY POS — service worker (çevrimdışı çalışma / PWA)
    Sürüm değiştiğinde CACHE adını artırın; eski önbellek silinir.
    ============================================================ */
-const CACHE = 'walky-v2';
+const CACHE = 'walky-v3';
 const ASSETS = [
   './',
   './index.html',

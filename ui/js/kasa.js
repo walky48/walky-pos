@@ -31,8 +31,11 @@ function openDay(){
   finishOpenDay(f, expected, true);
 }
 function finishOpenDay(f, expected, match){
-  db.floatChecks.push({date:iso(), expected, actual:f, match, by:user.name, at:Date.now()});
-  db.day={open:true, date:iso(), openingFloat:f, openedAt:Date.now(), openedBy:user.name, lastNextFloat:db.day.lastNextFloat||0};
+  const today=iso();
+  const reopen=db.dayHistory.some(d=>d.date===today);
+  db.floatChecks.push({date:today, expected, actual:f, match, by:user.name, at:Date.now()});
+  db.day={open:true, date:today, openingFloat:f, openedAt:Date.now(), openedBy:user.name, lastNextFloat:db.day.lastNextFloat||0};
   saveDB(); view=defaultView(user.role); render();
   toast(match?'Kasa açıldı, iyi çalışmalar!':'Kasa farklı tutarla açıldı — kayıt altına alındı','ok');
+  if(reopen) toast('Not: Bugün için gün sonu zaten alınmıştı — bu oturum aynı iş gününe eklenecek','err');
 }

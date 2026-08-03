@@ -26,9 +26,14 @@ function closeDay(){
   const nf=num($('#nfVal').value);
   if(nf<0){toast('Geçerli bir tutar girin','err');return}
   const st=computeStats(db.day.date, db.day.date);
-  db.dayHistory.push({date:db.day.date, ciro:st.ciro, nakitTL:st.nakitTL, nakitDvTL:st.nakitDvTL,
+  const entry={date:db.day.date, ciro:st.ciro, nakitTL:st.nakitTL, nakitDvTL:st.nakitDvTL,
     dvUSD:st.dvUSD, dvEUR:st.dvEUR, kart:st.kart, cari:st.cari, tahN:st.tahN, tahK:st.tahK, count:st.count,
-    openingFloat:db.day.openingFloat, nextFloat:nf, closedBy:user.name, closedAt:Date.now()});
+    openingFloat:db.day.openingFloat, nextFloat:nf, closedBy:user.name, closedAt:Date.now()};
+  // Aynı tarih için ikinci kez gün sonu alınırsa (örn. aynı gün içinde kasa
+  // tekrar açılıp kapatıldıysa) yeni bir satır eklemek yerine o tarihin
+  // raporunu güncelleriz — tek tarihe iki Z raporu oluşmasın diye.
+  const ix=db.dayHistory.findIndex(d=>d.date===db.day.date);
+  if(ix>=0) db.dayHistory[ix]=entry; else db.dayHistory.push(entry);
   db.day={open:false, date:null, openingFloat:0, lastNextFloat:nf};
   saveDB(); closeModal(); render();
   toast('Gün sonu alındı, kasa kapatıldı ✓','ok');
