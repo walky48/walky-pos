@@ -33,11 +33,13 @@ function viewMenu(){
     ${sections}`;
 }
 function setPrice(mid,cur,val){
+  if(ro()){render();return}
   const m=db.menu.find(x=>x.id===mid); const v=num(val);
   if(v<0){toast('Geçersiz fiyat','err');render();return}
   m.price[cur]=v; saveDB(); toast(m.name+' → '+fmt(v,cur),'ok');
 }
 function saveRates(){
+  if(ro())return;
   const u=num($('#rUsd').value), e=num($('#rEur').value);
   if(u<=0||e<=0){toast('Geçerli kur girin','err');return}
   db.rates.USD=u; db.rates.EUR=e; db.rates.updatedAt=Date.now();
@@ -46,6 +48,7 @@ function saveRates(){
 
 let rcpTmp=[];
 function prodModal(mid){
+  if(ro())return;
   const m=mid?db.menu.find(x=>x.id===mid):null;
   rcpTmp=m&&m.recipe?m.recipe.map(r=>({s:r.s,q:r.q})):[];
   const cats=menuCats();
@@ -110,6 +113,7 @@ function saveProduct(mid){
   toast(mid?'Ürün güncellendi ✓':name+' menüye eklendi ✓','ok');
 }
 function askDelProduct(mid){
+  if(ro())return;
   const m=db.menu.find(x=>x.id===mid); if(!m) return;
   if(db.tables.some(t=>t.items.some(i=>i.mid===mid))){toast('Bu ürün şu an açık bir masada — önce hesabı kapatın','err');return}
   showModal(`<div class="m-head"><h3>Ürünü Sil</h3><button class="icon-b" onclick="closeModal()">✕</button></div>

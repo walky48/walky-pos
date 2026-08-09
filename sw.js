@@ -3,7 +3,7 @@
    WALKY POS — service worker (çevrimdışı çalışma / PWA)
    Sürüm değiştiğinde CACHE adını artırın; eski önbellek silinir.
    ============================================================ */
-const CACHE = 'walky-v3';
+const CACHE = 'walky-v4';
 const ASSETS = [
   './',
   './index.html',
@@ -16,6 +16,7 @@ const ASSETS = [
   './backend/store.js',
   './backend/state.js',
   './backend/logic.js',
+  './backend/sync.js',
   './ui/js/common.js',
   './ui/js/login.js',
   './ui/js/kasa.js',
@@ -50,6 +51,7 @@ self.addEventListener('activate', e => {
    tazelenir; çevrimdışıyken önbellekten çalışır. */
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET' || !e.request.url.startsWith(self.location.origin)) return;
+  if (e.request.url.includes('/api/')) return; /* API ve canlı yayın (SSE) önbelleğe girmez */
   e.respondWith(
     fetch(e.request)
       .then(res => {

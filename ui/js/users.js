@@ -11,7 +11,28 @@ function viewUsers(){
   return `<div class="page-head">
       <div><h1>Kullanıcılar</h1><div class="sub">Personel hesapları ve rolleri</div></div>
       <button class="btn accent" onclick="openAddUser()">+ Yeni Kullanıcı</button></div>
-    <table class="dt"><thead><tr><th>Ad</th><th>Kullanıcı Adı</th><th>Rol</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
+    <table class="dt"><thead><tr><th>Ad</th><th>Kullanıcı Adı</th><th>Rol</th><th></th></tr></thead><tbody>${rows}</tbody></table>
+    ${syncPanelHTML()}`;
+}
+function syncPanelHTML(){
+  if(remoteMode) return '';
+  const st = syncCfg
+    ? `<div class="mini-row"><span>Durum</span><span class="v ${syncPending()?'amber':'green'}">${syncPending()?'🟡 Bekleyen değişiklik var':'🟢 Senkron'}</span></div>
+       <div class="mini-row"><span>Sunucu</span><span class="v small">${esc(syncCfg.url)}</span></div>
+       <div class="mini-row"><span>Restoran (kiracı)</span><span class="v">${esc(syncCfg.tenant)}</span></div>`
+    : `<p class="muted small">Kasa bir sunucuya bağlanırsa patron, muhasebe ve depo kendi cihazlarından restoranı canlı izleyebilir. İnternet kesilse bile kasa çalışmaya devam eder; bağlantı gelince veriler otomatik gönderilir.</p>`;
+  return `<div class="panel mt16"><div class="st" style="margin-bottom:12px">CANLI SUNUCU BAĞLANTISI (UZAKTAN İZLEME)</div>
+    ${st}
+    ${syncCfg
+      ? `<div class="m-actions" style="justify-content:flex-start"><button class="btn red" onclick="syncUnpair()">Bağlantıyı Kes</button></div>`
+      : `<label class="fl">Sunucu Adresi</label>
+         <input id="syUrl" class="inp" placeholder="https://..." value="${esc(location.origin.startsWith('http')?location.origin:'')}" autocomplete="off">
+         <label class="fl">Restoran Kimliği (kiracı)</label>
+         <input id="syTen" class="inp" placeholder="örn. demo" autocomplete="off">
+         <label class="fl">Cihaz API Anahtarı</label>
+         <input id="syKey" class="inp" placeholder="sunucu kurulumunda üretilen anahtar" autocomplete="off">
+         <div class="m-actions" style="justify-content:flex-start"><button class="btn accent" onclick="syncPair()">Bağlan ve Doğrula</button></div>`}
+  </div>`;
 }
 function openAddUser(){
   showModal(`<div class="m-head"><h3>Yeni Kullanıcı</h3><button class="icon-b" onclick="closeModal()">✕</button></div>

@@ -30,6 +30,7 @@ function cariDetail(id){
     <div class="m-actions"><button class="btn accent" onclick="closeModal()">Kapat</button></div>`,true);
 }
 function openTahsilat(id){
+  if(ro())return;
   const c=db.cari.find(x=>x.id===id); const b=cariBalance(c);
   showModal(`<div class="m-head"><h3>Tahsilat — ${esc(c.name)}</h3><button class="icon-b" onclick="closeModal()">✕</button></div>
     <p class="muted small">Güncel bakiye: <b class="red">${fmt(b.bal)}</b></p>

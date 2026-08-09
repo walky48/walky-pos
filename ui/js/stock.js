@@ -38,6 +38,7 @@ function viewStock(){
     ${log?`<div class="sect"><div class="st">Son Stok Hareketleri</div>${log}</div>`:''}`;
 }
 function openStockAdd(sid){
+  if(ro())return;
   const s=db.stock.find(x=>x.id===sid);
   showModal(`<div class="m-head"><h3>Sayım Girişi — ${esc(s.name)}</h3><button class="icon-b" onclick="closeModal()">✕</button></div>
     <p class="muted small">Mevcut stok: <b>${fmtQ(s.qty)} ${esc(s.unit)}</b>. Sayım sonucu eklenecek miktarı girin (yalnızca artırma yapılabilir).</p>
@@ -55,6 +56,7 @@ function applyStockAdd(sid){
   saveDB(); closeModal(); render(); toast(s.name+' stoğuna '+fmtQ(v)+' '+s.unit+' eklendi','ok');
 }
 function openStockEdit(sid){
+  if(ro())return;
   const s=db.stock.find(x=>x.id===sid);
   showModal(`<div class="m-head"><h3>Stok Düzenle — ${esc(s.name)}</h3><button class="icon-b" onclick="closeModal()">✕</button></div>
     <label class="fl">Yeni Stok Miktarı (${esc(s.unit)})</label>
