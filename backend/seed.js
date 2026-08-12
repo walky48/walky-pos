@@ -1,7 +1,4 @@
 'use strict';
-/* ============================================================
-   WALKY POS — demo veri seti (ilk kurulum / sıfırlama)
-   ============================================================ */
 function seedDB(){
   return {
     users:[
@@ -27,7 +24,12 @@ function seedDB(){
       {id:'s13',name:'Domates',       cat:'Sebze',        qty:8,   unit:'kg',    low:4,   crit:1.5},
       {id:'s14',name:'Soğan',         cat:'Sebze',        qty:15,  unit:'kg',    low:5,   crit:2},
       {id:'s15',name:'Baklava',       cat:'Tatlı',        qty:6,   unit:'kg',    low:3,   crit:1},
-      {id:'s16',name:'Sütlaç',        cat:'Tatlı',        qty:24,  unit:'adet',  low:10,  crit:4}
+      {id:'s16',name:'Sütlaç',        cat:'Tatlı',        qty:24,  unit:'adet',  low:10,  crit:4},
+      {id:'s17',name:'Rakı',          cat:'Alkol',        qty:700, unit:'cl',    low:200, crit:70},
+      {id:'s18',name:'Votka',         cat:'Alkol',        qty:700, unit:'cl',    low:200, crit:70},
+      {id:'s19',name:'Cin',           cat:'Alkol',        qty:350, unit:'cl',    low:150, crit:70},
+      {id:'s20',name:'Viski',         cat:'Alkol',        qty:700, unit:'cl',    low:200, crit:70},
+      {id:'s21',name:'Tonik (20cl)',  cat:'İçecek',       qty:40,  unit:'adet',  low:15,  crit:6}
     ],
     menu:[
       {id:'m1', name:'Izgara Köfte',    cat:'Yiyecek',      price:{TL:150,USD:5,  EUR:4},  recipe:[{s:'s10',q:0.15},{s:'s12',q:0.5}]},
@@ -46,7 +48,12 @@ function seedDB(){
       {id:'m14',name:'Nescafe',         cat:'Sıcak İçecek', price:{TL:70, USD:1.5,EUR:1.5},recipe:[{s:'s8',q:0.005}]},
       {id:'m15',name:'Bitki Çayı',      cat:'Sıcak İçecek', price:{TL:55, USD:1,  EUR:1},  recipe:[{s:'s9',q:1}]},
       {id:'m16',name:'Baklava',         cat:'Tatlı',        price:{TL:120,USD:2.5,EUR:2},  recipe:[{s:'s15',q:0.15}]},
-      {id:'m17',name:'Sütlaç',          cat:'Tatlı',        price:{TL:90, USD:2,  EUR:1.5},recipe:[{s:'s16',q:1}]}
+      {id:'m17',name:'Sütlaç',          cat:'Tatlı',        price:{TL:90, USD:2,  EUR:1.5},recipe:[{s:'s16',q:1}]},
+      {id:'m18',name:'Kadeh Rakı',      cat:'Alkol',        price:{TL:180,USD:4,  EUR:3.5},recipe:[{s:'s17',q:KADEH_CL}]},
+      {id:'m19',name:'Kadeh Votka',     cat:'Alkol',        price:{TL:200,USD:4.5,EUR:4},  recipe:[{s:'s18',q:KADEH_CL}]},
+      {id:'m20',name:'Kadeh Viski',     cat:'Alkol',        price:{TL:250,USD:5.5,EUR:5},  recipe:[{s:'s20',q:KADEH_CL}]},
+      {id:'m21',name:'Gin Tonic',       cat:'Alkol',        price:{TL:300,USD:6.5,EUR:6},  recipe:[{s:'s19',q:KADEH_CL},{s:'s21',q:1}]},
+      {id:'m22',name:'Vodka Sunrise',   cat:'Alkol',        price:{TL:280,USD:6,  EUR:5.5},recipe:[{s:'s18',q:KADEH_CL},{s:'s5',q:1}]}
     ],
     tables: Array.from({length:16},(_,i)=>({
       id:'t'+(i+1), name:'Masa '+(i+1), customName:null, status:'empty',

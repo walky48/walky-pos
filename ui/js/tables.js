@@ -30,7 +30,6 @@ function viewTables(){
 
 /* --- masa açma: önce para birimi --- */
 function openTableFlow(id){
-  if(ro())return;
   const t=getTable(id);
   if(t.status==='open'){ activeTableId=id; orderCat=menuCats()[0]; orderSearch=''; view='order'; render(); return; }
   showModal(`<div class="m-head"><h3>Para Birimi Seçin <span class="muted small" style="font-weight:500">&nbsp;${esc(t.name)}</span></h3>

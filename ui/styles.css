@@ -205,11 +205,6 @@ label.fl{display:block;font-size:13px;color:#c6cddd;margin:14px 0 6px}
 .sync-badge{font-size:12px}
 .sync-badge-slot{margin-left:auto;display:inline-flex}
 .sb-brand .sync-badge-slot{margin-left:auto}
-body.readonly .tdact .btn{display:none}
-body.readonly .page-head .btn{display:none}
-body.readonly .dt input.inp{pointer-events:none;opacity:.65}
-body.readonly .tcard{cursor:default}
-body.readonly .tcard:hover{transform:none;border-color:var(--border)}
 
 /* ---------- toast ---------- */
 #toastWrap{position:fixed;right:20px;bottom:20px;z-index:80;display:flex;flex-direction:column;gap:8px}

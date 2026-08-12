@@ -172,46 +172,89 @@ async function handleAPI(req, res, pathname, q){
 
   if(pathname === '/api/health'){ sendJSON(res, 200, {ok:true, name:'walky-pos', time:Date.now()}); return; }
 
-  /* kasa cihazı push'u */
+  /* kasa cihazı push'u — kasa her zaman kazanır (offline dönüşünde
+     restoran içindeki gerçek durum kasadadır) */
   if(pathname === '/api/sync' && req.method === 'POST'){
     const tid = String(req.headers['x-tenant-id']||''), key = String(req.headers['x-api-key']||'');
     const t = findTenant(tid);
     if(!t || !safeEqual(key, t.apiKey)){ sendJSON(res, 401, {ok:false, error:'Kimlik doğrulanamadı'}); return; }
     let body;
     try{ body = JSON.parse(await readBody(req)); }catch(e){ sendJSON(res, 400, {ok:false, error:'Geçersiz istek'}); return; }
-    if(!body || typeof body.rev !== 'number' || !body.state){ sendJSON(res, 400, {ok:false, error:'rev ve state zorunlu'}); return; }
+    if(!body || !body.state){ sendJSON(res, 400, {ok:false, error:'state zorunlu'}); return; }
     const cur = loadState(tid);
-    if(body.rev >= cur.rev){
-      const obj = {rev:body.rev, updatedAt:Date.now(), state:body.state};
-      saveState(tid, obj);
-      broadcast(tid, obj);
-    }
-    sendJSON(res, 200, {ok:true, rev:Math.max(body.rev, cur.rev)});
+    const obj = {rev:cur.rev + 1, updatedAt:Date.now(), state:body.state};
+    saveState(tid, obj);
+    broadcast(tid, obj);
+    sendJSON(res, 200, {ok:true, rev:obj.rev});
     return;
   }
 
-  /* uzaktan izleyici girişi */
+  /* uzaktan giriş — iki yol:
+     1) e-posta: sunucuda tanımlı sahip hesapları (patron/muhasebe/depo)
+     2) kullanıcı adı + restoran kodu: kasadaki personel hesapları (state.users) */
   if(pathname === '/api/login' && req.method === 'POST'){
     let body;
     try{ body = JSON.parse(await readBody(req, 64*1024)); }catch(e){ sendJSON(res, 400, {ok:false, error:'Geçersiz istek'}); return; }
-    const email = String(body.email||'').trim().toLowerCase(), pass = String(body.password||'');
-    let found = null, tenant = null;
-    loadTenants().forEach(t=>t.users.forEach(u=>{ if(u.email===email){ found=u; tenant=t; } }));
-    if(!found || !safeEqual(hashPass(pass, found.salt), found.hash)){
-      sendJSON(res, 401, {ok:false, error:'E-posta veya şifre hatalı'}); return;
+    const login = String(body.email||body.username||'').trim(), pass = String(body.password||'');
+    const tenantCode = String(body.tenant||'').trim().toLowerCase();
+
+    if(login.includes('@')){
+      const email = login.toLowerCase();
+      let found = null, tenant = null;
+      loadTenants().forEach(t=>t.users.forEach(u=>{ if(u.email===email){ found=u; tenant=t; } }));
+      if(!found || !safeEqual(hashPass(pass, found.salt), found.hash)){
+        sendJSON(res, 401, {ok:false, error:'E-posta veya şifre hatalı'}); return;
+      }
+      const token = signToken({t:tenant.id, u:found.email, n:found.name, r:found.role, exp:Date.now()+12*3600*1000});
+      sendJSON(res, 200, {ok:true, token, tenantName:tenant.name, user:{name:found.name, role:found.role, email:found.email}});
+      return;
     }
-    const token = signToken({t:tenant.id, u:found.email, n:found.name, r:found.role, exp:Date.now()+12*3600*1000});
-    sendJSON(res, 200, {ok:true, token, tenantName:tenant.name, user:{name:found.name, role:found.role, email:found.email}});
+
+    /* personel girişi: restoran kodu zorunlu (kullanıcı adları restoranlar arası benzersiz değildir) */
+    if(!tenantCode){ sendJSON(res, 400, {ok:false, error:'Personel girişi için restoran kodu gerekli'}); return; }
+    const t = findTenant(tenantCode);
+    const st = t ? loadState(t.id) : null;
+    const su = st && st.state && Array.isArray(st.state.users)
+      ? st.state.users.find(u=>u.username===login) : null;
+    if(!t || !su || !safeEqual(String(su.pass||''), pass)){
+      sendJSON(res, 401, {ok:false, error:'Restoran kodu, kullanıcı adı veya şifre hatalı'}); return;
+    }
+    const token = signToken({t:t.id, u:su.username, n:su.name, r:su.role, exp:Date.now()+12*3600*1000});
+    sendJSON(res, 200, {ok:true, token, tenantName:t.name, user:{name:su.name, role:su.role, email:null}});
     return;
   }
 
-  /* buradan sonrası token ister */
-  const p = verifyToken(bearerToken(req, q));
+  /* buradan sonrası kimlik ister: oturum token'ı VEYA kasa cihaz anahtarı */
+  let p = verifyToken(bearerToken(req, q));
+  if(!p && q.get('tenant') && q.get('key')){
+    const t = findTenant(String(q.get('tenant')));
+    if(t && safeEqual(String(q.get('key')), t.apiKey)) p = {t:t.id, u:'kasa', r:'device'};
+  }
   if(!p){ sendJSON(res, 401, {ok:false, error:'Oturum geçersiz veya süresi dolmuş'}); return; }
 
   if(pathname === '/api/state'){
     const st = loadState(p.t);
     sendJSON(res, 200, {ok:true, tenant:p.t, rev:st.rev, updatedAt:st.updatedAt, state:st.state});
+    return;
+  }
+
+  /* uzak istemci yazması — çakışma koruması (CAS): istemci hangi revizyonu
+     temel aldıysa onu bildirir; sunucudaki güncel rev farklıysa 409 döner ve
+     istemci önce güncel durumu alıp işlemi tekrarlar */
+  if(pathname === '/api/push' && req.method === 'POST'){
+    if(p.r === 'device'){ sendJSON(res, 400, {ok:false, error:'Kasa /api/sync kullanır'}); return; }
+    let body;
+    try{ body = JSON.parse(await readBody(req)); }catch(e){ sendJSON(res, 400, {ok:false, error:'Geçersiz istek'}); return; }
+    if(!body || typeof body.baseRev !== 'number' || !body.state){ sendJSON(res, 400, {ok:false, error:'baseRev ve state zorunlu'}); return; }
+    const cur = loadState(p.t);
+    if(body.baseRev !== cur.rev){
+      sendJSON(res, 409, {ok:false, error:'conflict', rev:cur.rev});
+      return;
+    }
+    const obj = {rev:cur.rev + 1, updatedAt:Date.now(), state:body.state};
+    saveState(p.t, obj);
+    broadcast(p.t, obj);
+    sendJSON(res, 200, {ok:true, rev:obj.rev});
     return;
   }
 

@@ -29,17 +29,19 @@ function loginHTML(){
   const remote = `
     <label class="fl">Sunucu Adresi</label>
     <input id="rmUrl" class="inp" placeholder="https://..." value="${esc((remoteSession&&remoteSession.url)||location.origin)}" autocomplete="off">
-    <label class="fl">E-posta</label>
-    <input id="rmMail" class="inp" inputmode="email" placeholder="patron@restoran.com" autocomplete="off">
+    <label class="fl">Restoran Kodu</label>
+    <input id="rmCode" class="inp" placeholder="örn. demo (e-posta ile girişte boş bırakılabilir)" autocomplete="off">
+    <label class="fl">Kullanıcı Adı veya E-posta</label>
+    <input id="rmUser" class="inp" placeholder="garson &nbsp;|&nbsp; patron@restoran.com" autocomplete="off">
     <label class="fl">Şifre</label>
     <input id="rmPass" class="inp" type="password" placeholder="••••••••">
-    <button class="btn accent wide mt24" onclick="remoteLogin()">Canlı Panele Bağlan</button>
-    <p class="muted tiny mt12">Uzaktan izleme salt-okunurdur: patron, muhasebe ve depo restorandaki durumu anlık görür, değişiklik yapamaz.</p>`;
+    <button class="btn accent wide mt24" onclick="remoteLogin()">Sisteme Bağlan</button>
+    <p class="muted tiny mt12">Uzaktan erişim internet gerektirir; tüm kullanıcılar (garson dahil) kendi cihazından sisteme girip işlem yapabilir. Değişiklikler tüm cihazlara anında yansır.</p>`;
   return `<div class="login-wrap"><div class="card login-card">
     <div class="brand"><div class="logo">${PLATE}</div><div class="nm">WALKY</div><div class="sub">Restoran Yönetim Sistemi</div></div>
     <div class="seg login-tabs">
       <button class="seg-b ${loginTab==='local'?'on':''}" onclick="setLoginTab('local')">🖥️ Kasa Girişi</button>
-      <button class="seg-b ${loginTab==='remote'?'on':''}" onclick="setLoginTab('remote')">📡 Uzaktan İzleme</button>
+      <button class="seg-b ${loginTab==='remote'?'on':''}" onclick="setLoginTab('remote')">📡 Uzaktan Erişim</button>
     </div>
     ${loginTab==='local'?local:remote}
   </div></div>`;

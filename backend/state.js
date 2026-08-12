@@ -1,7 +1,5 @@
 'use strict';
-/* ============================================================
-   WALKY POS — global uygulama durumu (state)
-   ============================================================ */
+
 let db;
 let user = null;
 let view = 'tables';

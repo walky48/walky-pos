@@ -20,14 +20,14 @@ function syncPanelHTML(){
     ? `<div class="mini-row"><span>Durum</span><span class="v ${syncPending()?'amber':'green'}">${syncPending()?'🟡 Bekleyen değişiklik var':'🟢 Senkron'}</span></div>
        <div class="mini-row"><span>Sunucu</span><span class="v small">${esc(syncCfg.url)}</span></div>
        <div class="mini-row"><span>Restoran (kiracı)</span><span class="v">${esc(syncCfg.tenant)}</span></div>`
-    : `<p class="muted small">Kasa bir sunucuya bağlanırsa patron, muhasebe ve depo kendi cihazlarından restoranı canlı izleyebilir. İnternet kesilse bile kasa çalışmaya devam eder; bağlantı gelince veriler otomatik gönderilir.</p>`;
+    : `<p class="muted small">Kasa bir sunucuya bağlanırsa tüm kullanıcılar (garson, patron, muhasebe, depo) kendi cihazından "Uzaktan Erişim" ile sisteme girip işlem yapabilir; buradaki personel hesapları restoran koduyla uzaktan da geçerlidir. İnternet kesilse bile kasa çalışmaya devam eder; bağlantı gelince veriler otomatik gönderilir.</p>`;
   return `<div class="panel mt16"><div class="st" style="margin-bottom:12px">CANLI SUNUCU BAĞLANTISI (UZAKTAN İZLEME)</div>
     ${st}
     ${syncCfg
       ? `<div class="m-actions" style="justify-content:flex-start"><button class="btn red" onclick="syncUnpair()">Bağlantıyı Kes</button></div>`
       : `<label class="fl">Sunucu Adresi</label>
          <input id="syUrl" class="inp" placeholder="https://..." value="${esc(location.origin.startsWith('http')?location.origin:'')}" autocomplete="off">
-         <label class="fl">Restoran Kimliği (kiracı)</label>
+         <label class="fl">Restoran Kodu (kiracı)</label>
          <input id="syTen" class="inp" placeholder="örn. demo" autocomplete="off">
          <label class="fl">Cihaz API Anahtarı</label>
          <input id="syKey" class="inp" placeholder="sunucu kurulumunda üretilen anahtar" autocomplete="off">

@@ -4,12 +4,6 @@
    ============================================================ */
 function navItems(){
   const r=user.role, items=[];
-  if(remoteMode){
-    if(r==='patron') return [['stats','📊','İstatistikler'],['tables','🪑','Masa Planı'],['stock','📦','Stok'],['cari','📒','Cari Hesaplar'],['menu','🍽️','Menü']];
-    if(r==='muhasebe') return [['stats','📊','İstatistikler'],['cari','📒','Cari Hesaplar']];
-    if(r==='depo') return [['stock','📦','Stok']];
-    return [['stats','📊','İstatistikler']];
-  }
   if(r==='garson'||r==='admin') items.push(['tables','🪑','Masa Planı']);
   if(r==='depo'||r==='admin')   items.push(['stock','📦','Stok']);
   if(r==='muhasebe'||r==='admin') items.push(['stats','📊','İstatistikler'],['cari','📒','Cari Hesaplar']);
@@ -21,9 +15,11 @@ function toggleSidebar(open){ sidebarOpen=open; render() }
 function layoutHTML(){
   const items=navItems().map(([v,ic,lb])=>
     `<button class="nav-i ${view===v?'on':''}" onclick="navTo('${v}')"><span class="ic">${ic}</span>${lb}</button>`).join('');
-  const gunsonu=(!remoteMode && (user.role==='garson'||user.role==='admin'))
+  const gunsonu=(user.role==='garson'||user.role==='admin')
     ? `<button class="nav-i" onclick="sidebarOpen=false;openGunSonu()"><span class="ic">🌙</span>Gün Sonu</button>` : '';
-  const roleLbl = remoteMode ? ({patron:'Patron', muhasebe:'Muhasebe', depo:'Depo'}[user.role]||'İzleyici')+' · Canlı İzleme' : ROLES[user.role];
+  const roleLbl = remoteMode
+    ? (remoteSession.user.role==='patron'?'Patron':ROLES[user.role]) + ' · Uzak'
+    : ROLES[user.role];
   const liveTag = remoteMode ? `<span class="live-tag">● CANLI</span>` : `<span class="sync-badge-slot">${syncBadgeHTML()}</span>`;
   let content='';
   if(view==='tables') content=viewTables();

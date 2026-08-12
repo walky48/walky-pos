@@ -5,8 +5,12 @@
 let memStore = null;
 function loadDB(){ try{const r=localStorage.getItem(DB_KEY); if(r) return JSON.parse(r);}catch(e){} return memStore; }
 function saveDB(){
-  if(typeof remoteMode!=='undefined' && remoteMode) return; /* izleyici asla yazamaz */
   db.rev=(db.rev||0)+1;
+  if(typeof remoteMode!=='undefined' && remoteMode){
+    /* uzak istemci: yerel diske yazmaz, değişikliği sunucuya gönderir */
+    if(typeof scheduleRemotePush==='function') scheduleRemotePush();
+    return;
+  }
   try{localStorage.setItem(DB_KEY, JSON.stringify(db));}catch(e){ memStore = db; }
   if(typeof scheduleSyncPush==='function') scheduleSyncPush();
 }
