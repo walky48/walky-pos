@@ -26,19 +26,19 @@ function syncPanelHTML(){
     ${syncCfg
       ? `<div class="m-actions" style="justify-content:flex-start"><button class="btn red" onclick="syncUnpair()">Bağlantıyı Kes</button></div>`
       : `<label class="fl">Sunucu Adresi</label>
-         <input id="syUrl" class="inp" placeholder="https://..." value="${esc(location.origin.startsWith('http')?location.origin:'')}" autocomplete="off">
+         <input id="syUrl" class="inp" value="${esc(location.origin.startsWith('http')?location.origin:'')}" autocomplete="off">
          <label class="fl">Restoran Kodu (kiracı)</label>
-         <input id="syTen" class="inp" placeholder="örn. demo" autocomplete="off">
+         <input id="syTen" class="inp" autocomplete="off">
          <label class="fl">Cihaz API Anahtarı</label>
-         <input id="syKey" class="inp" placeholder="sunucu kurulumunda üretilen anahtar" autocomplete="off">
+         <input id="syKey" class="inp" autocomplete="off">
          <div class="m-actions" style="justify-content:flex-start"><button class="btn accent" onclick="syncPair()">Bağlan ve Doğrula</button></div>`}
   </div>`;
 }
 function openAddUser(){
   showModal(`<div class="m-head"><h3>Yeni Kullanıcı</h3><button class="icon-b" onclick="closeModal()">✕</button></div>
-    <label class="fl">Ad Soyad</label><input id="nuName" class="inp" placeholder="örn. Mehmet Yılmaz">
-    <label class="fl">Kullanıcı Adı</label><input id="nuUser" class="inp" placeholder="örn. mehmet">
-    <label class="fl">Şifre</label><input id="nuPass" class="inp" placeholder="şifre">
+    <label class="fl">Ad Soyad</label><input id="nuName" class="inp">
+    <label class="fl">Kullanıcı Adı</label><input id="nuUser" class="inp">
+    <label class="fl">Şifre</label><input id="nuPass" class="inp">
     <label class="fl">Rol</label>
     <div class="seg" id="nuSeg">
       <button class="seg-b on" data-t="garson" onclick="segSel(this)">Garson</button>

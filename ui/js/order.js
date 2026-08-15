@@ -21,7 +21,7 @@ function orderHTML(){
     <div class="ord-body">
       <div class="ord-cats">${cats}</div>
       <div class="ord-mid">
-        <input class="inp" placeholder="Ürün ara..." value="${esc(orderSearch)}" oninput="orderSearch=this.value;renderProdGrid()">
+        <input class="inp" value="${esc(orderSearch)}" oninput="orderSearch=this.value;renderProdGrid()">
         <div class="prod-grid" id="prodGrid">${prodGridHTML()}</div>
       </div>
       <div class="ord-right" id="orderPanel">${orderPanelHTML()}</div>
@@ -110,7 +110,7 @@ function openAdjModal(kind){
       <button class="seg-b ${(cur&&cur.type==='amt')?'on':''}" data-t="amt" onclick="segSel(this)">${SYM[t.currency]} Tutar</button>
     </div>
     <label class="fl">Değer</label>
-    <input id="adjVal" class="inp" inputmode="decimal" value="${cur?cur.value:''}" placeholder="örn. 15">
+    <input id="adjVal" class="inp" inputmode="decimal" value="${cur?cur.value:''}">
     <div class="m-actions">
       ${cur?`<button class="btn red" onclick="clearAdj('${kind}')">Kaldır</button>`:''}
       <button class="btn ghost" onclick="closeModal()">Vazgeç</button>
@@ -141,7 +141,7 @@ function openIkramModal(){
   showModal(`<div class="m-head"><h3>🎁 İkram</h3><button class="icon-b" onclick="closeModal()">✕</button></div>
     <p class="muted small">Masadaki tüm tutara %100 indirim uygulanır. Kime ve hangi sebeple ikram edildiği; kim tarafından verildiği ve içerdiği ürünler muhasebe kayıtlarında görünür.</p>
     <label class="fl">Kime / Hangi Sebeple</label>
-    <input id="ikramVal" class="inp" placeholder="örn. Belediye Başkanı" value="${t.complimentary?esc(t.complimentary.name):''}">
+    <input id="ikramVal" class="inp" value="${t.complimentary?esc(t.complimentary.name):''}">
     <div class="m-actions">
       ${t.complimentary?`<button class="btn red" onclick="clearIkram()">Kaldır</button>`:''}
       <button class="btn ghost" onclick="closeModal()">Vazgeç</button>
@@ -169,7 +169,7 @@ function openRename(){
   showModal(`<div class="m-head"><h3>Masayı Yeniden Adlandır</h3><button class="icon-b" onclick="closeModal()">✕</button></div>
     <p class="muted small">Geçici bir isimdir; hesap alındığında masa <b>${esc(t.name)}</b> adına geri döner.</p>
     <label class="fl">Masa Adı</label>
-    <input id="rnVal" class="inp" value="${esc(t.customName||'')}" placeholder="örn. Ahmet&#39;in arkadaşları">
+    <input id="rnVal" class="inp" value="${esc(t.customName||'')}">
     <div class="m-actions">
       ${t.customName?`<button class="btn red" onclick="applyRename(true)">Orijinale Dön</button>`:''}
       <button class="btn ghost" onclick="closeModal()">Vazgeç</button>
@@ -222,7 +222,7 @@ function openPaymentModal(){
   if(payState.method==='cari'){
     const dl=db.cari.map(x=>`<option value="${esc(x.name)}">`).join('');
     extra=`<label class="fl">Cari Hesap Adı</label>
-      <input id="cariNm" class="inp" list="cariList" value="${esc(payState.cariName)}" placeholder="örn. Mehmet Usta / Karşı Esnaf" oninput="payState.cariName=this.value">
+      <input id="cariNm" class="inp" list="cariList" value="${esc(payState.cariName)}" oninput="payState.cariName=this.value">
       <datalist id="cariList">${dl}</datalist>
       <p class="muted tiny mt8">Tutar bu isme veresiye olarak yazılır; tahsilatı Cari Hesaplar ekranından alınır.</p>`;
   }

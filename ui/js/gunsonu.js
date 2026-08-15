@@ -17,7 +17,7 @@ function openGunSonu(){
     <div class="mini-row"><span>🔓 Açılış Kasa Fazlası</span><span class="v">${fmt(db.day.openingFloat)}</span></div>
     <div class="mini-row" style="border-color:var(--accent)"><span><b>Beklenen Kasa (TL Nakit)</b></span><span class="v accent">${fmt(drawer)}</span></div>
     <label class="fl">Ertesi güne bırakılan kasa fazlası (₺)</label>
-    <input id="nfVal" class="inp" inputmode="decimal" placeholder="örn. 500">
+    <input id="nfVal" class="inp" inputmode="decimal">
     <p class="muted tiny mt8">Sabah ilk müşteriye para üstü verebilmek için kasada bırakılan bozuk paradır. Kasa yarın bu tutarla açılır.</p>
     <div class="m-actions"><button class="btn ghost" onclick="closeModal()">Vazgeç</button>
     <button class="btn accent" onclick="closeDay()">Günü Kapat</button></div>`,true);

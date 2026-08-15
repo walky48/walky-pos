@@ -16,9 +16,9 @@ function setLoginTab(t){ loginTab=t; render(); }
 function loginHTML(){
   const local = `
     <label class="fl">Kullanıcı Adı</label>
-    <input id="loginUser" class="inp" placeholder="kullanıcı adınızı girin" autocomplete="off">
+    <input id="loginUser" class="inp" autocomplete="off">
     <label class="fl">Şifre</label>
-    <input id="loginPass" class="inp" type="password" placeholder="••••••••">
+    <input id="loginPass" class="inp" type="password">
     <button class="btn accent wide mt24" onclick="doLogin()">Giriş Yap</button>
     <div class="demo-box">
       <b>Demo hesaplar</b> (şifre: 1234)<br>
@@ -28,13 +28,13 @@ function loginHTML(){
     </div>`;
   const remote = `
     <label class="fl">Sunucu Adresi</label>
-    <input id="rmUrl" class="inp" placeholder="https://..." value="${esc((remoteSession&&remoteSession.url)||location.origin)}" autocomplete="off">
+    <input id="rmUrl" class="inp" value="${esc((remoteSession&&remoteSession.url)||location.origin)}" autocomplete="off">
     <label class="fl">Restoran Kodu</label>
-    <input id="rmCode" class="inp" placeholder="örn. demo (e-posta ile girişte boş bırakılabilir)" autocomplete="off">
+    <input id="rmCode" class="inp" autocomplete="off">
     <label class="fl">Kullanıcı Adı veya E-posta</label>
-    <input id="rmUser" class="inp" placeholder="garson &nbsp;|&nbsp; patron@restoran.com" autocomplete="off">
+    <input id="rmUser" class="inp" autocomplete="off">
     <label class="fl">Şifre</label>
-    <input id="rmPass" class="inp" type="password" placeholder="••••••••">
+    <input id="rmPass" class="inp" type="password">
     <button class="btn accent wide mt24" onclick="remoteLogin()">Sisteme Bağlan</button>
     <p class="muted tiny mt12">Uzaktan erişim internet gerektirir; tüm kullanıcılar (garson dahil) kendi cihazından sisteme girip işlem yapabilir. Değişiklikler tüm cihazlara anında yansır.</p>`;
   return `<div class="login-wrap"><div class="card login-card">

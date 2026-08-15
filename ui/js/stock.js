@@ -42,7 +42,7 @@ function openStockAdd(sid){
   showModal(`<div class="m-head"><h3>Sayım Girişi — ${esc(s.name)}</h3><button class="icon-b" onclick="closeModal()">✕</button></div>
     <p class="muted small">Mevcut stok: <b>${fmtQ(s.qty)} ${esc(s.unit)}</b>. Sayım sonucu eklenecek miktarı girin (yalnızca artırma yapılabilir).</p>
     <label class="fl">Eklenecek Miktar (${esc(s.unit)})</label>
-    <input id="stVal" class="inp" inputmode="decimal" placeholder="örn. 24">
+    <input id="stVal" class="inp" inputmode="decimal">
     <div class="m-actions"><button class="btn ghost" onclick="closeModal()">Vazgeç</button>
     <button class="btn accent" onclick="applyStockAdd('${sid}')">Stoğa Ekle</button></div>`);
   $('#stVal').focus();

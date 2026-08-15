@@ -56,12 +56,12 @@ function prodModal(mid){
     +`<option value="__new">➕ Yeni kategori…</option>`;
   showModal(`<div class="m-head"><h3>${m?'Ürünü Düzenle':'Yeni Ürün'}</h3><button class="icon-b" onclick="closeModal()">✕</button></div>
     <label class="fl">Ürün Adı</label>
-    <input id="pName" class="inp" placeholder="örn. Kazandibi" value="${m?esc(m.name):''}">
+    <input id="pName" class="inp" value="${m?esc(m.name):''}">
     <label class="fl">Kategori</label>
     <select id="pCat" class="inp" onchange="$('#pCatNewWrap').style.display=this.value==='__new'?'block':'none'">${catOpts}</select>
     <div id="pCatNewWrap" style="display:none">
       <label class="fl">Yeni Kategori Adı</label>
-      <input id="pCatNew" class="inp" placeholder="örn. Kahvaltı">
+      <input id="pCatNew" class="inp">
     </div>
     <label class="fl">Fiyatlar (TL ve Euro elle girilir, Dolar Euro'dan otomatik hesaplanır)</label>
     <div class="range-bar">

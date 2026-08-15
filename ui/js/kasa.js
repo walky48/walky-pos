@@ -9,7 +9,7 @@ function kasaHTML(){
     <p class="muted small" style="text-align:center;margin-top:5px">${trDate(iso())} · ${esc(user.name)}</p>
     <div class="kasa-note">Güne başlamadan önce kasadaki parayı sayıp kasa fazlasını girin. Girdiğiniz tutar, dün gece bırakılan tutarla karşılaştırılacaktır.</div>
     <label class="fl">Kasadaki Tutar (Kasa Fazlası)</label>
-    <input id="kfVal" class="inp" inputmode="decimal" placeholder="Kasadaki tutarı sayıp girin" autocomplete="off">
+    <input id="kfVal" class="inp" inputmode="decimal" autocomplete="off">
     <button class="btn accent wide mt24" onclick="openDay()">Kasayı Aç ve Güne Başla</button>
     <button class="btn ghost wide mt12" onclick="logout()">Çıkış Yap</button>
   </div></div>`;
