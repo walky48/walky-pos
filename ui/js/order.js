@@ -53,7 +53,7 @@ function orderPanelHTML(){
       <button class="x" title="Kaldır" onclick="removeItem('${i.mid}')">✕</button>
     </div>`).join('')
     : `<div class="empty-o">Henüz ürün eklenmedi.<br>Soldaki menüden ürün seçin.</div>`;
-  const dLabel=t.discount ? (t.discount.type==='pct'?`İndirim (%${fmtQ(t.discount.value)})`:'İndirim') : null;
+  const dLabel=t.complimentary ? `🎁 İkram — ${esc(t.complimentary.name)}` : (t.discount ? (t.discount.type==='pct'?`İndirim (%${fmtQ(t.discount.value)})`:'İndirim') : null);
   const sLabel=t.service ? (t.service.type==='pct'?`Servis Ücreti (%${fmtQ(t.service.value)})`:'Servis Ücreti') : null;
   return `<div class="rt"><h3>Sipariş</h3><span class="badge gray">${t.items.reduce((a,i)=>a+i.qty,0)} kalem</span></div>
     <div class="olines">${lines}</div>
@@ -68,6 +68,7 @@ function orderPanelHTML(){
         <button class="btn" onclick="openAdjModal('service')">Servis Ücreti</button>
         <button class="btn" onclick="printKitchen()">Mutfak Fişi${kCount?` <span class="badge cur">${kCount}</span>`:''}</button>
         <button class="btn" onclick="printReceipt()">Hesap Yazdır</button>
+        <button class="btn amber" style="grid-column:1/-1" onclick="openIkramModal()" ${t.items.length?'':'disabled'}>🎁 İkram</button>
         <button class="btn green" style="grid-column:1/-1" onclick="startPayment()" ${t.items.length?'':'disabled'}>Hesap Al</button>
       </div>
     </div>`;
@@ -123,9 +124,44 @@ function applyAdj(kind){
   const v=num($('#adjVal').value);
   if(v<=0){toast('Geçerli bir değer girin','err');return}
   if(type==='pct'&&v>100){toast('Yüzde 100’den büyük olamaz','err');return}
-  t[kind]={type,value:v}; saveDB(); closeModal(); renderOrderPanel();
+  t[kind]={type,value:v};
+  if(kind==='discount') t.complimentary=null;
+  saveDB(); closeModal(); renderOrderPanel();
 }
-function clearAdj(kind){ const t=getTable(activeTableId); t[kind]=null; saveDB(); closeModal(); renderOrderPanel(); }
+function clearAdj(kind){
+  const t=getTable(activeTableId); t[kind]=null;
+  if(kind==='discount') t.complimentary=null;
+  saveDB(); closeModal(); renderOrderPanel();
+}
+
+/* --- ikram --- */
+function openIkramModal(){
+  const t=getTable(activeTableId);
+  if(!t.items.length){toast('Masada ürün yok','err');return}
+  showModal(`<div class="m-head"><h3>🎁 İkram</h3><button class="icon-b" onclick="closeModal()">✕</button></div>
+    <p class="muted small">Masadaki tüm tutara %100 indirim uygulanır. Kime ve hangi sebeple ikram edildiği; kim tarafından verildiği ve içerdiği ürünler muhasebe kayıtlarında görünür.</p>
+    <label class="fl">Kime / Hangi Sebeple</label>
+    <input id="ikramVal" class="inp" placeholder="örn. Belediye Başkanı" value="${t.complimentary?esc(t.complimentary.name):''}">
+    <div class="m-actions">
+      ${t.complimentary?`<button class="btn red" onclick="clearIkram()">Kaldır</button>`:''}
+      <button class="btn ghost" onclick="closeModal()">Vazgeç</button>
+      <button class="btn accent" onclick="applyIkram()">İkram Olarak Uygula</button>
+    </div>`);
+  $('#ikramVal').focus();
+}
+function applyIkram(){
+  const t=getTable(activeTableId);
+  const name=$('#ikramVal').value.trim();
+  if(!name){toast('Bir isim/sebep girin','err');return}
+  t.discount={type:'pct',value:100};
+  t.complimentary={name, by:user.name};
+  saveDB(); closeModal(); renderOrderPanel(); toast('İkram uygulandı — '+name,'ok');
+}
+function clearIkram(){
+  const t=getTable(activeTableId);
+  t.discount=null; t.complimentary=null;
+  saveDB(); closeModal(); renderOrderPanel();
+}
 
 /* --- masayı geçici adlandırma --- */
 function openRename(){
@@ -162,7 +198,7 @@ function cancelTable(){
 }
 function resetTable(t){
   t.status='empty'; t.customName=null; t.currency=null; t.openedAt=null; t.openedBy=null;
-  t.items=[]; t.discount=null; t.service=null;
+  t.items=[]; t.discount=null; t.service=null; t.complimentary=null;
 }
 
 /* --- ödeme --- */
@@ -195,7 +231,7 @@ function openPaymentModal(){
     ${items}
     <div class="mt12">
       <div class="trow"><span>Ara Toplam</span><b>${fmt(tot.sub,c)}</b></div>
-      ${t.discount?`<div class="trow"><span>İndirim${t.discount.type==='pct'?' (%'+fmtQ(t.discount.value)+')':''}</span><b class="green">−${fmt(tot.disc,c)}</b></div>`:''}
+      ${t.discount?`<div class="trow"><span>${t.complimentary?'🎁 İkram — '+esc(t.complimentary.name):'İndirim'+(t.discount.type==='pct'?' (%'+fmtQ(t.discount.value)+')':'')}</span><b class="green">−${fmt(tot.disc,c)}</b></div>`:''}
       ${t.service?`<div class="trow"><span>Servis Ücreti${t.service.type==='pct'?' (%'+fmtQ(t.service.value)+')':''}</span><b class="amber">+${fmt(tot.serv,c)}</b></div>`:''}
       <div class="trow big"><span>Toplam</span><span class="v">${fmt(tot.total,c)}</span></div>
       ${c!=='TL'?`<div class="trow"><span>TL Karşılığı (Kur: 1${SYM[c]} = ${fmt(rateOf(c))})</span><b class="accent">${fmt(tot.totalTL)}</b></div>`:''}
@@ -225,7 +261,8 @@ function completePayment(){
     items:t.items.map(i=>({name:i.name, qty:i.qty, unit:i.unit})),
     sub:tot.sub, disc:tot.disc, serv:tot.serv, total:tot.total, totalTL:tot.totalTL,
     method:payState.method, payCur:payState.method==='nakit'?payState.payCur:null,
-    cariName:payState.method==='cari'?payState.cariName.trim():null
+    cariName:payState.method==='cari'?payState.cariName.trim():null,
+    complimentary:t.complimentary?{name:t.complimentary.name, by:t.complimentary.by}:null
   };
   db.sales.push(sale);
   if(sale.method==='cari'){

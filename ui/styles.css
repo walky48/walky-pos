@@ -31,6 +31,8 @@ label.fl{display:block;font-size:13px;color:#c6cddd;margin:14px 0 6px}
 .btn.green:hover{background:#23b662}
 .btn.red{background:transparent;border-color:#6b2a2a;color:#f28b8b}
 .btn.red:hover{background:#3a1b1b}
+.btn.amber{background:transparent;border-color:#7a5613;color:var(--amber)}
+.btn.amber:hover{background:#3a2a0f}
 .btn.ghost{background:transparent;border-color:var(--border)}
 .btn.sm{padding:6px 10px;font-size:12.5px;border-radius:7px}
 .btn.wide{width:100%}

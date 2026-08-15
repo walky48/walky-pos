@@ -23,7 +23,7 @@ function receiptHTML(t, tot, sale){
     ${lines}
     <div class="rc-hr"></div>
     <div class="rc-row"><span>Ara Toplam</span><span>${fmt(tot.sub,c)}</span></div>
-    ${tot.disc>0?`<div class="rc-row"><span>İndirim</span><span>-${fmt(tot.disc,c)}</span></div>`:''}
+    ${tot.disc>0?`<div class="rc-row"><span>${t.complimentary?'İkram':'İndirim'}</span><span>-${fmt(tot.disc,c)}</span></div>`:''}
     ${tot.serv>0?`<div class="rc-row"><span>Servis Ücreti</span><span>+${fmt(tot.serv,c)}</span></div>`:''}
     <div class="rc-row rc-tot"><span>TOPLAM</span><span>${fmt(tot.total,c)}</span></div>
     ${c!=='TL'?`<div class="rc-row"><span>TL Karşılığı</span><span>${fmt(tot.totalTL)}</span></div>

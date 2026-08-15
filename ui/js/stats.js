@@ -42,6 +42,12 @@ function viewStats(){
       <td>${trDate(c.date)}</td><td data-lbl="Beklenen">${fmt(c.expected)}</td><td data-lbl="Girilen">${fmt(c.actual)}</td>
       <td data-lbl="Durum">${c.match?'<span class="green">✓ Uyumlu</span>':'<span class="red">⚠ Uyuşmuyor</span>'}</td>
       <td class="muted" data-lbl="Açan">${esc(c.by)}</td><td class="muted" data-lbl="Saat">${trDT(c.at)}</td></tr>`).join('');
+  const ikramRows=stR.sales.filter(s=>s.complimentary).slice().reverse().map(s=>`<tr>
+      <td>${trDate(s.bd)}</td><td data-lbl="Masa">${esc(s.table)}</td>
+      <td data-lbl="Kime"><b>${esc(s.complimentary.name)}</b></td>
+      <td class="muted" data-lbl="Veren">${esc(s.complimentary.by)}</td>
+      <td data-lbl="İçerik">${esc(s.items.map(i=>fmtQ(i.qty)+'x '+i.name).join(', '))}</td>
+      <td class="num" data-lbl="Tutar (TL)">${fmt(s.sub*s.rate)}</td></tr>`).join('');
   return `<div class="page-head">
       <div><h1>İstatistikler</h1><div class="sub">${db.day.open?'Açık iş günü: '+trDate(db.day.date):'Kasa kapalı · Son gün: '+trDate(today)}</div></div>
     </div>
@@ -88,6 +94,11 @@ function viewStats(){
       </div>
     </div>
     <div class="panel mt16">
+      <div class="st" style="margin-bottom:10px">İKRAMLAR (${trDate(listF)}${listF!==listT?' – '+trDate(listT):''})</div>
+      ${ikramRows?`<table class="dt"><thead><tr><th>Tarih</th><th>Masa</th><th>Kime</th><th>Veren</th><th>İçerik</th><th>Tutar (TL)</th></tr></thead><tbody>${ikramRows}</tbody></table>`
+            :'<div class="muted small">Bu aralıkta ikram kaydı yok.</div>'}
+    </div>
+    <div class="panel mt16">
       <div class="st" style="margin-bottom:10px">KASA AÇILIŞ KONTROLLERİ</div>
       ${fcRows?`<table class="dt"><thead><tr><th>Tarih</th><th>Beklenen (Dün Bırakılan)</th><th>Girilen</th><th>Durum</th><th>Açan</th><th>Saat</th></tr></thead><tbody>${fcRows}</tbody></table>`
             :'<div class="muted small">Henüz kasa açılış kaydı yok.</div>'}
@@ -108,7 +119,7 @@ function orderDetail(id){
     ${items}
     <div class="mt12">
       <div class="trow"><span>Ara Toplam</span><b>${fmt(s.sub,c)}</b></div>
-      ${s.disc>0?`<div class="trow"><span>İndirim</span><b class="green">−${fmt(s.disc,c)}</b></div>`:''}
+      ${s.disc>0?`<div class="trow"><span>${s.complimentary?'🎁 İkram — '+esc(s.complimentary.name)+' <span class="muted tiny">(veren: '+esc(s.complimentary.by)+')</span>':'İndirim'}</span><b class="green">−${fmt(s.disc,c)}</b></div>`:''}
       ${s.serv>0?`<div class="trow"><span>Servis Ücreti</span><b class="amber">+${fmt(s.serv,c)}</b></div>`:''}
       <div class="trow big"><span>Toplam</span><span class="v">${fmt(s.total,c)}</span></div>
       ${c!=='TL'?`<div class="trow"><span>TL Karşılığı (Kur ${fmt(s.rate)})</span><b class="accent">${fmt(s.totalTL)}</b></div>`:''}

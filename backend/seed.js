@@ -105,10 +105,10 @@ function seedDB(){
     else if(KADEH_SPIRIT_CATS.includes(cat)) alkStock.push({id:nid(),name,cat:'Alkol',qty:1000,unit:'cl',low:140,crit:70});
     else if(cat==='Biralar') alkStock.push({id:nid(),name,cat:'Alkol',qty:100,unit:'adet',low:24,crit:6});
   });
-  // Rakı: boy/kadeh farketmeksizin marka bazlı tek havuz
+
   const rakiBrands=[...new Set(MENU_ROWS.filter(r=>r[1]==='Rakılar').map(r=>r[0].match(/^(.+) \d+cl$/)[1]))];
   rakiBrands.forEach(name=>alkStock.push({id:nid(),name,cat:'Alkol',qty:1000,unit:'cl',low:140,crit:70}));
-  // menüde ayrı satılmayan ama kokteyllerde kullanılan likörler + Prosecco (kadeh + kokteyl payı aynı havuzdan)
+
   ['Prosecco','Don Julio','Havana Club','Garrone Triple Sec','Garrone Rosso','Martini Rosso','Campari','Amaretto','Kahlua','Aperol']
     .forEach(name=>alkStock.push({id:nid(),name,cat:'Alkol',qty:1000,unit:'cl',low:100,crit:40}));
 
@@ -191,7 +191,7 @@ function seedDB(){
       'Sahil 1','Sahil 2','Sahil 3','Sahil 4'
     ].map((name,i)=>({
       id:'t'+(i+1), name, customName:null, status:'empty',
-      currency:null, openedAt:null, openedBy:null, items:[], discount:null, service:null
+      currency:null, openedAt:null, openedBy:null, items:[], discount:null, service:null, complimentary:null
     })),
     sales:[],
     cari:[],
