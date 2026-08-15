@@ -34,6 +34,16 @@ if(!db.stockAlkolSeeded){
   db.stock=seedDB().stock;
   db.stockAlkolSeeded=true;
 }
+// depoda artık sadece alkol kalemleri tutuluyor — eski demo yiyecek/içecek stokları kaldırıldı, tek seferlik
+if(!db.stockNonAlkolRemoved){
+  db.stock=db.stock.filter(s=>s.cat==='Alkol');
+  db.stockNonAlkolRemoved=true;
+}
+// Dolar fiyatları artık Euro fiyatından ve güncel kurdan otomatik hesaplanıyor — mevcut menüye bir kerelik uygulanır
+if(!db.usdFromEurApplied){
+  recalcMenuUsdPrices();
+  db.usdFromEurApplied=true;
+}
 // masa planı restoranın gerçek düzenine göre güncellendi (25 masa) — eski test masalarıyla çakışmasın diye tek seferlik, sadece hiçbir masa açık değilse uygulanır
 if(!db.tables25Seeded){
   if(db.tables.every(t=>t.status==='empty')) db.tables=seedDB().tables;

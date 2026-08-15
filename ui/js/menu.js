@@ -8,7 +8,7 @@ function viewMenu(){
     const rows=db.menu.filter(m=>m.cat===cat).map(m=>`<tr>
       <td style="width:30%"><b>${esc(m.name)}</b><div class="muted tiny">${rcpSummary(m)}</div></td>
       <td data-lbl="TL (₺)"><input class="inp" style="max-width:150px" value="${String(m.price.TL).replace('.',',')}" onchange="setPrice('${m.id}','TL',this.value)"></td>
-      <td data-lbl="Dolar ($)"><input class="inp" style="max-width:150px" value="${String(m.price.USD).replace('.',',')}" onchange="setPrice('${m.id}','USD',this.value)"></td>
+      <td data-lbl="Dolar ($, otomatik)"><input class="inp" style="max-width:150px" value="${String(m.price.USD).replace('.',',')}" disabled title="Euro fiyatından ve güncel kurdan otomatik hesaplanır"></td>
       <td data-lbl="Euro (€)"><input class="inp" style="max-width:150px" value="${String(m.price.EUR).replace('.',',')}" onchange="setPrice('${m.id}','EUR',this.value)"></td>
       <td class="right tdact" style="white-space:nowrap"><button class="rowbtn" onclick="prodModal('${m.id}')">Düzenle</button>&nbsp;<button class="btn sm red" onclick="askDelProduct('${m.id}')">Sil</button></td>
     </tr>`).join('');
@@ -17,7 +17,7 @@ function viewMenu(){
       <tbody>${rows}</tbody></table></div>`;
   }).join('');
   return `<div class="page-head">
-      <div><h1>Menü Yönetimi</h1><div class="sub">Ürün ekleyin, fiyatları TL / Dolar / Euro bazında ayrı ayrı yönetin — kur dalgalanmasından bağımsız, manuel fiyatlama</div></div>
+      <div><h1>Menü Yönetimi</h1><div class="sub">TL ve Euro fiyatları elle girilir; Dolar fiyatı Euro'dan ve güncel kurdan otomatik hesaplanır (her zaman yukarı yuvarlanır)</div></div>
       <button class="btn accent" onclick="prodModal('')">+ Yeni Ürün</button>
     </div>
     <div class="panel mb12" style="margin-bottom:20px">
@@ -35,13 +35,16 @@ function viewMenu(){
 function setPrice(mid,cur,val){
   const m=db.menu.find(x=>x.id===mid); const v=num(val);
   if(v<0){toast('Geçersiz fiyat','err');render();return}
-  m.price[cur]=v; saveDB(); toast(m.name+' → '+fmt(v,cur),'ok');
+  m.price[cur]=v;
+  if(cur==='EUR') m.price.USD=usdFromEur(v,db.rates);
+  saveDB(); render(); toast(m.name+' → '+fmt(v,cur),'ok');
 }
 function saveRates(){
   const u=num($('#rUsd').value), e=num($('#rEur').value);
   if(u<=0||e<=0){toast('Geçerli kur girin','err');return}
   db.rates.USD=u; db.rates.EUR=e; db.rates.updatedAt=Date.now();
-  saveDB(); render(); toast('Kurlar güncellendi ✓','ok');
+  recalcMenuUsdPrices();
+  saveDB(); render(); toast('Kurlar güncellendi, Dolar fiyatları yeniden hesaplandı ✓','ok');
 }
 
 let rcpTmp=[];
@@ -60,11 +63,11 @@ function prodModal(mid){
       <label class="fl">Yeni Kategori Adı</label>
       <input id="pCatNew" class="inp" placeholder="örn. Kahvaltı">
     </div>
-    <label class="fl">Fiyatlar (her para birimi için ayrı, manuel)</label>
+    <label class="fl">Fiyatlar (TL ve Euro elle girilir, Dolar Euro'dan otomatik hesaplanır)</label>
     <div class="range-bar">
       <div class="fld"><span>₺</span><input id="pTL" class="inp" style="width:110px" inputmode="decimal" value="${m?String(m.price.TL).replace('.',','):''}"></div>
-      <div class="fld"><span>$</span><input id="pUSD" class="inp" style="width:110px" inputmode="decimal" value="${m?String(m.price.USD).replace('.',','):''}"></div>
-      <div class="fld"><span>€</span><input id="pEUR" class="inp" style="width:110px" inputmode="decimal" value="${m?String(m.price.EUR).replace('.',','):''}"></div>
+      <div class="fld"><span>€</span><input id="pEUR" class="inp" style="width:110px" inputmode="decimal" value="${m?String(m.price.EUR).replace('.',','):''}" oninput="pModalUsdPreview()"></div>
+      <div class="fld"><span>$</span><input id="pUSD" class="inp" style="width:110px" disabled value="${m?usdFromEur(m.price.EUR,db.rates):0}"></div>
     </div>
     <label class="fl">Reçete (stok bağlantısı — ürün satıldıkça bu malzemeler düşer)</label>
     <div id="rcpRows"></div>
@@ -87,6 +90,10 @@ function renderRcpRows(){
     </div>`;
   }).join('');
 }
+function pModalUsdPreview(){
+  const el=$('#pUSD'); if(!el) return;
+  el.value=usdFromEur(num($('#pEUR').value),db.rates);
+}
 function rcpAdd(){rcpTmp.push({s:db.stock[0].id,q:1});renderRcpRows()}
 function rcpChgS(i,v){rcpTmp[i].s=v;renderRcpRows()}
 function rcpChgQ(i,v){rcpTmp[i].q=num(v)}
@@ -96,9 +103,10 @@ function saveProduct(mid){
   if(!name){toast('Ürün adı girin','err');return}
   let cat=$('#pCat').value;
   if(cat==='__new'){cat=$('#pCatNew').value.trim();if(!cat){toast('Yeni kategori adı girin','err');return}}
-  const tl=num($('#pTL').value), usd=num($('#pUSD').value), eur=num($('#pEUR').value);
+  const tl=num($('#pTL').value), eur=num($('#pEUR').value);
   if(tl<=0){toast('TL fiyatı zorunludur','err');return}
-  if(usd<0||eur<0){toast('Geçersiz fiyat','err');return}
+  if(eur<0){toast('Geçersiz fiyat','err');return}
+  const usd=usdFromEur(eur,db.rates);
   const recipe=rcpTmp.filter(r=>r.s&&r.q>0).map(r=>({s:r.s,q:r.q}));
   if(mid){
     const m=db.menu.find(x=>x.id===mid);

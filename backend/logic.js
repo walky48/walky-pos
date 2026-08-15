@@ -15,6 +15,24 @@ function applyRecipe(m,delta){ // delta adet: + eklendi, − çıkarıldı
   });
   return warn;
 }
+/* --- Euro fiyatından Dolar hesaplama (özel yukarı-eğilimli yuvarlama) ---
+   Kural: ondalık basamaklar sondan başa doğru teker teker değerlendirilir;
+   basamak 7-8-9 ise yukarı yuvarlanıp bir önceki basamağa taşınır, 0-6 ise
+   direkt atılır. Tüm ondalıklar bitene kadar tekrarlanır, sonuç tam dolar olur. */
+function usdFromEur(eur, rates){
+  if(!eur || !rates || !rates.USD || !rates.EUR) return 0;
+  const raw = eur * (rates.EUR / rates.USD);
+  let n = Math.round(raw*1e8); // 8 ondalık basamak hassasiyetle tam sayıya ölçekle
+  for(let d=8; d>0; d--){
+    const last = n % 10;
+    n = Math.floor(n/10);
+    if(last>=7) n += 1;
+  }
+  return n;
+}
+function recalcMenuUsdPrices(){
+  db.menu.forEach(m=>{ m.price.USD = usdFromEur(m.price.EUR, db.rates); });
+}
 function calcTotals(t){
   const sub=t.items.reduce((a,i)=>a+i.qty*i.unit,0);
   let disc=0; if(t.discount) disc = t.discount.type==='pct' ? sub*t.discount.value/100 : Math.min(t.discount.value,sub);

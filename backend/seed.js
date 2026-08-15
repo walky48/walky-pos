@@ -112,26 +112,7 @@ function seedDB(){
   ['Prosecco','Don Julio','Havana Club','Garrone Triple Sec','Garrone Rosso','Martini Rosso','Campari','Amaretto','Kahlua','Aperol']
     .forEach(name=>alkStock.push({id:nid(),name,cat:'Alkol',qty:1000,unit:'cl',low:100,crit:40}));
 
-  const stock=[
-    {id:'s1', name:'Kola (33cl)',   cat:'İçecek',       qty:48,  unit:'adet',  low:20,  crit:8},
-    {id:'s2', name:'Su (50cl)',     cat:'İçecek',       qty:120, unit:'adet',  low:30,  crit:10},
-    {id:'s3', name:'Ayran (200ml)', cat:'İçecek',       qty:8,   unit:'adet',  low:20,  crit:5},
-    {id:'s4', name:'Şalgam',        cat:'İçecek',       qty:25,  unit:'adet',  low:10,  crit:4},
-    {id:'s5', name:'Meyve Suyu',    cat:'İçecek',       qty:30,  unit:'adet',  low:10,  crit:4},
-    {id:'s6', name:'Çay',           cat:'Sıcak İçecek', qty:340, unit:'bardak',low:100, crit:40},
-    {id:'s7', name:'Türk Kahvesi',  cat:'Sıcak İçecek', qty:2,   unit:'kg',    low:1,   crit:0.4},
-    {id:'s8', name:'Nescafe',       cat:'Sıcak İçecek', qty:1.5, unit:'kg',    low:0.8, crit:0.3},
-    {id:'s9', name:'Bitki Çayı',    cat:'Sıcak İçecek', qty:60,  unit:'adet',  low:20,  crit:8},
-    {id:'s10',name:'Dana Kıyma',    cat:'Et',           qty:12.5,unit:'kg',    low:5,   crit:2},
-    {id:'s11',name:'Tavuk But',     cat:'Et',           qty:3.2, unit:'kg',    low:4,   crit:1.5},
-    {id:'s12',name:'Ekmek',         cat:'Unlu Mamul',   qty:40,  unit:'adet',  low:15,  crit:5},
-    {id:'s13',name:'Domates',       cat:'Sebze',        qty:8,   unit:'kg',    low:4,   crit:1.5},
-    {id:'s14',name:'Soğan',         cat:'Sebze',        qty:15,  unit:'kg',    low:5,   crit:2},
-    {id:'s15',name:'Baklava',       cat:'Tatlı',        qty:6,   unit:'kg',    low:3,   crit:1},
-    {id:'s16',name:'Sütlaç',        cat:'Tatlı',        qty:24,  unit:'adet',  low:10,  crit:4},
-    {id:'s21',name:'Tonik (20cl)',  cat:'İçecek',       qty:40,  unit:'adet',  low:15,  crit:6},
-    ...alkStock
-  ];
+  const stock=[...alkStock];
   const sid=n=>{ const s=stock.find(x=>x.name===n); if(!s) throw new Error('alkol stoğu bulunamadı: '+n); return s.id; };
 
   /* ---------- kokteyl / kadeh reçeteleri (backend'e özel, kullanıcı görmez) ---------- */
