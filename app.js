@@ -24,14 +24,20 @@ if(!db.stockLog) db.stockLog=[];
 if(!db.dayHistory) db.dayHistory=[];
 if(!db.cari) db.cari=[];
 if(!db.floatChecks) db.floatChecks=[];
-// alkol takibi (kadeh/kokteyl = KADEH_CL) — eski kayıtlara tek seferlik eklenir
-if(!db.alkolSeeded){
-  const sd=seedDB();
-  sd.stock.filter(s=>['s17','s18','s19','s20','s21'].includes(s.id))
-    .forEach(s=>{ if(!db.stock.some(x=>x.id===s.id)) db.stock.push(s); });
-  sd.menu.filter(m=>['m18','m19','m20','m21','m22'].includes(m.id))
-    .forEach(m=>{ if(!db.menu.some(x=>x.id===m.id)) db.menu.push(m); });
-  db.alkolSeeded=true;
+// menü restoranın gerçek listesiyle değiştirildi — tek seferlik, açık siparişler kendi ürün adı/fiyatını zaten sipariş satırında sakladığı için etkilenmez
+if(!db.menuRealSeeded){
+  db.menu=seedDB().menu;
+  db.menuRealSeeded=true;
+}
+// alkol stokları test amaçlı dolduruldu (cl'ler 1000, biralar 100 adet) — tek seferlik
+if(!db.stockAlkolSeeded){
+  db.stock=seedDB().stock;
+  db.stockAlkolSeeded=true;
+}
+// masa planı restoranın gerçek düzenine göre güncellendi (25 masa) — eski test masalarıyla çakışmasın diye tek seferlik, sadece hiçbir masa açık değilse uygulanır
+if(!db.tables25Seeded){
+  if(db.tables.every(t=>t.status==='empty')) db.tables=seedDB().tables;
+  db.tables25Seeded=true;
 }
 initSync();
 remoteResume().then(resumed=>{

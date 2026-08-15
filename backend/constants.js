@@ -4,7 +4,7 @@
    ============================================================ */
 const SYM = {TL:'₺', USD:'$', EUR:'€'};
 const CUR_LABEL = {TL:'TL', USD:'DOLAR', EUR:'EURO'};
-const KITCHEN_CATS = ['Yiyecek','Tatlı'];
+const KITCHEN_CATS = ['Çorba','Soğuk Mezeler','Salatalar','Ara Sıcaklar','Başlangıçlar','Deniz Ürünleri','Peynir & Soğuk Tabaklar','Ana Yemekler','Tatlılar'];
 const KADEH_CL = 5; // bir kadeh / kokteyl bardağı alkol miktarı (cl)
 const ROLES = {admin:'Yönetici', garson:'Garson', depo:'Depo', muhasebe:'Muhasebe'};
 const DB_KEY = 'walky_pos_v1';
