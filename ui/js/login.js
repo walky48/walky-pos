@@ -17,13 +17,7 @@ function loginHTML(){
     <input id="loginUser" class="inp" autocomplete="off">
     <label class="fl">Şifre</label>
     <input id="loginPass" class="inp" type="password">
-    <button class="btn accent wide mt24" onclick="doLogin()">Giriş Yap</button>
-    <div class="demo-box">
-      <b>Demo hesaplar</b> (şifre: 1234)<br>
-      <b>admin</b> · yönetici &nbsp;|&nbsp; <b>garson</b> · garson<br>
-      <b>depo</b> · depo &nbsp;|&nbsp; <b>muhasebe</b> · muhasebe
-      <div class="mt8"><button class="rowbtn" style="color:#60a5fa;font-size:12px" onclick="resetDB()">Demo verilerini sıfırla</button></div>
-    </div>`;
+    <button class="btn accent wide mt24" onclick="doLogin()">Giriş Yap</button>`;
   const remote = `
     <label class="fl">Sunucu Adresi</label>
     <input id="rmUrl" class="inp" value="${esc((remoteSession&&remoteSession.url)||location.origin)}" autocomplete="off">

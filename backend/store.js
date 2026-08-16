@@ -12,4 +12,3 @@ function saveDB(){
   try{localStorage.setItem(DB_KEY, JSON.stringify(db));}catch(e){ memStore = db; }
   if(typeof scheduleSyncPush==='function') scheduleSyncPush();
 }
-function resetDB(){ try{localStorage.removeItem(DB_KEY);}catch(e){} memStore=null; db=seedDB(); saveDB(); user=null; render(); toast('Demo verileri sıfırlandı','ok'); }
