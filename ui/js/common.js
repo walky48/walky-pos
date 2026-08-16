@@ -1,7 +1,5 @@
 'use strict';
-/* ============================================================
-   WALKY POS — ortak arayüz yardımcıları: toast, modal, segment
-   ============================================================ */
+
 function toast(msg,type){
   const w=$('#toastWrap'); const el=document.createElement('div');
   el.className='toast '+(type||''); el.textContent=msg; w.appendChild(el);

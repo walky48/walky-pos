@@ -1,7 +1,5 @@
 'use strict';
-/* ============================================================
-   WALKY POS — giriş ekranı
-   ============================================================ */
+
 function doLogin(){
   const u=$('#loginUser').value.trim(), p=$('#loginPass').value;
   const f=db.users.find(x=>x.username===u && x.pass===p);

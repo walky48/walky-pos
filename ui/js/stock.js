@@ -1,7 +1,5 @@
 'use strict';
-/* ============================================================
-   WALKY POS — stok ekranı (depo: sadece artırır · admin: tam yetki)
-   ============================================================ */
+
 function viewStock(){
   const canEdit = user.role==='admin';
   const counts={ok:0,low:0,crit:0};

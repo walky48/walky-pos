@@ -1,7 +1,5 @@
 'use strict';
-/* ============================================================
-   WALKY POS — kasa açılışı (garson/admin için zorunlu)
-   ============================================================ */
+
 function kasaHTML(){
   return `<div class="login-wrap"><div class="card kasa-card">
     <div class="brand" style="margin-bottom:14px"><div class="nm" style="font-size:20px">WALKY</div></div>

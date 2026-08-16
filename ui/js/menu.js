@@ -1,7 +1,5 @@
 'use strict';
-/* ============================================================
-   WALKY POS — menü yönetimi (yalnızca admin) + kur
-   ============================================================ */
+
 function viewMenu(){
   const cats=menuCats();
   const sections=cats.map(cat=>{

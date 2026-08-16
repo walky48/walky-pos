@@ -1,15 +1,5 @@
 'use strict';
-/* ============================================================
-   WALKY POS — senkronizasyon (çok-yazarlı)
-   KASA: offline-first cihaz. Her kayıttan sonra durumu sunucuya
-   iter (kasa her zaman kazanır — internet kesintisi sırasında
-   restorandaki gerçek durum kasadadır), diğer cihazların
-   değişikliklerini SSE ile alıp yerel veritabanına işler.
-   UZAK İSTEMCİLER (garson telefonu, patron, muhasebe, depo):
-   internet varken TAM ERİŞİM. Değişiklikler CAS ile sunucuya
-   yazılır: aynı anda başka cihaz yazdıysa sunucu 409 döner,
-   istemci güncel durumu alıp kullanıcıyı uyarır.
-   ============================================================ */
+
 
 /* ---------- ortak sayaçlar ---------- */
 const SYNC_KEY = 'walky_sync_v1';

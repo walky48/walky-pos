@@ -1,8 +1,5 @@
 'use strict';
-/* ============================================================
-   WALKY POS — iş kuralları: stok düşümü, toplam hesaplama,
-   istatistik hesaplama, cari bakiye
-   ============================================================ */
+
 
 /* --- sipariş kalemleri & stok düşümü --- */
 function applyRecipe(m,delta){ // delta adet: + eklendi, − çıkarıldı
@@ -15,14 +12,11 @@ function applyRecipe(m,delta){ // delta adet: + eklendi, − çıkarıldı
   });
   return warn;
 }
-/* --- Euro fiyatından Dolar hesaplama (özel yukarı-eğilimli yuvarlama) ---
-   Kural: ondalık basamaklar sondan başa doğru teker teker değerlendirilir;
-   basamak 7-8-9 ise yukarı yuvarlanıp bir önceki basamağa taşınır, 0-6 ise
-   direkt atılır. Tüm ondalıklar bitene kadar tekrarlanır, sonuç tam dolar olur. */
+
 function usdFromEur(eur, rates){
   if(!eur || !rates || !rates.USD || !rates.EUR) return 0;
   const raw = eur * (rates.EUR / rates.USD);
-  let n = Math.round(raw*1e8); // 8 ondalık basamak hassasiyetle tam sayıya ölçekle
+  let n = Math.round(raw*1e8); 
   for(let d=8; d>0; d--){
     const last = n % 10;
     n = Math.floor(n/10);

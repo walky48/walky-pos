@@ -1,7 +1,5 @@
 'use strict';
-/* ============================================================
-   WALKY POS — sipariş ekranı
-   ============================================================ */
+  
 function orderHTML(){
   const t=getTable(activeTableId);
   const cats=menuCats().map(c=>`<button class="cat-b ${orderCat===c?'on':''}" onclick="orderCat='${c}';orderSearch='';render()">${c}</button>`).join('');

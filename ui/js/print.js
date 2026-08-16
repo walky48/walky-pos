@@ -1,7 +1,5 @@
 'use strict';
-/* ============================================================
-   WALKY POS — yazdırma (müşteri fişi + mutfak fişi)
-   ============================================================ */
+
 function doPrint(html){
   const pa=$('#printArea'); pa.innerHTML=html;
   window.print();

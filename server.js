@@ -1,18 +1,5 @@
 'use strict';
-/* ============================================================
-   WALKY POS — sunucu
-   - Statik dosya sunumu (kasa uygulaması + uzaktan izleme paneli)
-   - Kiracı (restoran) başına veri saklama: data/state_<id>.json
-   - Kasa cihazı push'u: POST /api/sync  (X-Tenant-Id + X-Api-Key)
-   - Uzaktan izleyici:  POST /api/login → GET /api/state + SSE /api/events
-   Harici bağımlılık yok; veri data/ klasöründe tutulur (git dışı).
 
-   Komutlar:
-     node server.js                                  → sunucuyu başlat
-     node server.js --add-tenant "Restoran Adı"      → yeni restoran + API anahtarı
-     node server.js --add-user <tenantId> <eposta> <"Ad Soyad"> <patron|muhasebe|depo> <şifre>
-     node server.js --list-tenants                   → kayıtlı restoranları göster
-   ============================================================ */
 const http = require('http');
 const fs = require('fs');
 const path = require('path');

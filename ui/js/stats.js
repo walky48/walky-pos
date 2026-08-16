@@ -1,7 +1,5 @@
 'use strict';
-/* ============================================================
-   WALKY POS — istatistikler (muhasebe + admin)
-   ============================================================ */
+
 function statCard(ic,val,lbl,cls,sub){
   return `<div class="stat"><span class="si">${ic}</span><div>
     <div class="sv ${cls||''}">${val}</div><div class="sl">${lbl}</div>${sub?`<div class="ss">${sub}</div>`:''}</div></div>`;

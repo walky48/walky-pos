@@ -1,7 +1,5 @@
 'use strict';
-/* ============================================================
-   WALKY POS — kullanıcılar (yalnızca admin)
-   ============================================================ */
+
 function viewUsers(){
   const rows=db.users.map(u=>`<tr>
     <td><b>${esc(u.name)}</b></td><td class="muted" data-lbl="Kullanıcı Adı">${esc(u.username)}</td>

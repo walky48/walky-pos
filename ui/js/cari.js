@@ -1,7 +1,5 @@
 'use strict';
-/* ============================================================
-   WALKY POS — cari hesaplar (veresiye defteri)
-   ============================================================ */
+
 function viewCari(){
   if(!db.cari.length) return `<div class="page-head"><div><h1>Cari Hesaplar</h1><div class="sub">Veresiye defteri</div></div></div>
     <div class="panel muted">Henüz cari hesap yok. Garson ödeme ekranında "Cari At" seçtiğinde burada hesap oluşur.</div>`;

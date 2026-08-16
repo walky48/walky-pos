@@ -1,7 +1,5 @@
 'use strict';
-/* ============================================================
-   WALKY POS — masa planı
-   ============================================================ */
+
 function viewTables(){
   const all=db.tables, open=all.filter(t=>t.status==='open'), empty=all.length-open.length;
   const shown=all.filter(t=> tableFilter==='all' ? true : tableFilter==='open' ? t.status==='open' : t.status==='empty');

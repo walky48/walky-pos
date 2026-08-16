@@ -1,9 +1,5 @@
 'use strict';
-/* ============================================================
-   WALKY POS — kök render + başlatma
-   Bu dosya backend (veri/durum) ile ui (ekranlar) katmanlarını
-   birbirine bağlar ve uygulamayı başlatır.
-   ============================================================ */
+
 function render(){
   const app=$('#app');
   if(!user){
@@ -24,7 +20,6 @@ if(!db.stockLog) db.stockLog=[];
 if(!db.dayHistory) db.dayHistory=[];
 if(!db.cari) db.cari=[];
 if(!db.floatChecks) db.floatChecks=[];
-// menü restoranın gerçek listesiyle değiştirildi — tek seferlik, açık siparişler kendi ürün adı/fiyatını zaten sipariş satırında sakladığı için etkilenmez
 if(!db.menuRealSeeded){
   db.menu=seedDB().menu;
   db.menuRealSeeded=true;
@@ -44,10 +39,22 @@ if(!db.usdFromEurApplied){
   recalcMenuUsdPrices();
   db.usdFromEurApplied=true;
 }
-// masa planı restoranın gerçek düzenine göre güncellendi (25 masa) — eski test masalarıyla çakışmasın diye tek seferlik, sadece hiçbir masa açık değilse uygulanır
+
 if(!db.tables25Seeded){
   if(db.tables.every(t=>t.status==='empty')) db.tables=seedDB().tables;
   db.tables25Seeded=true;
+}
+// gerçek personel hesapları tanımlandı (isim/şifre güncellemeleri + garsonlar) — tek seferlik
+if(!db.usersRealSeeded){
+  const byUser=un=>db.users.find(u=>u.username===un);
+  const admin=byUser('admin'); if(admin){ admin.name='Bahar'; admin.pass='7811'; }
+  const depo=byUser('depo'); if(depo){ depo.pass='2207'; }
+  const muhasebe=byUser('muhasebe'); if(muhasebe){ muhasebe.name='Funda'; muhasebe.pass='4823'; }
+  db.users=db.users.filter(u=>u.username!=='garson');
+  [['kadir','Kadir'],['muhammed','Muhammed'],['fevzi','Fevzi'],['ugur','Uğur']].forEach(([un,name])=>{
+    if(!byUser(un)) db.users.push({id:uid(), username:un, pass:'1234', name, role:'garson'});
+  });
+  db.usersRealSeeded=true;
 }
 initSync();
 remoteResume().then(resumed=>{

@@ -1,7 +1,5 @@
 'use strict';
-/* ============================================================
-   WALKY POS — uygulama iskeleti: yan menü + sayfa yönlendirme
-   ============================================================ */
+
 function navItems(){
   const r=user.role, items=[];
   if(r==='garson'||r==='admin') items.push(['tables','🪑','Masa Planı']);

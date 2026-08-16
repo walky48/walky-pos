@@ -1,7 +1,5 @@
 'use strict';
-/* ============================================================
-   WALKY POS — gün sonu (Z raporu)
-   ============================================================ */
+
 function openGunSonu(){
   if(db.tables.some(t=>t.status==='open')){toast('Açık masalar var — önce tüm hesapları alın','err');return}
   const st=computeStats(db.day.date, db.day.date);

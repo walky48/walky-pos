@@ -1,6 +1,6 @@
 'use strict';
 function seedDB(){
-  /* menü satırları: [isim, kategori, TL fiyatı] */
+ 
   const MENU_ROWS = [
     ['Balık Çorbası','Çorba',620],
     ['Cunda Ezme','Soğuk Mezeler',520],['Biber Tatari','Soğuk Mezeler',480],['Girit Ezme','Soğuk Mezeler',640],
@@ -115,7 +115,7 @@ function seedDB(){
   const stock=[...alkStock];
   const sid=n=>{ const s=stock.find(x=>x.name===n); if(!s) throw new Error('alkol stoğu bulunamadı: '+n); return s.id; };
 
-  /* ---------- kokteyl / kadeh reçeteleri (backend'e özel, kullanıcı görmez) ---------- */
+
   const RCP={
     // kadeh şaraplar
     'Beyaz Şarap (Pinot Grigio)':     [[sid('Pinot Grigio'),22]],
@@ -172,10 +172,13 @@ function seedDB(){
 
   return {
     users:[
-      {id:'u1',username:'admin',   pass:'1234',name:'Admin Kullanıcı', role:'admin'},
-      {id:'u2',username:'garson',  pass:'1234',name:'Ahmet',           role:'garson'},
-      {id:'u3',username:'depo',    pass:'1234',name:'Depo Sorumlusu',  role:'depo'},
-      {id:'u4',username:'muhasebe',pass:'1234',name:'Muhasebe',        role:'muhasebe'}
+      {id:'u1',username:'admin',   pass:'7811',name:'Bahar',          role:'admin'},
+      {id:'u3',username:'depo',    pass:'2207',name:'Depo Sorumlusu', role:'depo'},
+      {id:'u4',username:'muhasebe',pass:'4823',name:'Funda',          role:'muhasebe'},
+      {id:'u5',username:'kadir',   pass:'1234',name:'Kadir',          role:'garson'},
+      {id:'u6',username:'muhammed',pass:'1234',name:'Muhammed',       role:'garson'},
+      {id:'u7',username:'fevzi',   pass:'1234',name:'Fevzi',          role:'garson'},
+      {id:'u8',username:'ugur',    pass:'1234',name:'Uğur',           role:'garson'}
     ],
     rates:{USD:47.01, EUR:53.58, updatedAt:null},
     stock,
