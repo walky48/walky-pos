@@ -56,6 +56,12 @@ if(!db.usersRealSeeded){
   });
   db.usersRealSeeded=true;
 }
+// admin girişi kullanıcı adı da isme uydu — tek seferlik
+if(!db.adminUsernameRenamed){
+  const admin=db.users.find(u=>u.username==='admin');
+  if(admin) admin.username='bahar';
+  db.adminUsernameRenamed=true;
+}
 initSync();
 remoteResume().then(resumed=>{
   if(!resumed){ saveDB(); render(); }
