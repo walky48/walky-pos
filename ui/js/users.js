@@ -14,6 +14,13 @@ function viewUsers(){
     ${printerPanelHTML()}`;
 }
 function printerPanelHTML(){
+  const native = typeof nativePrinterAvailable==='function' && nativePrinterAvailable();
+  if(native){
+    return `<div class="panel mt16"><div class="st" style="margin-bottom:12px">YAZICI (USB, SESSİZ YAZDIRMA)</div>
+      <div class="mini-row"><span>Durum</span><span class="v green">🟢 Native uygulama — otomatik</span></div>
+      <p class="muted tiny mt8">Bu cihazda uygulamanın kendi USB yazıcı desteği aktif. "Hesap Yazdır" ve "Mutfak Fişi" doğrudan bağlı yazıcıya basar; ilk yazdırmada Android bir kerelik "bu cihaza erişime izin ver" penceresi gösterebilir, izin verdikten sonra bir daha sormaz.</p>
+    </div>`;
+  }
   const supported = typeof printerSupported==='function' && printerSupported();
   if(!supported){
     return `<div class="panel mt16"><div class="st" style="margin-bottom:12px">YAZICI (USB, SESSİZ YAZDIRMA)</div>

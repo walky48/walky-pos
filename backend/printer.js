@@ -9,7 +9,22 @@
 const PRN_KEY = 'walky_printer_v1';
 let usbPrinter = null; // {device, epOut}
 
-function printerSupported(){ return !!(navigator.usb); }
+/* ---------- native (Capacitor Android) USB yazıcı — WebUSB'nin engellendiği
+   durumlarda (ör. Android'in yazıcıyı zaten kendi sürücüsüne bağlamış olması)
+   doğrudan Android'in kendi USB iznini kullanır, aynı Simpra gibi ---------- */
+function nativePrinterAvailable(){
+  return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()
+    && window.Capacitor.Plugins && window.Capacitor.Plugins.UsbPrinter);
+}
+function bytesToBase64(bytes){
+  let bin=''; for(let i=0;i<bytes.length;i++) bin+=String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
+async function printBytesNative(bytes){
+  await window.Capacitor.Plugins.UsbPrinter.printBytes({data: bytesToBase64(bytes)});
+}
+
+function printerSupported(){ return nativePrinterAvailable() || !!(navigator.usb); }
 function printerSavedInfo(){
   try{ const r = localStorage.getItem(PRN_KEY); return r ? JSON.parse(r) : null; }catch(e){ return null; }
 }
@@ -90,8 +105,13 @@ function escposFromLines(lines){
   return out;
 }
 async function printLinesSilently(lines){
+  const bytes = escposFromLines(lines);
+  if(nativePrinterAvailable()){
+    try{ await printBytesNative(bytes); return true; }
+    catch(e){ toast('Yazıcıya gönderilemedi: '+(e&&e.message?e.message:e), 'err'); return false; }
+  }
   const ok = await tryReconnectPrinter();
   if(!ok) return false;
-  try{ await sendRaw(escposFromLines(lines)); return true; }
+  try{ await sendRaw(bytes); return true; }
   catch(e){ usbPrinter=null; return false; }
 }

@@ -1,0 +1,12 @@
+{
+  "appId": "tr.com.walkyrms.pos",
+  "appName": "WALKY",
+  "webDir": "www",
+  "server": {
+    "url": "https://walkyrms.com.tr",
+    "cleartext": false
+  },
+  "android": {
+    "allowMixedContent": false
+  }
+}
