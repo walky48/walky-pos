@@ -96,20 +96,35 @@ function initSync(){
   if(syncCfg && !remoteMode){ kasaSubscribe(); if(syncPending()) syncPushNow(); }
 }
 
-/* eşleştirme (Kullanıcılar sayfasındaki panel) */
+/* eşleştirme (Kullanıcılar sayfasındaki panel)
+   Yeni bir cihaz eşleştirildiğinde, sunucuda zaten veri varsa (başka bir
+   kasa daha önce bağlanmışsa) o veri BENİMSENİR — bu cihazın kendi boş/
+   varsayılan verisiyle sunucudakini ezmesi engellenir. Sunucuda hiç veri
+   yoksa (ilk kurulum) bu cihazın verisi başlangıç durumu olarak gönderilir. */
 async function syncPair(){
   const url = $('#syUrl').value.trim().replace(/\/+$/,''), tenant = $('#syTen').value.trim(), key = $('#syKey').value.trim();
   if(!url || !tenant || !key){ toast('Sunucu adresi, restoran kodu ve anahtar zorunlu','err'); return; }
+  let health;
   try{
-    const h = await fetch(url + '/api/health').then(r=>r.json());
-    if(!h.ok) throw new Error();
+    health = await fetch(url + '/api/health').then(r=>r.json());
+    if(!health.ok) throw new Error();
   }catch(e){ toast('Sunucuya ulaşılamadı — adresi kontrol edin','err'); return; }
+  let cur;
+  try{
+    cur = await fetch(url + '/api/state?tenant=' + encodeURIComponent(tenant) + '&key=' + encodeURIComponent(key)).then(r=>r.json());
+  }catch(e){ toast('Sunucuya ulaşılamadı — adresi kontrol edin','err'); return; }
+  if(!cur.ok){ toast('Restoran kodu veya anahtar hatalı','err'); return; }
   syncCfg = {url, tenant, key};
-  syncLastOkRev = 0; /* ilk tam gönderimi tetikle */
-  saveSyncCfg();
-  await syncPushNow();
-  if(syncPending()){ toast('Anahtar doğrulanamadı veya gönderim başarısız','err'); syncCfg=null; saveSyncCfg(); }
-  else{ kasaSubscribe(); toast('Sunucuya bağlandı — canlı yayın aktif ✓','ok'); }
+  if(cur.state){
+    adoptState(cur);
+    toast('Sunucudaki mevcut veriler bu cihaza yüklendi ✓','ok');
+  }else{
+    syncLastOkRev = 0; /* sunucuda hiç veri yok — bu cihazınki ilk veri olarak gönderilir */
+    saveSyncCfg();
+    await syncPushNow();
+    if(syncPending()){ toast('Gönderim başarısız — tekrar deneyin','err'); syncCfg=null; saveSyncCfg(); render(); return; }
+  }
+  kasaSubscribe();
   render();
 }
 function syncUnpair(){

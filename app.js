@@ -68,6 +68,16 @@ if(!db.testDataCleared){
   db.stock.forEach(s=>{ s.qty=0; });
   db.testDataCleared=true;
 }
+// bazı kokteyl/kadeh reçeteleri düzeltildi — sadece bu ürünlerin reçetesi değişir, isim/fiyat/diğer ürünler etkilenmez, tek seferlik
+if(!db.recipeFix1Applied){
+  const sd=seedDB();
+  ['Beyaz Şarap (Pinot Grigio)','Kırmızı Şarap (Pasqua Merlot)','Roze Şarap (Pinot Grigio Rose)','Prosecco',
+   'Negroni','Chilli Negroni','Aperol Spritz','Ananas','Kavun','Çilek','Şeftali'].forEach(name=>{
+    const src=sd.menu.find(m=>m.name===name), dst=db.menu.find(m=>m.name===name);
+    if(src && dst) dst.recipe=src.recipe;
+  });
+  db.recipeFix1Applied=true;
+}
 initSync();
 if(typeof tryReconnectPrinter==='function') tryReconnectPrinter();
 remoteResume().then(resumed=>{

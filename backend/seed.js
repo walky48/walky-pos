@@ -118,15 +118,15 @@ function seedDB(){
 
   const RCP={
     // kadeh şaraplar
-    'Beyaz Şarap (Pinot Grigio)':     [[sid('Pinot Grigio'),22]],
-    'Kırmızı Şarap (Pasqua Merlot)':  [[sid('Pasqua Merlot'),22]],
-    'Roze Şarap (Pinot Grigio Rose)': [[sid('Pinot Grigio Rose'),22]],
-    'Prosecco':                       [[sid('Prosecco'),22]],
+    'Beyaz Şarap (Pinot Grigio)':     [[sid('Pinot Grigio'),18]],
+    'Kırmızı Şarap (Pasqua Merlot)':  [[sid('Pasqua Merlot'),18]],
+    'Roze Şarap (Pinot Grigio Rose)': [[sid('Pinot Grigio Rose'),18]],
+    'Prosecco':                       [[sid('Prosecco'),18]],
     // imza kokteyller
     'Azumare Special':       [[sid("Gordon's Day Gin"),5],[sid('Garrone Triple Sec'),2]],
     'Azumare Passion':       [[sid('Yeni Rakı Yeni Seri'),4]],
     'Azumare Chilli Passion':[[sid('Don Julio'),5],[sid('Garrone Triple Sec'),2]],
-    'Chilli Negroni':        [[sid("Gordon's Day Gin"),5],[sid('Martini Rosso'),2],[sid('Campari'),2]],
+    'Chilli Negroni':        [[sid("Gordon's Day Gin"),2],[sid('Martini Rosso'),2],[sid('Campari'),2]],
     'NO1':                   [[sid('J&B 225'),5],[sid('Amaretto'),2]],
     'Aperol Margarita':      [[sid('Aperol'),2],[sid('Don Julio'),4]],
     'Azumare Refresh':       [[sid("Gordon's Day Gin"),5]],
@@ -137,16 +137,16 @@ function seedDB(){
     'Caipirinha':            [[sid('Captain Morgan White'),5]],
     'Whiskey Sour':          [[sid('J&B 225'),5],[sid('Garrone Triple Sec'),2]],
     'Moscow Mule':           [[sid('Smirnoff 750'),5]],
-    'Negroni':               [[sid('Campari'),2],[sid("Gordon's Day Gin"),5],[sid('Garrone Triple Sec'),2],[sid('Garrone Rosso'),2]],
-    'Aperol Spritz':         [[sid('Aperol'),5],[sid('Prosecco'),10]],
+    'Negroni':               [[sid('Campari'),2],[sid("Gordon's Day Gin"),2],[sid('Garrone Triple Sec'),2],[sid('Garrone Rosso'),2]],
+    'Aperol Spritz':         [[sid('Aperol'),5],[sid('Prosecco'),8]],
     'Espresso Martini':      [[sid('Smirnoff 750'),5],[sid('Kahlua'),2]],
     'Pornstar Martini':      [[sid('Smirnoff 750'),5],[sid('Prosecco'),5]],
     'Long Island Iced Tea':  [[sid('Smirnoff 750'),2],[sid("Gordon's Day Gin"),2],[sid('Havana Club'),2],[sid('Don Julio'),1],[sid('Garrone Triple Sec'),1]],
-    // sangria (4 lezzet de aynı reçete)
-    'Ananas':  [[sid("Gordon's Day Gin"),20],[sid('Pinot Grigio'),25],[sid('Pinot Grigio Rose'),25]],
-    'Kavun':   [[sid("Gordon's Day Gin"),20],[sid('Pinot Grigio'),25],[sid('Pinot Grigio Rose'),25]],
-    'Çilek':   [[sid("Gordon's Day Gin"),20],[sid('Pinot Grigio'),25],[sid('Pinot Grigio Rose'),25]],
-    'Şeftali': [[sid("Gordon's Day Gin"),20],[sid('Pinot Grigio'),25],[sid('Pinot Grigio Rose'),25]],
+    // sangria (1LT, 4 lezzet de aynı reçete)
+    'Ananas':  [[sid('Smirnoff 750'),12],[sid('Campari'),6]],
+    'Kavun':   [[sid('Smirnoff 750'),12],[sid('Campari'),6]],
+    'Çilek':   [[sid('Smirnoff 750'),12],[sid('Campari'),6]],
+    'Şeftali': [[sid('Smirnoff 750'),12],[sid('Campari'),6]],
     // şişe kokteyl (1LT = 4 porsiyon, tek porsiyon reçetesinin 4 katı). Sunset reçetesi henüz belirlenmedi.
     'Azumare Refresh (Şişe 1LT)':     [[sid("Gordon's Day Gin"),20]],
     'Long Island Ice Tea (Şişe 1LT)': [[sid('Smirnoff 750'),8],[sid("Gordon's Day Gin"),8],[sid('Havana Club'),8],[sid('Don Julio'),4],[sid('Garrone Triple Sec'),4]],

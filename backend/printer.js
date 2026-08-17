@@ -36,12 +36,19 @@ async function openPrinterDevice(device){
 
 async function pairPrinter(){
   if(!printerSupported()){ toast('Bu tarayıcı/cihaz USB yazıcı bağlantısını desteklemiyor','err'); return; }
+  let device;
   try{
-    const device = await navigator.usb.requestDevice({filters:[]});
+    device = await navigator.usb.requestDevice({filters:[]});
+  }catch(e){ toast('Yazıcı seçilmedi','err'); if(typeof render==='function') render(); return; }
+  try{
     await openPrinterDevice(device);
     localStorage.setItem(PRN_KEY, JSON.stringify({vendorId:device.vendorId, productId:device.productId}));
     toast('Yazıcı bağlandı: '+(device.productName||'USB Yazıcı')+' ✓','ok');
-  }catch(e){ toast('Yazıcı seçilmedi veya bağlanamadı','err'); }
+  }catch(e){
+    /* işletim sistemi (ör. Android'in kendi USB yazıcı desteği) arayüzü zaten
+       tutuyor olabilir — gerçek hatayı göster ki uzaktan teşhis edilebilsin */
+    toast('Yazıcıya bağlanılamadı: '+(e&&e.message?e.message:e), 'err');
+  }
   if(typeof render==='function') render();
 }
 async function tryReconnectPrinter(){
