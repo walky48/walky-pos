@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE = 'walky-v5';
+const CACHE = 'walky-v6';
 const ASSETS = [
   './',
   './index.html',
@@ -14,6 +14,7 @@ const ASSETS = [
   './backend/state.js',
   './backend/logic.js',
   './backend/sync.js',
+  './backend/printer.js',
   './ui/js/common.js',
   './ui/js/login.js',
   './ui/js/kasa.js',

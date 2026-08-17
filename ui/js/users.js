@@ -10,7 +10,22 @@ function viewUsers(){
       <div><h1>Kullanıcılar</h1><div class="sub">Personel hesapları ve rolleri</div></div>
       <button class="btn accent" onclick="openAddUser()">+ Yeni Kullanıcı</button></div>
     <table class="dt"><thead><tr><th>Ad</th><th>Kullanıcı Adı</th><th>Rol</th><th></th></tr></thead><tbody>${rows}</tbody></table>
-    ${syncPanelHTML()}`;
+    ${syncPanelHTML()}
+    ${printerPanelHTML()}`;
+}
+function printerPanelHTML(){
+  const supported = typeof printerSupported==='function' && printerSupported();
+  if(!supported){
+    return `<div class="panel mt16"><div class="st" style="margin-bottom:12px">YAZICI (USB, SESSİZ YAZDIRMA)</div>
+      <p class="muted small">Bu cihaz/tarayıcı USB yazıcı bağlantısını desteklemiyor. "Hesap Yazdır" ve "Mutfak Fişi" butonları normal yazdırma penceresini açmaya devam edecek.</p></div>`;
+  }
+  const connected = typeof printerConnected==='function' && printerConnected();
+  const saved = typeof printerSavedInfo==='function' && printerSavedInfo();
+  return `<div class="panel mt16"><div class="st" style="margin-bottom:12px">YAZICI (USB, SESSİZ YAZDIRMA)</div>
+    <div class="mini-row"><span>Durum</span><span class="v ${connected?'green':(saved?'amber':'')}">${connected?'🟢 Bağlı':(saved?'🟡 Eşleşti, bağlantı bekleniyor':'⚪ Bağlı değil')}</span></div>
+    <p class="muted tiny mt8">USB adisyon/mutfak yazıcınızı bir kere seçin — sonrasında "Hesap Yazdır" ve "Mutfak Fişi" hiçbir pencere açmadan doğrudan bu yazıcıya basar. Bağlantı kurulamazsa otomatik olarak normal yazdırma penceresine döner.</p>
+    <div class="m-actions" style="justify-content:flex-start"><button class="btn accent" onclick="pairPrinter()">🖨️ Yazıcı Seç / Değiştir</button></div>
+  </div>`;
 }
 function syncPanelHTML(){
   if(remoteMode) return '';

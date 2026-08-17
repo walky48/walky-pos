@@ -69,6 +69,7 @@ if(!db.testDataCleared){
   db.testDataCleared=true;
 }
 initSync();
+if(typeof tryReconnectPrinter==='function') tryReconnectPrinter();
 remoteResume().then(resumed=>{
   if(!resumed){ saveDB(); render(); }
 });
