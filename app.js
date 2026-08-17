@@ -62,6 +62,12 @@ if(!db.adminUsernameRenamed){
   if(admin) admin.username='bahar';
   db.adminUsernameRenamed=true;
 }
+// test verileri temizlendi (satışlar, gün sonu geçmişi, kasa kontrolleri, cari, stok miktarları) — menüye dokunulmadı, tek seferlik
+if(!db.testDataCleared){
+  db.sales=[]; db.dayHistory=[]; db.floatChecks=[]; db.cari=[]; db.stockLog=[];
+  db.stock.forEach(s=>{ s.qty=0; });
+  db.testDataCleared=true;
+}
 initSync();
 remoteResume().then(resumed=>{
   if(!resumed){ saveDB(); render(); }
