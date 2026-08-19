@@ -33,7 +33,7 @@ function prodGridHTML(){
   if(!list.length) return `<div class="muted" style="grid-column:1/-1;padding:24px 4px">Ürün bulunamadı.</div>`;
   return list.map(m=>`<button class="prod" onclick="addItem('${m.id}')">
     <span class="prod-ic">🍽️</span>
-    <span class="prod-nm">${esc(m.name)}</span>
+    <span class="prod-nm">${esc(m.name)}${m.variants?' <b class="prod-opt" title="Seçenekli ürün">●</b>':''}</span>
     <span class="prod-pr">${fmt(m.price[t.currency],t.currency)}</span>
     ${t.currency!=='TL'?`<span class="prod-tl">${fmt(m.price[t.currency]*rateOf(t.currency))}</span>`:''}
   </button>`).join('');
@@ -44,12 +44,12 @@ function renderOrderPanel(){const p=$('#orderPanel'); if(p) p.innerHTML=orderPan
 function orderPanelHTML(){
   const t=getTable(activeTableId), c=t.currency, tot=calcTotals(t);
   const kCount=t.items.reduce((a,i)=>KITCHEN_CATS.includes(i.cat)?a+(i.qty-i.sent):a,0);
-  const lines=t.items.length ? t.items.map(i=>`<div class="oline">
+  const lines=t.items.length ? t.items.map(i=>{const lk=i.lid||i.mid; return `<div class="oline">
       <span class="n">${esc(i.name)}${c!=='TL'?`<span class="sub-tl">${fmt(i.unit*rateOf(c))} / adet</span>`:''}</span>
-      <span class="qty"><button onclick="decItem('${i.mid}')">−</button><span class="q">${i.qty}</span><button onclick="addItem('${i.mid}')">+</button></span>
+      <span class="qty"><button onclick="decLine('${lk}')">−</button><span class="q">${i.qty}</span><button onclick="incLine('${lk}')">+</button></span>
       <span class="p">${fmt(i.qty*i.unit,c)}${c!=='TL'?`<span class="sub-tl">${fmt(i.qty*i.unit*rateOf(c))}</span>`:''}</span>
-      <button class="x" title="Kaldır" onclick="removeItem('${i.mid}')">✕</button>
-    </div>`).join('')
+      <button class="x" title="Kaldır" onclick="removeLine('${lk}')">✕</button>
+    </div>`;}).join('')
     : `<div class="empty-o">Henüz ürün eklenmedi.<br>Soldaki menüden ürün seçin.</div>`;
   const dLabel=t.complimentary ? `🎁 İkram — ${esc(t.complimentary.name)}` : (t.discount ? (t.discount.type==='pct'?`İndirim (%${fmtQ(t.discount.value)})`:'İndirim') : null);
   const sLabel=t.service ? (t.service.type==='pct'?`Servis Ücreti (%${fmtQ(t.service.value)})`:'Servis Ücreti') : null;
@@ -73,27 +73,54 @@ function orderPanelHTML(){
 }
 
 /* --- sipariş kalemleri --- */
+const VARIANT_ICONS={çilekli:'🍓', elmalı:'🍏', karamelli:'🍮', vanilyalı:'🍦', sade:'⚪'};
+function variantIcon(label){ return VARIANT_ICONS[String(label).toLowerCase()] || '🍽️'; }
+
 function addItem(mid){
+  const m=db.menu.find(x=>x.id===mid); if(!m) return;
+  if(m.variants && m.variants.length){ openVariantPicker(mid); return; }
+  addLine(mid, m.recipe, m.name, null);
+}
+function openVariantPicker(mid){
+  const m=db.menu.find(x=>x.id===mid); if(!m) return;
+  const cards=m.variants.map((v,idx)=>`<button class="cur-card" onclick="addItemVariant('${mid}',${idx})">
+      <span class="cur-sym">${variantIcon(v.label)}</span>${esc(v.label)}</button>`).join('');
+  showModal(`<div class="m-head"><h3>${esc(m.name)} <span class="muted small" style="font-weight:500">&nbsp;seçenek seçin</span></h3>
+    <button class="icon-b" onclick="closeModal()">✕</button></div>
+    <div class="cur-grid">${cards}</div>`,true);
+}
+function addItemVariant(mid, idx){
+  const m=db.menu.find(x=>x.id===mid); const v=m&&m.variants[idx]; if(!m||!v) return;
+  addLine(mid, [...m.recipe, ...v.extra], m.name+' — '+v.label, v.label);
+  closeModal();
+}
+function addLine(mid, recipe, name, variant){
   const t=getTable(activeTableId); const m=db.menu.find(x=>x.id===mid); if(!t||!m) return;
-  const warn=applyRecipe(m,1);
-  const line=t.items.find(i=>i.mid===mid);
+  const warn=applyRecipe({recipe},1);
+  const line=t.items.find(i=>i.mid===mid && (i.variant||null)===variant);
   if(line) line.qty++;
-  else t.items.push({mid, name:m.name, cat:m.cat, qty:1, unit:m.price[t.currency], sent:0});
+  else t.items.push({lid:uid(), mid, name, cat:m.cat, qty:1, unit:m.price[t.currency], sent:0, variant, recipe});
   if(warn) toast(m.name+' için stok eksiye düştü!','err');
   saveDB(); renderOrderPanel();
 }
-function decItem(mid){
-  const t=getTable(activeTableId); const line=t.items.find(i=>i.mid===mid); if(!line) return;
-  const m=db.menu.find(x=>x.id===mid);
-  if(m) applyRecipe(m,-1);
+function findLine(lid){ return getTable(activeTableId).items.find(i=>(i.lid||i.mid)===lid); }
+function lineRecipe(line){ if(line.recipe) return line.recipe; const m=db.menu.find(x=>x.id===line.mid); return m?m.recipe:[]; }
+function incLine(lid){
+  const line=findLine(lid); if(!line) return;
+  applyRecipe({recipe:lineRecipe(line)},1);
+  line.qty++;
+  saveDB(); renderOrderPanel();
+}
+function decLine(lid){
+  const t=getTable(activeTableId); const line=findLine(lid); if(!line) return;
+  applyRecipe({recipe:lineRecipe(line)},-1);
   line.qty--; if(line.sent>line.qty) line.sent=line.qty;
   if(line.qty<=0) t.items=t.items.filter(i=>i!==line);
   saveDB(); renderOrderPanel();
 }
-function removeItem(mid){
-  const t=getTable(activeTableId); const line=t.items.find(i=>i.mid===mid); if(!line) return;
-  const m=db.menu.find(x=>x.id===mid);
-  if(m) applyRecipe(m,-line.qty);
+function removeLine(lid){
+  const t=getTable(activeTableId); const line=findLine(lid); if(!line) return;
+  applyRecipe({recipe:lineRecipe(line)},-line.qty);
   t.items=t.items.filter(i=>i!==line);
   saveDB(); renderOrderPanel();
 }
@@ -191,7 +218,7 @@ function cancelTableAsk(){
 }
 function cancelTable(){
   const t=getTable(activeTableId);
-  t.items.forEach(i=>{ const m=db.menu.find(x=>x.id===i.mid); if(m) applyRecipe(m,-i.qty); });
+  t.items.forEach(i=>applyRecipe({recipe:lineRecipe(i)},-i.qty));
   resetTable(t); saveDB(); closeModal(); view='tables'; render(); toast('Masa iptal edildi, stok geri yüklendi','ok');
 }
 function resetTable(t){

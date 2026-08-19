@@ -37,7 +37,7 @@ function seedDB(){
     ['Azumare Special','İmza Kokteyller',750],['Azumare Passion','İmza Kokteyller',750],['Azumare Chilli Passion','İmza Kokteyller',750],
     ['Chilli Negroni','İmza Kokteyller',750],['NO1','İmza Kokteyller',750],['Aperol Margarita','İmza Kokteyller',750],['Azumare Refresh','İmza Kokteyller',750],
     ['Lynchburg Lemonade','Classic Kokteyl',750],['Margarita','Classic Kokteyl',750],
-    ['Mojito (Çilekli)','Classic Kokteyl',750],['Mojito (Elmalı)','Classic Kokteyl',750],
+    ['Mojito','Classic Kokteyl',750],
     ['Caipirinha','Classic Kokteyl',750],['Whiskey Sour','Classic Kokteyl',750],['Moscow Mule','Classic Kokteyl',750],
     ['Negroni','Classic Kokteyl',750],['Aperol Spritz','Classic Kokteyl',750],['Espresso Martini','Classic Kokteyl',750],
     ['Pornstar Martini','Classic Kokteyl',750],['Long Island Iced Tea','Classic Kokteyl',750],
@@ -47,12 +47,12 @@ function seedDB(){
     ['Beyaz Şarap (Pinot Grigio)','Kadeh Şaraplar',450],['Kırmızı Şarap (Pasqua Merlot)','Kadeh Şaraplar',450],
     ['Roze Şarap (Pinot Grigio Rose)','Kadeh Şaraplar',450],['Prosecco','Kadeh Şaraplar',600],
     ['Espresso','Soft İçecekler',250],['Americano','Soft İçecekler',250],['Cappuccino','Soft İçecekler',300],['Latte','Soft İçecekler',300],
-    ['Ice Latte (Sade)','Soft İçecekler',400],['Ice Latte (Karamelli)','Soft İçecekler',400],['Ice Latte (Vanilyalı)','Soft İçecekler',400],
+    ['Ice Latte','Soft İçecekler',400],
     ['Çay','Soft İçecekler',150],['Türk Kahvesi','Soft İçecekler',200],
     ['Cola','Soft İçecekler',250],['Fanta','Soft İçecekler',250],['Sprite','Soft İçecekler',250],['Redbull','Soft İçecekler',325],
     ['S. Pelegrino 25cl','Soft İçecekler',200],['S. Pelegrino 70cl','Soft İçecekler',475],
     ['Su 330ml','Soft İçecekler',100],['Su 750ml','Soft İçecekler',150],['Soda','Soft İçecekler',150],['Churchill','Soft İçecekler',170],
-    ['Azumare Sunset','Alkolsüz Kokteyl',500],['Alkolsüz Mojito (Çilekli)','Alkolsüz Kokteyl',500],['Alkolsüz Mojito (Elmalı)','Alkolsüz Kokteyl',500],
+    ['Azumare Sunset','Alkolsüz Kokteyl',500],['Alkolsüz Mojito','Alkolsüz Kokteyl',500],
     ['Layd Killer','Nargile',1000],['Love 66','Nargile',1000],['Pişmiş Şeftali','Nargile',1000],
     ['Double Apple','Nargile',1000],['Nikotin İçermeyen','Nargile',1000],
     ['Azumare Special Fresh','Nargile',1500],['Azumare Special Tropical','Nargile',1500],
@@ -144,8 +144,7 @@ function seedDB(){
     // classic / universal kokteyl
     'Lynchburg Lemonade':    [[sid('J&B 225'),5],[sid('Garrone Triple Sec'),2]],
     'Margarita':             [[sid('Don Julio'),5],[sid('Garrone Triple Sec'),2]],
-    'Mojito (Çilekli)':      [[sid('Captain Morgan White'),5],[sid('Çilek Püresi'),2]],
-    'Mojito (Elmalı)':       [[sid('Captain Morgan White'),5],[sid('Elma Püresi'),2]],
+    'Mojito':                [[sid('Captain Morgan White'),5]],
     'Caipirinha':            [[sid('Captain Morgan White'),5]],
     'Whiskey Sour':          [[sid('J&B 225'),5],[sid('Garrone Triple Sec'),2]],
     'Moscow Mule':           [[sid('Smirnoff 750'),5],[sid('Tonik'),1]],
@@ -154,17 +153,12 @@ function seedDB(){
     'Espresso Martini':      [[sid('Smirnoff 750'),5],[sid('Kahlua'),2]],
     'Pornstar Martini':      [[sid('Smirnoff 750'),5],[sid('Prosecco'),5]],
     'Long Island Iced Tea':  [[sid('Smirnoff 750'),7.5],[sid("Gordon's Day Gin"),7.5],[sid('Captain Morgan White'),7.5],[sid('Don Julio'),7.5],[sid('Garrone Triple Sec'),7.5]],
-    // alkolsüz kokteyller
-    'Azumare Sunset':              [[sid('Çilek Püresi'),2],[sid('Mango Püresi'),2]],
-    'Alkolsüz Mojito (Çilekli)':   [[sid('Çilek Püresi'),2]],
-    'Alkolsüz Mojito (Elmalı)':    [[sid('Elma Püresi'),2]],
+    // alkolsüz kokteyller (Alkolsüz Mojito'nun meyve seçeneği VARIANTS'ta)
+    'Azumare Sunset': [[sid('Çilek Püresi'),2],[sid('Mango Püresi'),2]],
     // kendi şişe/kutusundan 1 adet düşen sade içecekler
     'Cola':[[sid('Cola'),1]], 'Fanta':[[sid('Fanta'),1]], 'Sprite':[[sid('Sprite'),1]], 'Redbull':[[sid('Redbull'),1]],
     'S. Pelegrino 25cl':[[sid('S. Pelegrino 25cl'),1]], 'S. Pelegrino 70cl':[[sid('S. Pelegrino 70cl'),1]],
     'Su 330ml':[[sid('Su 330ml'),1]], 'Su 750ml':[[sid('Su 750ml'),1]], 'Soda':[[sid('Soda'),1]],
-    // ice latte
-    'Ice Latte (Karamelli)': [[sid('Karamel Şurubu'),2]],
-    'Ice Latte (Vanilyalı)': [[sid('Vanilya Şurubu'),2]],
     // sangria (1LT, 4 lezzet de aynı reçete)
     'Ananas':  [[sid("Gordon's Day Gin"),10],[sid('Pinot Grigio'),18],[sid('Pinot Grigio Rose'),18],[sid('Tonik'),1]],
     'Kavun':   [[sid("Gordon's Day Gin"),10],[sid('Pinot Grigio'),18],[sid('Pinot Grigio Rose'),18],[sid('Tonik'),1]],
@@ -175,6 +169,15 @@ function seedDB(){
     'Sunset (Şişe 1LT)':              [[sid('Smirnoff 750'),12],[sid('Campari'),6],[sid('Çilek Püresi'),2],[sid('Çarkıfelek Püresi'),2]],
     'Long Island Ice Tea (Şişe 1LT)': [[sid('Smirnoff 750'),28.5],[sid("Gordon's Day Gin"),28.5],[sid('Captain Morgan White'),28.5],[sid('Don Julio'),28.5],[sid('Garrone Triple Sec'),28.5]],
     'Lyncburg Lemonade (Şişe 1LT)':   [[sid('J&B 225'),20],[sid('Garrone Triple Sec'),8]]
+  };
+
+  /* ---------- seçenekli ürünler ----------
+     Garson üründe tıkladığında hangi seçenek (meyve/aroma) alındığını sorar;
+     seçilen seçeneğin "extra" reçetesi, ürünün temel reçetesine EKLENEREK düşülür. */
+  const VARIANTS={
+    'Mojito':           [{label:'Çilekli', extra:[[sid('Çilek Püresi'),2]]}, {label:'Elmalı', extra:[[sid('Elma Püresi'),2]]}],
+    'Alkolsüz Mojito':  [{label:'Çilekli', extra:[[sid('Çilek Püresi'),2]]}, {label:'Elmalı', extra:[[sid('Elma Püresi'),2]]}],
+    'Ice Latte':        [{label:'Sade', extra:[]}, {label:'Karamelli', extra:[[sid('Karamel Şurubu'),2]]}, {label:'Vanilyalı', extra:[[sid('Vanilya Şurubu'),2]]}]
   };
 
   const menu=MENU_ROWS.map(([name,cat,tl],i)=>{
@@ -191,7 +194,9 @@ function seedDB(){
         recipe=[[sid(name),1]];
       }
     }
-    return {id:'m'+(i+1), name, cat, price:{TL:tl,USD:0,EUR:0}, recipe:(recipe||[]).map(([s,q])=>({s,q}))};
+    const row={id:'m'+(i+1), name, cat, price:{TL:tl,USD:0,EUR:0}, recipe:(recipe||[]).map(([s,q])=>({s,q}))};
+    if(VARIANTS[name]) row.variants=VARIANTS[name].map(v=>({label:v.label, extra:v.extra.map(([s,q])=>({s,q}))}));
+    return row;
   });
 
   return {

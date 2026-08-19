@@ -116,6 +116,7 @@ label.fl{display:block;font-size:13px;color:#c6cddd;margin:14px 0 6px}
 .prod:hover{border-color:var(--accent);transform:translateY(-2px)}
 .prod .prod-ic{font-size:19px;opacity:.85}
 .prod .prod-nm{font-weight:700;font-size:13.5px;text-align:center}
+.prod .prod-opt{color:var(--accent);font-size:9px;vertical-align:super}
 .prod .prod-pr{color:var(--accent);font-weight:800}
 .prod .prod-tl{color:var(--muted);font-size:11.5px}
 .ord-right{border-left:1px solid var(--border);background:#101627;display:flex;flex-direction:column;min-height:0}

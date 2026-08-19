@@ -78,8 +78,8 @@ if(!db.recipeFix1Applied){
   });
   db.recipeFix1Applied=true;
 }
-// içecek/kokteyl malzemesi stokları eklendi (kola, meşrubat, şurup, püre...); Mojito/Ice Latte/Alkolsüz Kokteyl
-// çeşitlere ayrıldı; etkilenen kokteyl/sangria reçeteleri güncellendi — tek seferlik
+// içecek/kokteyl malzemesi stokları eklendi (kola, meşrubat, şurup, püre...); Azumare Sunset eklendi;
+// etkilenen kokteyl/sangria reçeteleri güncellendi — tek seferlik
 if(!db.stockDrinksAdded){
   const sd=seedDB();
   const byName=(arr,n)=>arr.find(x=>x.name===n);
@@ -90,14 +90,11 @@ if(!db.stockDrinksAdded){
       if(s) db.stock.push({...s});
     }
   });
-  db.menu=db.menu.filter(m=>!['Mojito','Ice Latte','Alkolsüz Kokteyl'].includes(m.name));
-  ['Mojito (Çilekli)','Mojito (Elmalı)','Ice Latte (Sade)','Ice Latte (Karamelli)','Ice Latte (Vanilyalı)',
-   'Azumare Sunset','Alkolsüz Mojito (Çilekli)','Alkolsüz Mojito (Elmalı)'].forEach(name=>{
-    if(!byName(db.menu,name)){
-      const m=byName(sd.menu,name);
-      if(m) db.menu.push({id:uid(), name:m.name, cat:m.cat, price:{...m.price}, recipe:m.recipe.map(r=>({...r}))});
-    }
-  });
+  db.menu=db.menu.filter(m=>m.name!=='Alkolsüz Kokteyl');
+  if(!byName(db.menu,'Azumare Sunset')){
+    const m=byName(sd.menu,'Azumare Sunset');
+    if(m) db.menu.push({id:uid(), name:m.name, cat:m.cat, price:{...m.price}, recipe:m.recipe.map(r=>({...r}))});
+  }
   ['Azumare Passion','Azumare Chilli Passion','NO1','Aperol Margarita','Moscow Mule','Aperol Spritz',
    'Long Island Iced Tea','Long Island Ice Tea (Şişe 1LT)','Sunset (Şişe 1LT)','Ananas','Kavun','Çilek','Şeftali',
    'Cola','Fanta','Sprite','Redbull','S. Pelegrino 25cl','S. Pelegrino 70cl','Su 330ml','Su 750ml','Soda'].forEach(name=>{
@@ -105,6 +102,22 @@ if(!db.stockDrinksAdded){
     if(src && dst) dst.recipe=src.recipe.map(r=>({...r}));
   });
   db.stockDrinksAdded=true;
+}
+// Mojito / Ice Latte / Alkolsüz Mojito artık tek ürün + tıklayınca açılan seçenek (meyve/aroma)
+// penceresi ile satılıyor; önceki oturumda ayrı satır olarak eklenmiş çeşitler varsa birleştirilir — tek seferlik
+if(!db.menuVariantsAdded){
+  const sd=seedDB();
+  const byName=(arr,n)=>arr.find(x=>x.name===n);
+  db.menu=db.menu.filter(m=>!['Mojito (Çilekli)','Mojito (Elmalı)','Ice Latte (Sade)','Ice Latte (Karamelli)','Ice Latte (Vanilyalı)',
+    'Alkolsüz Mojito (Çilekli)','Alkolsüz Mojito (Elmalı)'].includes(m.name));
+  ['Mojito','Ice Latte','Alkolsüz Mojito'].forEach(name=>{
+    const src=byName(sd.menu,name); if(!src) return;
+    let dst=byName(db.menu,name);
+    if(!dst){ dst={id:uid(), name:src.name, cat:src.cat, price:{...src.price}}; db.menu.push(dst); }
+    dst.recipe=src.recipe.map(r=>({...r}));
+    dst.variants=src.variants.map(v=>({label:v.label, extra:v.extra.map(e=>({...e}))}));
+  });
+  db.menuVariantsAdded=true;
 }
 initSync();
 if(typeof tryReconnectPrinter==='function') tryReconnectPrinter();
