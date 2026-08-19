@@ -13,6 +13,7 @@ function orderHTML(){
       <span class="badge cur">${SYM[t.currency]} ${CUR_LABEL[t.currency]}</span>
       ${t.currency!=='TL'?`<span class="mi muted tiny">Kur: 1${SYM[t.currency]} = ${fmt(rateOf(t.currency))}</span>`:''}
       <span style="flex:1"></span>
+      <button class="btn sm" onclick="openFreeItemModal()">+ Serbest Ürün</button>
       <button class="btn red sm" onclick="cancelTableAsk()">Masayı İptal Et</button>
       <button class="icon-b" style="font-size:18px" title="Masa planına dön" onclick="view='tables';render()">✕</button>
     </div>
@@ -206,6 +207,31 @@ function applyRename(clear){
   const t=getTable(activeTableId);
   t.customName = clear ? null : ($('#rnVal').value.trim() || null);
   saveDB(); closeModal(); render();
+}
+
+/* --- menüde olmayan, serbest fiyatlı ürün ekleme --- */
+function openFreeItemModal(){
+  const t=getTable(activeTableId);
+  showModal(`<div class="m-head"><h3>Serbest Ürün Ekle</h3><button class="icon-b" onclick="closeModal()">✕</button></div>
+    <p class="muted small">Menüde olmayan bir sipariş için isim ve fiyat girin.</p>
+    <label class="fl">Ürün Adı</label>
+    <input id="fiName" class="inp" autocomplete="off">
+    <label class="fl">Fiyat (${CUR_LABEL[t.currency]})</label>
+    <input id="fiPrice" class="inp" inputmode="decimal">
+    <div class="m-actions">
+      <button class="btn ghost" onclick="closeModal()">İptal</button>
+      <button class="btn accent" onclick="addFreeItem()">Ekle</button>
+    </div>`);
+  $('#fiName').focus();
+}
+function addFreeItem(){
+  const t=getTable(activeTableId);
+  const name=$('#fiName').value.trim();
+  const price=num($('#fiPrice').value);
+  if(!name){toast('Ürün adı girin','err');return}
+  if(price<=0){toast('Geçerli bir fiyat girin','err');return}
+  t.items.push({lid:uid(), mid:null, name, cat:'Diğer', qty:1, unit:price, sent:0, variant:null, recipe:[]});
+  saveDB(); closeModal(); renderOrderPanel(); toast(name+' eklendi ✓','ok');
 }
 
 /* --- masa iptali --- */

@@ -20,6 +20,7 @@ if(!db.stockLog) db.stockLog=[];
 if(!db.dayHistory) db.dayHistory=[];
 if(!db.cari) db.cari=[];
 if(!db.floatChecks) db.floatChecks=[];
+if(!db.expenses) db.expenses=[];
 if(!db.menuRealSeeded){
   db.menu=seedDB().menu;
   db.menuRealSeeded=true;

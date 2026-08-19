@@ -228,6 +228,7 @@ function seedDB(){
     sales:[],
     cari:[],
     stockLog:[],
+    expenses:[],
     day:{open:false, date:null, openingFloat:0, openedAt:null, openedBy:null, lastNextFloat:0},
     dayHistory:[],
     floatChecks:[]

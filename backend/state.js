@@ -10,6 +10,7 @@ let tableFilter = 'all';
 let stockFilter = 'all';
 let payState = null;
 let statsFrom = iso(), statsTo = iso(), statsCustom = false;
+let gidFrom = weekStartISO(), gidTo = iso(), gidCustom = false;
 let sidebarOpen = false;
 
 function getTable(id){return db.tables.find(t=>t.id===id)}

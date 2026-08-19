@@ -4,6 +4,7 @@ function navItems(){
   const r=user.role, items=[];
   if(r==='garson'||r==='admin') items.push(['tables','🪑','Masa Planı']);
   if(r==='depo'||r==='admin')   items.push(['stock','📦','Stok']);
+  if(r==='garson'||r==='depo'||r==='admin') items.push(['expenses','🧾','Giderler']);
   if(r==='muhasebe'||r==='admin') items.push(['stats','📊','İstatistikler'],['cari','📒','Cari Hesaplar']);
   if(r==='admin') items.push(['menu','🍽️','Menü'],['users','👥','Kullanıcılar']);
   return items;
@@ -22,6 +23,7 @@ function layoutHTML(){
   let content='';
   if(view==='tables') content=viewTables();
   else if(view==='stock') content=viewStock();
+  else if(view==='expenses') content=viewGiderler();
   else if(view==='stats') content=viewStats();
   else if(view==='cari') content=viewCari();
   else if(view==='menu') content=viewMenu();

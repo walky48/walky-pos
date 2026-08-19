@@ -37,6 +37,7 @@ function adoptState(payload){
   if(!db.dayHistory) db.dayHistory=[];
   if(!db.cari) db.cari=[];
   if(!db.floatChecks) db.floatChecks=[];
+  if(!db.expenses) db.expenses=[];
   syncServerRev = payload.rev;
   syncLastOkRev = db.rev||0;
   if(!remoteMode){
@@ -179,6 +180,7 @@ function enterRemoteMode(statePayload){
   if(!db.dayHistory) db.dayHistory=[];
   if(!db.cari) db.cari=[];
   if(!db.floatChecks) db.floatChecks=[];
+  if(!db.expenses) db.expenses=[];
   syncServerRev = statePayload.rev||0;
   syncLastOkRev = db.rev||0;
   /* patron = uygulama içinde yönetici yetkisi */
