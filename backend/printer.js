@@ -84,20 +84,37 @@ async function sendRaw(bytes){
   await usbPrinter.device.transferOut(usbPrinter.epOut, bytes);
 }
 
+/* ---------- Türkçe karakterler için WPC1254 (Windows-1254/Turkish) kodlayıcı ----------
+   Yazıcı UTF-8 değil tek baytlık bir kod sayfası kullanıyor; ESC t 48 ile o sayfayı
+   WPC1254 (Türkçe) olarak seçip metni de aynı sayfaya göre bayt bayt kodluyoruz.
+   ı/İ/ğ/Ğ/ş/Ş dışındaki Latin-1 aralığındaki harfler (ç,ö,ü,é... ) kod noktasıyla
+   birebir örtüştüğü için doğrudan geçiyor. */
+const TR1254 = {'Ğ':0xD0,'ğ':0xF0,'İ':0xDD,'ı':0xFD,'Ş':0xDE,'ş':0xFE};
+function encodeCP1254(str){
+  const bytes=[];
+  for(const ch of String(str||'')){
+    if(TR1254[ch]!==undefined){ bytes.push(TR1254[ch]); continue; }
+    const cp = ch.codePointAt(0);
+    bytes.push(cp<256 ? cp : 0x3F);
+  }
+  return Uint8Array.from(bytes);
+}
+
 /* ---------- ESC/POS metin üretici ---------- */
 const ESC=0x1B, GS=0x1D;
 function escposFromLines(lines){
-  const enc = new TextEncoder();
-  const parts = [new Uint8Array([ESC,0x40])]; // yazıcıyı sıfırla
+  const parts = [new Uint8Array([ESC,0x40]), new Uint8Array([ESC,0x74,48])]; // sıfırla + WPC1254 (Türkçe) kod sayfası
   lines.forEach(l=>{
     const align = l.align==='c'?1 : l.align==='r'?2 : 0;
     parts.push(new Uint8Array([ESC,0x61,align]));
     parts.push(new Uint8Array([ESC,0x45,l.bold?1:0]));
+    parts.push(new Uint8Array([ESC,0x4D,l.small?1:0]));
     parts.push(new Uint8Array([GS,0x21,l.big?0x11:0x00]));
-    parts.push(enc.encode((l.text||'')+'\n'));
+    parts.push(encodeCP1254((l.text||'')+'\n'));
   });
   parts.push(new Uint8Array([ESC,0x61,0]));
-  parts.push(enc.encode('\n\n\n'));
+  parts.push(new Uint8Array([ESC,0x4D,0]));
+  parts.push(encodeCP1254('\n\n\n'));
   parts.push(new Uint8Array([GS,0x56,0])); // kağıdı kes
   let total=0; parts.forEach(p=>total+=p.length);
   const out=new Uint8Array(total); let off=0;

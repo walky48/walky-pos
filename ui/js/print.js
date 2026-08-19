@@ -5,62 +5,79 @@ function doPrint(html){
   window.print();
   setTimeout(()=>{pa.innerHTML=''},800);
 }
+function receiptTotals3(t, tot){
+  const c=t.currency;
+  const totalTL  = tot.totalTL;
+  const totalEUR = c==='EUR' ? tot.total : totalTL/(db.rates.EUR||1);
+  const totalUSD = c==='USD' ? tot.total : totalTL/(db.rates.USD||1);
+  return {totalTL, totalEUR, totalUSD};
+}
 function receiptHTML(t, tot, sale){
-  const c=t.currency, r=rateOf(c);
-  const lines=t.items.map(i=>`<div class="rc-row"><span>${i.qty}x ${esc(i.name)}</span><span>${fmt(i.qty*i.unit,c)}</span></div>
-    ${c!=='TL'?`<div class="rc-sub">${fmt(i.qty*i.unit*r)}</div>`:''}`).join('');
+  const c=t.currency;
+  const {totalTL, totalEUR, totalUSD} = receiptTotals3(t, tot);
+  const lines=t.items.map(i=>`<div class="rc-row"><span>${i.qty}x ${esc(i.name)}</span><span>${fmt(i.qty*i.unit,c)}</span></div>`).join('');
   const payLbl = sale ? (sale.method==='nakit' ? 'Nakit ('+CUR_LABEL[sale.payCur]+')'
                     : sale.method==='kart' ? 'Kredi Kartı' : 'Cari: '+esc(sale.cariName)) : null;
   return `<div class="rc">
-    <div class="rc-brand">WALKY</div>
-    <div class="rc-c">Restoran Yönetim Sistemi</div>
+    <div class="rc-brand">Azumare Lounge</div>
     <div class="rc-hr"></div>
     <div class="rc-row"><span>Masa: ${esc(displayName(t))}</span><span>${trTime(Date.now())}</span></div>
     <div class="rc-row"><span>Garson: ${esc(t.openedBy||'')}</span><span>${trDate(db.day.date||iso())}</span></div>
+    <div class="rc-row"><span></span><span>${CUR_LABEL[c]}</span></div>
     <div class="rc-hr"></div>
     ${lines}
     <div class="rc-hr"></div>
     <div class="rc-row"><span>Ara Toplam</span><span>${fmt(tot.sub,c)}</span></div>
     ${tot.disc>0?`<div class="rc-row"><span>${t.complimentary?'İkram':'İndirim'}</span><span>-${fmt(tot.disc,c)}</span></div>`:''}
     ${tot.serv>0?`<div class="rc-row"><span>Servis Ücreti</span><span>+${fmt(tot.serv,c)}</span></div>`:''}
-    <div class="rc-row rc-tot"><span>TOPLAM</span><span>${fmt(tot.total,c)}</span></div>
-    ${c!=='TL'?`<div class="rc-row"><span>TL Karşılığı</span><span>${fmt(tot.totalTL)}</span></div>
-    <div class="rc-c" style="font-size:10.5px">Kur: 1${SYM[c]} = ${fmt(r)}</div>`:''}
+    <div class="rc-hr"></div>
+    <div class="rc-row rc-tot"><span>TOPLAM (TL)</span><span>${fmt(totalTL,'TL')}</span></div>
+    <div class="rc-row rc-tot"><span>TOPLAM (EUR)</span><span>${fmt(totalEUR,'EUR')}</span></div>
+    <div class="rc-row rc-tot"><span>TOPLAM (USD)</span><span>${fmt(totalUSD,'USD')}</span></div>
     ${payLbl?`<div class="rc-hr"></div><div class="rc-row"><span>Ödeme</span><span>${payLbl}</span></div>`:''}
     <div class="rc-hr"></div>
-    <div class="rc-c">Bizi tercih ettiğiniz için<br>teşekkür ederiz!</div>
+    <div class="rc-c">Afiyet olsun<br>Yine bekleriz!</div>
+    <div class="rc-foot-brand">WALKY<br>Restoran Yönetim Sistemi</div>
   </div>`;
 }
 /* ---------- USB yazıcı için düz metin satırları (receiptHTML/mutfak fişiyle aynı içerik) ---------- */
+const RC_COLS = 42; // termal kağıttaki karakter genişliği — sığmıyorsa/boşluk fazlaysa bu sayıyı değiştir
+function padLine(left, right, width){
+  width = width || RC_COLS;
+  const gap = width - left.length - right.length;
+  return gap>0 ? left+' '.repeat(gap)+right : left+' '+right;
+}
 function receiptLines(t, tot, sale){
-  const c=t.currency, r=rateOf(c);
+  const c=t.currency;
+  const {totalTL, totalEUR, totalUSD} = receiptTotals3(t, tot);
   const payLbl = sale ? (sale.method==='nakit' ? 'Nakit ('+CUR_LABEL[sale.payCur]+')'
                     : sale.method==='kart' ? 'Kredi Kartı' : 'Cari: '+sale.cariName) : null;
   const L=[
-    {text:'WALKY', align:'c', bold:true, big:true},
-    {text:'Restoran Yönetim Sistemi', align:'c'},
+    {text:'Azumare Lounge', align:'c', bold:true, big:true},
     {text:'--------------------------------'},
     {text:'Masa: '+displayName(t)+'   '+trTime(Date.now())},
     {text:'Garson: '+(t.openedBy||'')+'   '+trDate(db.day.date||iso())},
+    {text:CUR_LABEL[c], align:'r'},
     {text:'--------------------------------'}
   ];
   t.items.forEach(i=>{
-    L.push({text:i.qty+'x '+i.name+'   '+fmt(i.qty*i.unit,c)});
-    if(c!=='TL') L.push({text:fmt(i.qty*i.unit*r), align:'r'});
+    L.push({text: padLine(i.qty+'x '+i.name, fmt(i.qty*i.unit,c))});
   });
   L.push({text:'--------------------------------'});
-  L.push({text:'Ara Toplam: '+fmt(tot.sub,c)});
-  if(tot.disc>0) L.push({text:(t.complimentary?'İkram':'İndirim')+': -'+fmt(tot.disc,c)});
-  if(tot.serv>0) L.push({text:'Servis Ücreti: +'+fmt(tot.serv,c)});
-  L.push({text:'TOPLAM: '+fmt(tot.total,c), bold:true, big:true});
-  if(c!=='TL'){
-    L.push({text:'TL Karşılığı: '+fmt(tot.totalTL)});
-    L.push({text:'Kur: 1'+SYM[c]+' = '+fmt(r)});
-  }
-  if(payLbl){ L.push({text:'--------------------------------'}); L.push({text:'Ödeme: '+payLbl}); }
+  L.push({text: padLine('Ara Toplam', fmt(tot.sub,c))});
+  if(tot.disc>0) L.push({text: padLine(t.complimentary?'İkram':'İndirim', '-'+fmt(tot.disc,c))});
+  if(tot.serv>0) L.push({text: padLine('Servis Ücreti', '+'+fmt(tot.serv,c))});
   L.push({text:'--------------------------------'});
-  L.push({text:'Bizi tercih ettiğiniz için', align:'c'});
-  L.push({text:'teşekkür ederiz!', align:'c'});
+  L.push({text: padLine('TOPLAM (TL)', fmt(totalTL,'TL')), bold:true});
+  L.push({text: padLine('TOPLAM (EUR)', fmt(totalEUR,'EUR')), bold:true});
+  L.push({text: padLine('TOPLAM (USD)', fmt(totalUSD,'USD')), bold:true});
+  if(payLbl){ L.push({text:'--------------------------------'}); L.push({text: padLine('Ödeme', payLbl)}); }
+  L.push({text:'--------------------------------'});
+  L.push({text:'Afiyet olsun', align:'c'});
+  L.push({text:'Yine bekleriz!', align:'c'});
+  L.push({text:'', align:'c'});
+  L.push({text:'WALKY', align:'c', small:true});
+  L.push({text:'Restoran Yönetim Sistemi', align:'c', small:true});
   return L;
 }
 function kitchenLines(t, pend){
