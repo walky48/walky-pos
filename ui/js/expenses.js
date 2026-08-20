@@ -4,15 +4,19 @@ function groupExpenses(list){
   const g={};
   list.forEach(e=>{
     const k=e.name+'|'+e.unit;
-    if(!g[k]) g[k]={name:e.name, unit:e.unit, total:0};
-    g[k].total+=e.qty;
+    if(!g[k]) g[k]={name:e.name, unit:e.unit, total:0, cost:0};
+    g[k].total+=e.qty; g[k].cost+=(e.price||0);
   });
   return Object.values(g).sort((a,b)=>a.name.localeCompare(b.name,'tr'));
 }
 function expenseGroupRows(list){
   const g=groupExpenses(list);
   if(!g.length) return '<div class="muted small">Bu aralıkta gider kaydı yok.</div>';
-  return g.map(x=>`<div class="mini-row"><span>${esc(x.name)}</span><span class="v">${fmtQ(x.total)} ${esc(x.unit)}</span></div>`).join('');
+  const rows=g.map(x=>`<div class="mini-row"><span>${esc(x.name)}</span>
+      <span class="v">${fmtQ(x.total)} ${esc(x.unit)} <span class="muted">·</span> ${fmt(x.cost)}</span></div>`).join('');
+  const sum=list.reduce((a,e)=>a+(e.price||0),0);
+  return rows+`<div class="mini-row" style="margin-top:6px;padding-top:10px;border-top:1px solid var(--border2)">
+      <span><b>Toplam Gider</b></span><span class="v accent"><b>${fmt(sum)}</b></span></div>`;
 }
 function viewGiderler(){
   const inRange=(e,f,t)=>{const d=iso(new Date(e.ts)); return d>=f && d<=t;};
@@ -24,6 +28,7 @@ function viewGiderler(){
       <td data-lbl="Tarih/Saat">${trDT(e.ts)}</td>
       <td data-lbl="Ürün"><b>${esc(e.name)}</b></td>
       <td class="num" data-lbl="Miktar">${fmtQ(e.qty)} ${esc(e.unit)}</td>
+      <td class="num" data-lbl="Fiyat">${fmt(e.price||0)}</td>
       <td class="muted" data-lbl="Giren">${esc(e.by)}</td>
     </tr>`).join('');
   return `<div class="page-head">
@@ -45,7 +50,7 @@ function viewGiderler(){
       <div class="panel"><div class="st" style="margin-bottom:10px">TOPLAM (${trDate(listF)}${listF!==listT?' – '+trDate(listT):''})</div>${expenseGroupRows(rangeList)}</div>
       <div class="panel">
         <div class="st" style="margin-bottom:10px">KAYITLAR</div>
-        ${logRows?`<table class="dt"><thead><tr><th>Tarih/Saat</th><th>Ürün</th><th class="right">Miktar</th><th>Giren</th></tr></thead><tbody>${logRows}</tbody></table>`
+        ${logRows?`<table class="dt"><thead><tr><th>Tarih/Saat</th><th>Ürün</th><th class="right">Miktar</th><th class="right">Fiyat</th><th>Giren</th></tr></thead><tbody>${logRows}</tbody></table>`
               :'<div class="muted small">Bu aralıkta gider kaydı yok.</div>'}
       </div>
     </div>`;
@@ -67,6 +72,8 @@ function openExpenseModal(){
       <button class="seg-b" data-t="Adet" onclick="segSel(this)">Adet</button>
       <button class="seg-b" data-t="cl" onclick="segSel(this)">cl</button>
     </div>
+    <label class="fl">Fiyat (₺)</label>
+    <input id="exPrice" class="inp" inputmode="decimal">
     <div class="m-actions">
       <button class="btn ghost" onclick="closeModal()">Vazgeç</button>
       <button class="btn accent" onclick="addExpense()">Ekle</button>
@@ -76,9 +83,11 @@ function openExpenseModal(){
 function addExpense(){
   const name=$('#exName').value.trim();
   const qty=num($('#exQty').value);
+  const price=num($('#exPrice').value);
   const unit=document.querySelector('#exSeg .on').dataset.t;
   if(!name){toast('Ürün adı girin','err');return}
   if(qty<=0){toast('Geçerli bir miktar girin','err');return}
-  db.expenses.push({id:uid(), name, qty, unit, by:user.name, ts:Date.now()});
+  if(price<=0){toast('Geçerli bir fiyat girin','err');return}
+  db.expenses.push({id:uid(), name, qty, unit, price, by:user.name, ts:Date.now()});
   saveDB(); closeModal(); render(); toast(name+' eklendi ✓','ok');
 }
