@@ -120,6 +120,13 @@ if(!db.menuVariantsAdded){
   });
   db.menuVariantsAdded=true;
 }
+// Bahar ile aynı yetkilere sahip ikinci bir yönetici hesabı (Mahmut) eklendi — tek seferlik
+if(!db.mahmutAdminAdded){
+  if(!db.users.some(u=>u.username==='mahmut')){
+    db.users.push({id:uid(), username:'mahmut', pass:'9274', name:'Mahmut', role:'admin'});
+  }
+  db.mahmutAdminAdded=true;
+}
 initSync();
 if(typeof tryReconnectPrinter==='function') tryReconnectPrinter();
 remoteResume().then(resumed=>{

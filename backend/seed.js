@@ -202,6 +202,7 @@ function seedDB(){
   return {
     users:[
       {id:'u1',username:'bahar',   pass:'7811',name:'Bahar',          role:'admin'},
+      {id:'u2',username:'mahmut',  pass:'9274',name:'Mahmut',         role:'admin'},
       {id:'u3',username:'depo',    pass:'2207',name:'Depo Sorumlusu', role:'depo'},
       {id:'u4',username:'muhasebe',pass:'4823',name:'Funda',          role:'muhasebe'},
       {id:'u5',username:'kadir',   pass:'1234',name:'Kadir',          role:'garson'},
