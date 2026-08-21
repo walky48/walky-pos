@@ -36,7 +36,7 @@ function receiptHTML(t, tot, sale){
     <div class="rc-row rc-tot"><span>TOPLAM (USD)</span><span>${fmt(totalUSD,'USD')}</span></div>
     ${payLbl?`<div class="rc-hr"></div><div class="rc-row"><span>Ödeme</span><span>${payLbl}</span></div>`:''}
     <div class="rc-hr"></div>
-    <div class="rc-c">Afiyet olsun<br>Yine bekleriz!</div>
+    <div class="rc-c">Afiyet olsun<br>Yine bekleriz!<br>Hope to see you again</div>
     <div class="rc-foot-brand">WALKY<br>Restoran Yönetim Sistemi</div>
   </div>`;
 }
@@ -44,7 +44,12 @@ function receiptHTML(t, tot, sale){
 const RC_COLS = 42; // termal kağıttaki karakter genişliği — sığmıyorsa/boşluk fazlaysa bu sayıyı değiştir
 function padLine(left, right, width){
   width = width || RC_COLS;
-  const gap = width - left.length - right.length;
+  // ₺/€ gibi simgeler yazıcıda "TL"/"EUR" olarak basıldığı için (bkz.
+  // backend/printer.js printLen) hizalama .length değil gerçek basılı
+  // genişliğe göre hesaplanmalı — aksi halde fiyat satırları kayar
+  const llen = typeof printLen==='function' ? printLen(left) : left.length;
+  const rlen = typeof printLen==='function' ? printLen(right) : right.length;
+  const gap = width - llen - rlen;
   return gap>0 ? left+' '.repeat(gap)+right : left+' '+right;
 }
 function receiptLines(t, tot, sale){
@@ -75,6 +80,7 @@ function receiptLines(t, tot, sale){
   L.push({text:'--------------------------------'});
   L.push({text:'Afiyet olsun', align:'c'});
   L.push({text:'Yine bekleriz!', align:'c'});
+  L.push({text:'Hope to see you again', align:'c'});
   L.push({text:'', align:'c'});
   L.push({text:'WALKY', align:'c', small:true});
   L.push({text:'Restoran Yönetim Sistemi', align:'c', small:true});

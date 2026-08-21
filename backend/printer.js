@@ -108,14 +108,35 @@ function encodeReceiptText(str){
   }
   return Uint8Array.from(bytes);
 }
+/* bir karakter dizisinin gerçek yazıcıda kaç karakter genişliği kaplayacağı
+   (₺→"TL", €→"EUR" gibi çevirilerin uzunluk değiştirdiği durumlar dahil) —
+   sütun hizalaması yapan padLine() bunu kullanmazsa fiyat satırları kayar */
+function printLen(str){
+  let n=0;
+  for(const ch of String(str||'')){
+    n += (TR_ASCII[ch]!==undefined) ? TR_ASCII[ch].length : 1;
+  }
+  return n;
+}
 
 /* ---------- ESC/POS metin üretici ----------
-   Normal satırlar bir boy büyütüldü (çift yükseklik); kağıt genişliği
-   aynı kaldığı için sütun hizalaması (padLine) bozulmuyor. En kısa fiş
-   (tek ürün) bile en az ~10cm çıksın diye altta TAIL_BLANK_LINES kadar
-   boş, büyük satır bırakılıyor — çok/az geldiyse tek bu sayıyı değiştir. */
+   Normal satırlar bir boy büyütüldü (çift yükseklik); sütun hizalaması
+   (padLine, ui/js/print.js) artık gerçek basılı genişliği (printLen)
+   kullandığı için ₺/€ gibi çevrimde uzayan simgeler kaymaya yol açmıyor.
+
+   En kısa fiş (tek ürün) bile en az ~TARGET_MM uzunlukta çıksın diye altta
+   boşluk bırakılıyor — ama bu boşluk SABİT değil: içerik (ürün sayısı)
+   arttıkça boşluktan düşülüyor, yani toplam uzunluk içerik TARGET_MM'i
+   geçene kadar hep aynı kalır; içerik bu sınırı geçtiğinde boşluk sıfıra
+   iner ve fiş doğal uzunluğunda basılır. MM_PER_LINE_* değerleri en
+   yaygın ESC/POS varsayılanına göre tahmindir (fiziksel yazıcıda santim
+   cetveliyle ölçülmeden kesinleşemez) — gerçek çıktı hedeften kısa/uzun
+   gelirse yalnızca bu sabitleri ayarla. */
 const ESC=0x1B, GS=0x1D;
-const TAIL_BLANK_LINES = 10;
+const TARGET_MM = 120; // hedef minimum fiş uzunluğu (12cm)
+const MM_PER_LINE_NORMAL = 3.0;  // Font A, 1x satır yüksekliği (~24 nokta @203dpi, yaygın varsayılan)
+const MM_PER_LINE_DOUBLE = 6.0;  // GS!0x01 / GS!0x11 (çift yükseklik) satır — gövde metninin tamamı bu boyda
+const MM_PER_LINE_SMALL  = 2.1;  // Font B (küçük — sadece WALKY altyazısı, ~17 nokta @203dpi)
 function escposFromLines(lines){
   const parts = [new Uint8Array([ESC,0x40])]; // yazıcıyı sıfırla
   lines.forEach(l=>{
@@ -127,10 +148,12 @@ function escposFromLines(lines){
     parts.push(new Uint8Array([GS,0x21,size]));
     parts.push(encodeReceiptText((l.text||'')+'\n'));
   });
+  const contentMM = lines.reduce((s,l)=>s+(l.small?MM_PER_LINE_SMALL:MM_PER_LINE_DOUBLE),0);
+  const tailLines = Math.max(0, Math.round((TARGET_MM-contentMM)/MM_PER_LINE_DOUBLE));
   parts.push(new Uint8Array([ESC,0x61,0]));
   parts.push(new Uint8Array([ESC,0x4D,0]));
   parts.push(new Uint8Array([GS,0x21,0x01]));
-  parts.push(encodeReceiptText('\n'.repeat(TAIL_BLANK_LINES)));
+  parts.push(encodeReceiptText('\n'.repeat(tailLines)));
   parts.push(new Uint8Array([GS,0x21,0x00]));
   parts.push(new Uint8Array([GS,0x56,0])); // kağıdı kes
   let total=0; parts.forEach(p=>total+=p.length);
