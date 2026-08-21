@@ -109,21 +109,29 @@ function encodeReceiptText(str){
   return Uint8Array.from(bytes);
 }
 
-/* ---------- ESC/POS metin üretici ---------- */
+/* ---------- ESC/POS metin üretici ----------
+   Normal satırlar bir boy büyütüldü (çift yükseklik); kağıt genişliği
+   aynı kaldığı için sütun hizalaması (padLine) bozulmuyor. En kısa fiş
+   (tek ürün) bile en az ~10cm çıksın diye altta TAIL_BLANK_LINES kadar
+   boş, büyük satır bırakılıyor — çok/az geldiyse tek bu sayıyı değiştir. */
 const ESC=0x1B, GS=0x1D;
+const TAIL_BLANK_LINES = 10;
 function escposFromLines(lines){
   const parts = [new Uint8Array([ESC,0x40])]; // yazıcıyı sıfırla
   lines.forEach(l=>{
     const align = l.align==='c'?1 : l.align==='r'?2 : 0;
+    const size = l.big ? 0x11 : (l.small ? 0x00 : 0x01); // 0x01 = normal genişlik, çift yükseklik
     parts.push(new Uint8Array([ESC,0x61,align]));
     parts.push(new Uint8Array([ESC,0x45,l.bold?1:0]));
     parts.push(new Uint8Array([ESC,0x4D,l.small?1:0]));
-    parts.push(new Uint8Array([GS,0x21,l.big?0x11:0x00]));
+    parts.push(new Uint8Array([GS,0x21,size]));
     parts.push(encodeReceiptText((l.text||'')+'\n'));
   });
   parts.push(new Uint8Array([ESC,0x61,0]));
   parts.push(new Uint8Array([ESC,0x4D,0]));
-  parts.push(encodeReceiptText('\n\n\n'));
+  parts.push(new Uint8Array([GS,0x21,0x01]));
+  parts.push(encodeReceiptText('\n'.repeat(TAIL_BLANK_LINES)));
+  parts.push(new Uint8Array([GS,0x21,0x00]));
   parts.push(new Uint8Array([GS,0x56,0])); // kağıdı kes
   let total=0; parts.forEach(p=>total+=p.length);
   const out=new Uint8Array(total); let off=0;
