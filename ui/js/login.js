@@ -4,10 +4,10 @@ function doLogin(){
   const u=$('#loginUser').value.trim(), p=$('#loginPass').value;
   const f=db.users.find(x=>x.username===u && x.pass===p);
   if(!f){toast('Kullanıcı adı veya şifre hatalı','err');return}
-  user=f; view=defaultView(f.role); tableFilter='all'; render();
+  user=f; view=defaultView(f.role); tableFilter='all'; peekMode=false; render();
 }
 function defaultView(r){return r==='depo'?'stock' : r==='muhasebe'?'stats' : 'tables'}
-function logout(){user=null; render()}
+function logout(){user=null; peekMode=false; render()}
 
 let loginTab = 'local';
 function setLoginTab(t){ loginTab=t; render(); }

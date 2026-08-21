@@ -9,6 +9,7 @@ function kasaHTML(){
     <label class="fl">Kasadaki Tutar (Kasa Fazlası)</label>
     <input id="kfVal" class="inp" inputmode="decimal" autocomplete="off">
     <button class="btn accent wide mt24" onclick="openDay()">Kasayı Aç ve Güne Başla</button>
+    ${user.role==='admin'?`<button class="btn wide mt12" onclick="peekMode=true;view='stats';render()">Kasa Açmadan Sadece Görüntüle</button>`:''}
     <button class="btn ghost wide mt12" onclick="logout()">Çıkış Yap</button>
   </div></div>`;
 }

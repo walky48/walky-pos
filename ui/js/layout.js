@@ -2,7 +2,7 @@
 
 function navItems(){
   const r=user.role, items=[];
-  if(r==='garson'||r==='admin') items.push(['tables','🪑','Masa Planı']);
+  if((r==='garson'||r==='admin') && db.day.open) items.push(['tables','🪑','Masa Planı']);
   if(r==='depo'||r==='admin')   items.push(['stock','📦','Stok']);
   if(r==='garson'||r==='depo'||r==='admin') items.push(['expenses','🧾','Giderler']);
   if(r==='muhasebe'||r==='admin') items.push(['stats','📊','İstatistikler'],['cari','📒','Cari Hesaplar']);
@@ -14,8 +14,14 @@ function toggleSidebar(open){ sidebarOpen=open; render() }
 function layoutHTML(){
   const items=navItems().map(([v,ic,lb])=>
     `<button class="nav-i ${view===v?'on':''}" onclick="navTo('${v}')"><span class="ic">${ic}</span>${lb}</button>`).join('');
-  const gunsonu=(user.role==='garson'||user.role==='admin')
+  const gunsonu=((user.role==='garson'||user.role==='admin') && db.day.open)
     ? `<button class="nav-i" onclick="sidebarOpen=false;openGunSonu()"><span class="ic">🌙</span>Gün Sonu</button>` : '';
+  const peekBar=(!db.day.open && user.role==='admin')
+    ? (remoteMode
+        ? `<div class="peek-bar">🔒 Kasa kapalı — sadece görüntüleme. Sipariş/masa işlemleri kasadan (restorandaki cihazdan) yapılmalı.</div>`
+        : `<div class="peek-bar">🔒 Kasa kapalı — sadece görüntüleme modundasınız, sipariş/masa işlemi yapılamaz.
+            <button class="btn sm accent" onclick="peekMode=false;render()">Kasayı Aç</button></div>`)
+    : '';
   const roleLbl = remoteMode
     ? (remoteSession.user.role==='patron'?'Patron':ROLES[user.role]) + ' · Uzak'
     : ROLES[user.role];
@@ -45,6 +51,6 @@ function layoutHTML(){
         <button class="icon-b" title="Çıkış" onclick="${remoteMode?'remoteLogout()':'logout()'}">⏻</button>
       </div>
     </aside>
-    <main class="main">${content}</main>
+    <main class="main">${peekBar}${content}</main>
   </div>`;
 }

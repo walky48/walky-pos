@@ -8,7 +8,9 @@ function render(){
     const pr=$('#rmPass'); if(pr) pr.onkeydown=e=>{if(e.key==='Enter')remoteLogin()};
     return;
   }
-  if((user.role==='garson'||user.role==='admin') && !db.day.open){ app.innerHTML=kasaHTML(); return; }
+  // uzak oturumlar (ör. patron telefonundan) fiziksel kasa sayımına tabi değil —
+  // sadece kasadaki fiziksel cihaz gün açılışını yapmak zorunda
+  if((user.role==='garson'||user.role==='admin') && !db.day.open && !remoteMode && !(user.role==='admin' && peekMode)){ app.innerHTML=kasaHTML(); return; }
   if(view==='order' && activeTableId){ app.innerHTML=orderHTML(); return; }
   app.innerHTML=layoutHTML();
 }
