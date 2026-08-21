@@ -6,7 +6,8 @@ function orderHTML(){
   return `<div class="ord">
     <div class="ord-head">
       <span class="tname">${esc(displayName(t))}
-        <button class="icon-b" title="Masayı yeniden adlandır" onclick="openRename()">✏️</button></span>
+        <button class="icon-b" title="Masayı yeniden adlandır" onclick="openRename()">✏️</button>
+        <button class="icon-b" title="Masayı başka bir masaya taşı" onclick="openMoveTable()">🔀</button></span>
       <span class="sep"></span>
       <span class="mi">👤 ${esc(t.openedBy||'')}</span>
       <span class="mi">⏱ ${elapsedMin(t.openedAt)} dk</span>
@@ -209,6 +210,28 @@ function applyRename(clear){
   saveDB(); closeModal(); render();
 }
 
+/* --- masayı başka bir (boş) masaya taşıma --- */
+function openMoveTable(){
+  const t=getTable(activeTableId);
+  const empties=db.tables.filter(x=>x.status==='empty');
+  if(!empties.length){toast('Taşınacak boş masa yok','err');return}
+  const cards=empties.map(x=>`<button class="cur-card" onclick="moveTableTo('${x.id}')">${esc(x.name)}</button>`).join('');
+  showModal(`<div class="m-head"><h3>Masayı Taşı <span class="muted small" style="font-weight:500">&nbsp;${esc(displayName(t))} → nereye?</span></h3>
+    <button class="icon-b" onclick="closeModal()">✕</button></div>
+    <div class="cur-grid">${cards}</div>`,true);
+}
+function moveTableTo(destId){
+  const src=getTable(activeTableId), dst=getTable(destId);
+  if(!src||!dst||dst.status!=='empty') return;
+  dst.status='open'; dst.currency=src.currency; dst.openedAt=src.openedAt; dst.openedBy=src.openedBy;
+  dst.customName=src.customName; dst.items=src.items; dst.discount=src.discount;
+  dst.service=src.service; dst.complimentary=src.complimentary;
+  resetTable(src);
+  activeTableId=destId;
+  saveDB(); closeModal(); render();
+  toast('Masa '+dst.name+' konumuna taşındı ✓','ok');
+}
+
 /* --- menüde olmayan, serbest fiyatlı ürün ekleme --- */
 function openFreeItemModal(){
   const t=getTable(activeTableId);
@@ -319,7 +342,7 @@ function completePayment(){
   if(sale.method==='cari'){
     let acc=db.cari.find(x=>x.name.toLowerCase()===sale.cariName.toLowerCase());
     if(!acc){acc={id:uid(), name:sale.cariName, entries:[]}; db.cari.push(acc);}
-    acc.entries.push({d:db.day.date, ts:Date.now(), type:'borc', amtTL:sale.totalTL, note:sale.table});
+    acc.entries.push({d:db.day.date, ts:Date.now(), type:'borc', amtTL:sale.totalTL, note:sale.table, saleId:sale.id});
   }
   if(payState.print) printReceipt(sale);
   resetTable(t); payState=null; saveDB(); closeModal();

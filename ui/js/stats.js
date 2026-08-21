@@ -23,7 +23,8 @@ function viewStats(){
       <td>${trDate(s.bd)}</td><td data-lbl="Masa"><b>${esc(s.table)}</b></td><td class="muted" data-lbl="Garson">${esc(s.waiter||'')}</td>
       <td data-lbl="Açılış">${trTime(s.openedAt)}</td><td data-lbl="Kapanış">${trTime(s.closedAt)}</td>
       <td class="num" data-lbl="Tutar">${fmt(s.totalTL)}</td><td data-lbl="Ödeme">${payLabel(s)}</td>
-      <td class="right tdact"><button class="rowbtn" onclick="orderDetail('${s.id}')">Detay</button></td></tr>`).join('');
+      <td class="right tdact"><button class="rowbtn" onclick="orderDetail('${s.id}')">Detay</button>
+        ${(user.role==='admin' && s.bd===db.day.date)?`<button class="rowbtn" style="color:var(--red);margin-left:8px" onclick="reopenSaleAsk('${s.id}')">Yeniden Aç</button>`:''}</td></tr>`).join('');
   // en çok satanlar
   const agg={};
   stR.sales.forEach(s=>s.items.forEach(i=>{
@@ -123,7 +124,44 @@ function orderDetail(id){
       ${c!=='TL'?`<div class="trow"><span>TL Karşılığı (Kur ${fmt(s.rate)})</span><b class="accent">${fmt(s.totalTL)}</b></div>`:''}
       <div class="trow"><span>Ödeme Yöntemi</span><b>${payLabel(s)}</b></div>
     </div>
-    <div class="m-actions"><button class="btn accent" onclick="closeModal()">Kapat</button></div>`);
+    <div class="m-actions">
+      ${(user.role==='admin' && s.bd===db.day.date)?`<button class="btn red" onclick="reopenSaleAsk('${s.id}')">Çeki Yeniden Aç</button>`:''}
+      <button class="btn accent" onclick="closeModal()">Kapat</button>
+    </div>`);
+}
+
+/* --- yanlışlıkla kapatılan çeki yeniden açma (sadece admin) --- */
+function reopenSaleAsk(id){
+  if(!user || user.role!=='admin') return;
+  const s=db.sales.find(x=>x.id===id); if(!s) return;
+  if(s.bd!==db.day.date){toast('Yalnızca bugünün çekleri yeniden açılabilir','err');return}
+  const empties=db.tables.filter(x=>x.status==='empty');
+  if(!empties.length){toast('Yeniden açmak için boş masa yok','err');return}
+  const cards=empties.map(x=>`<button class="cur-card" onclick="reopenSaleTo('${id}','${x.id}')">${esc(x.name)}</button>`).join('');
+  showModal(`<div class="m-head"><h3>Çeki Yeniden Aç <span class="muted small" style="font-weight:500">&nbsp;${esc(s.table)} → hangi masaya?</span></h3>
+    <button class="icon-b" onclick="closeModal()">✕</button></div>
+    <p class="muted small">Bu çek satış kaydından silinir ve kapanmadan önceki haliyle seçtiğiniz boş masaya açık sipariş olarak taşınır. Stok tekrar düşülmez (sipariş girilirken zaten düşülmüştü).</p>
+    <div class="cur-grid">${cards}</div>`,true);
+}
+function reopenSaleTo(saleId, tableId){
+  if(!user || user.role!=='admin') return;
+  const idx=db.sales.findIndex(x=>x.id===saleId); if(idx<0) return;
+  const s=db.sales[idx];
+  const dst=getTable(tableId); if(!dst||dst.status!=='empty') return;
+  dst.status='open';
+  dst.customName = (s.table!==s.origTable) ? s.table : null;
+  dst.currency=s.currency; dst.openedAt=s.openedAt; dst.openedBy=s.waiter;
+  dst.items=s.items.map(i=>({lid:uid(), mid:null, name:i.name, cat:'Diğer', qty:i.qty, unit:i.unit, sent:i.qty, variant:null, recipe:[]}));
+  dst.complimentary = s.complimentary ? {name:s.complimentary.name, by:s.complimentary.by} : null;
+  dst.discount = dst.complimentary ? {type:'pct', value:100} : (s.disc>0 ? {type:'amt', value:s.disc} : null);
+  dst.service = s.serv>0 ? {type:'amt', value:s.serv} : null;
+  if(s.method==='cari' && s.cariName){
+    const acc=db.cari.find(x=>x.name.toLowerCase()===s.cariName.toLowerCase());
+    if(acc) acc.entries=acc.entries.filter(e=>e.saleId!==s.id);
+  }
+  db.sales.splice(idx,1);
+  saveDB(); closeModal(); render();
+  toast('Çek yeniden açıldı: '+dst.name,'ok');
 }
 function exportCSV(f,t){
   const S=db.sales.filter(s=>s.bd>=f&&s.bd<=t);
