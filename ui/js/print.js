@@ -12,10 +12,18 @@ function receiptTotals3(t, tot){
   const totalUSD = c==='USD' ? tot.total : totalTL/(db.rates.USD||1);
   return {totalTL, totalEUR, totalUSD};
 }
+/* fişte fiyat gösterimi: önce sayı, sonra 2 boşluk, sonra para birimi
+   (₺ yerine yazıcı uyumluluğu için "TL" metni; € gerçek sembol olarak
+   basılır — bkz. backend/printer.js encodeReceiptText/EURO_BYTE) */
+const PRN_SUFFIX = {TL:'TL', EUR:'€', USD:'$'};
+function fmtPrn(n, cur){
+  const num = Number(n||0).toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  return num+'  '+PRN_SUFFIX[cur||'TL'];
+}
 function receiptHTML(t, tot, sale){
   const c=t.currency;
   const {totalTL, totalEUR, totalUSD} = receiptTotals3(t, tot);
-  const lines=t.items.map(i=>`<div class="rc-row"><span>${i.qty}x ${esc(i.name)}</span><span>${fmt(i.qty*i.unit,c)}</span></div>`).join('');
+  const lines=t.items.map(i=>`<div class="rc-row"><span>${i.qty}x ${esc(i.name)}</span><span>${fmtPrn(i.qty*i.unit,c)}</span></div>`).join('');
   const payLbl = sale ? (sale.method==='nakit' ? 'Nakit ('+CUR_LABEL[sale.payCur]+')'
                     : sale.method==='kart' ? 'Kredi Kartı' : 'Cari: '+esc(sale.cariName)) : null;
   return `<div class="rc">
@@ -27,13 +35,13 @@ function receiptHTML(t, tot, sale){
     <div class="rc-hr"></div>
     ${lines}
     <div class="rc-hr"></div>
-    <div class="rc-row"><span>Ara Toplam</span><span>${fmt(tot.sub,c)}</span></div>
-    ${tot.disc>0?`<div class="rc-row"><span>${t.complimentary?'İkram':'İndirim'}</span><span>-${fmt(tot.disc,c)}</span></div>`:''}
-    ${tot.serv>0?`<div class="rc-row"><span>Servis Ücreti</span><span>+${fmt(tot.serv,c)}</span></div>`:''}
+    <div class="rc-row"><span>Ara Toplam</span><span>${fmtPrn(tot.sub,c)}</span></div>
+    ${tot.disc>0?`<div class="rc-row"><span>${t.complimentary?'İkram':'İndirim'}</span><span>-${fmtPrn(tot.disc,c)}</span></div>`:''}
+    ${tot.serv>0?`<div class="rc-row"><span>Servis Ücreti</span><span>+${fmtPrn(tot.serv,c)}</span></div>`:''}
     <div class="rc-hr"></div>
-    <div class="rc-row rc-tot"><span>TOPLAM (TL)</span><span>${fmt(totalTL,'TL')}</span></div>
-    <div class="rc-row rc-tot"><span>TOPLAM (EUR)</span><span>${fmt(totalEUR,'EUR')}</span></div>
-    <div class="rc-row rc-tot"><span>TOPLAM (USD)</span><span>${fmt(totalUSD,'USD')}</span></div>
+    <div class="rc-row rc-tot"><span>TOPLAM (TL)</span><span>${fmtPrn(totalTL,'TL')}</span></div>
+    <div class="rc-row rc-tot"><span>TOPLAM (EUR)</span><span>${fmtPrn(totalEUR,'EUR')}</span></div>
+    <div class="rc-row rc-tot"><span>TOPLAM (USD)</span><span>${fmtPrn(totalUSD,'USD')}</span></div>
     ${payLbl?`<div class="rc-hr"></div><div class="rc-row"><span>Ödeme</span><span>${payLbl}</span></div>`:''}
     <div class="rc-hr"></div>
     <div class="rc-c">Afiyet olsun<br>Yine bekleriz!<br>Hope to see you again</div>
@@ -44,13 +52,17 @@ function receiptHTML(t, tot, sale){
 const RC_COLS = 42; // termal kağıttaki karakter genişliği — sığmıyorsa/boşluk fazlaysa bu sayıyı değiştir
 function padLine(left, right, width){
   width = width || RC_COLS;
-  // ₺/€ gibi simgeler yazıcıda "TL"/"EUR" olarak basıldığı için (bkz.
+  // ₺ gibi simgeler yazıcıda "TL" olarak basıldığı için (bkz.
   // backend/printer.js printLen) hizalama .length değil gerçek basılı
   // genişliğe göre hesaplanmalı — aksi halde fiyat satırları kayar
-  const llen = typeof printLen==='function' ? printLen(left) : left.length;
-  const rlen = typeof printLen==='function' ? printLen(right) : right.length;
-  const gap = width - llen - rlen;
-  return gap>0 ? left+' '.repeat(gap)+right : left+' '+right;
+  const plen = s => typeof printLen==='function' ? printLen(s) : s.length;
+  const rlen = plen(right);
+  // çok uzun ürün adları (menüde 35+ karakterlik isimler var) fiyatı bir
+  // alt satıra kaydırmasın diye gerekirse kısaltılır — asla taşma olmasın
+  let out = left;
+  if(plen(out) + rlen + 1 > width) out = out.slice(0, Math.max(0, width - rlen - 1));
+  const gap = width - plen(out) - rlen;
+  return gap>0 ? out+' '.repeat(gap)+right : out+' '+right;
 }
 function receiptLines(t, tot, sale){
   const c=t.currency;
@@ -66,16 +78,16 @@ function receiptLines(t, tot, sale){
     {text:'--------------------------------'}
   ];
   t.items.forEach(i=>{
-    L.push({text: padLine(i.qty+'x '+i.name, fmt(i.qty*i.unit,c))});
+    L.push({text: padLine(i.qty+'x '+i.name, fmtPrn(i.qty*i.unit,c))});
   });
   L.push({text:'--------------------------------'});
-  L.push({text: padLine('Ara Toplam', fmt(tot.sub,c))});
-  if(tot.disc>0) L.push({text: padLine(t.complimentary?'İkram':'İndirim', '-'+fmt(tot.disc,c))});
-  if(tot.serv>0) L.push({text: padLine('Servis Ücreti', '+'+fmt(tot.serv,c))});
+  L.push({text: padLine('Ara Toplam', fmtPrn(tot.sub,c))});
+  if(tot.disc>0) L.push({text: padLine(t.complimentary?'İkram':'İndirim', '-'+fmtPrn(tot.disc,c))});
+  if(tot.serv>0) L.push({text: padLine('Servis Ücreti', '+'+fmtPrn(tot.serv,c))});
   L.push({text:'--------------------------------'});
-  L.push({text: padLine('TOPLAM (TL)', fmt(totalTL,'TL')), bold:true});
-  L.push({text: padLine('TOPLAM (EUR)', fmt(totalEUR,'EUR')), bold:true});
-  L.push({text: padLine('TOPLAM (USD)', fmt(totalUSD,'USD')), bold:true});
+  L.push({text: padLine('TOPLAM (TL)', fmtPrn(totalTL,'TL')), bold:true});
+  L.push({text: padLine('TOPLAM (EUR)', fmtPrn(totalEUR,'EUR')), bold:true});
+  L.push({text: padLine('TOPLAM (USD)', fmtPrn(totalUSD,'USD')), bold:true});
   if(payLbl){ L.push({text:'--------------------------------'}); L.push({text: padLine('Ödeme', payLbl)}); }
   L.push({text:'--------------------------------'});
   L.push({text:'Afiyet olsun', align:'c'});

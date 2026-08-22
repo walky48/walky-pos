@@ -94,11 +94,19 @@ async function sendRaw(bytes){
    hangi yazıcı/kod sayfası olursa olsun bozulmadan çıkar. */
 const TR_ASCII = {
   'ç':'c','Ç':'C','ğ':'g','Ğ':'G','ı':'i','İ':'I','ö':'o','Ö':'O',
-  'ş':'s','Ş':'S','ü':'u','Ü':'U','₺':'TL','€':'EUR','—':'-','–':'-','’':"'",'‘':"'",'“':'"','”':'"'
+  'ş':'s','Ş':'S','ü':'u','Ü':'U','₺':'TL','—':'-','–':'-','’':"'",'‘':"'",'“':'"','”':'"'
 };
+/* € işareti klasik kod sayfalarının hiçbirinde yok; en yaygın Batı Avrupa
+   tablosu olan WPC1252/CP1252'de 0x80 konumunda tek bayt olarak duruyor.
+   Yazıcı fabrika varsayılanı bu tabloysa (çoğu Avrupa piyasası klonunda
+   öyledir) doğru sembol basılır; değilse farklı bir karakter çıkabilir —
+   ama tek bayt olduğu için hizalama/kayma riski YOK (bkz. printLen), sadece
+   görünüm riski var. Gerçek baskıda yanlış çıkarsa burada tek satır değişir. */
+const EURO_BYTE = 0x80;
 function encodeReceiptText(str){
   const bytes=[];
   for(const ch of String(str||'')){
+    if(ch==='€'){ bytes.push(EURO_BYTE); continue; }
     if(TR_ASCII[ch]!==undefined){
       for(const c of TR_ASCII[ch]) bytes.push(c.charCodeAt(0));
       continue;
