@@ -5,6 +5,7 @@ let user = null;
 let view = 'tables';
 let activeTableId = null;
 let orderCat = 'Yiyecek';
+let orderSubCat = null; // Yemekler/Alkollü İçecekler gibi gruplanmış üst kategori içindeki alt filtre
 let orderSearch = '';
 let tableFilter = 'all';
 let stockFilter = 'all';

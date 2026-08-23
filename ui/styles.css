@@ -52,6 +52,7 @@ label.fl{display:block;font-size:13px;color:#c6cddd;margin:14px 0 6px}
   font-size:13px;font-weight:600;color:var(--muted)}
 .chip.on{background:rgba(245,166,35,.14);border-color:var(--accent);color:var(--accent)}
 .chip .cnt{background:#232c44;color:#aab2c8;border-radius:6px;padding:1px 7px;font-size:11.5px}
+.rate-chip{font-variant-numeric:tabular-nums;color:#8fb3d9;border-color:#2a3a52}
 .dot{display:inline-block;width:7px;height:7px;border-radius:50%}
 
 /* ---------- login ---------- */
@@ -107,15 +108,20 @@ label.fl{display:block;font-size:13px;color:#c6cddd;margin:14px 0 6px}
 .icon-b:hover{background:#1c2540;color:var(--text)}
 .ord-body{flex:1;display:grid;grid-template-columns:150px 1fr 375px;min-height:0}
 .ord-cats{border-right:1px solid var(--border);padding:12px 8px;overflow:auto;background:#0e1420}
-.cat-b{display:block;width:100%;text-align:left;padding:11px 13px;border-radius:9px;color:#aab2c8;font-weight:600;font-size:13.5px;margin-bottom:4px}
+.cat-b{display:block;width:100%;text-align:left;padding:11px 13px;border-radius:9px;color:#aab2c8;font-weight:600;font-size:14.5px;margin-bottom:4px}
 .cat-b:hover{background:#161e31}
 .cat-b.on{background:rgba(245,166,35,.14);color:var(--accent)}
 .ord-mid{padding:16px 18px;overflow:auto;min-width:0}
+.ord-subcats{display:flex;flex-wrap:wrap;gap:6px}
+.ord-subcats:not(:empty){margin-top:10px}
+.subcat-b{font-size:13px;font-weight:600;padding:6px 12px;border-radius:999px;background:var(--panel2);border:1px solid var(--border);color:var(--muted);cursor:pointer}
+.subcat-b:hover{border-color:var(--accent)}
+.subcat-b.on{background:rgba(245,166,35,.14);border-color:var(--accent);color:var(--accent)}
 .prod-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(172px,1fr));gap:12px;margin-top:14px}
 .prod{background:var(--panel2);border:1px solid var(--border);border-radius:11px;padding:18px 12px 14px;display:flex;flex-direction:column;align-items:center;gap:6px;transition:.13s}
 .prod:hover{border-color:var(--accent);transform:translateY(-2px)}
 .prod .prod-ic{font-size:19px;opacity:.85}
-.prod .prod-nm{font-weight:700;font-size:13.5px;text-align:center}
+.prod .prod-nm{font-weight:700;font-size:14.5px;text-align:center}
 .prod .prod-opt{color:var(--accent);font-size:9px;vertical-align:super}
 .prod .prod-pr{color:var(--accent);font-weight:800}
 .prod .prod-tl{color:var(--muted);font-size:11.5px}

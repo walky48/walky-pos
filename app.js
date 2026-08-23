@@ -129,6 +129,27 @@ if(!db.mahmutAdminAdded){
   }
   db.mahmutAdminAdded=true;
 }
+// Alkolsüz Kokteyl kategorisi kaldırıldı, içindeki ürünler Soft İçecekler'e taşındı — tek seferlik
+if(!db.alkolsuzKokteylMovedToSoft){
+  db.menu.forEach(m=>{ if(m.cat==='Alkolsüz Kokteyl') m.cat='Soft İçecekler'; });
+  db.alkolsuzKokteylMovedToSoft=true;
+}
+// Sangria isimleri netleştirildi (Ananas -> Ananaslı Sangria vb.) — tek seferlik
+if(!db.sangriaNamesRenamed){
+  const RENAME={'Ananas':'Ananaslı Sangria','Kavun':'Kavunlu Sangria','Çilek':'Çilekli Sangria','Şeftali':'Şeftalili Sangria'};
+  db.menu.forEach(m=>{ if(m.cat==='Sangria' && RENAME[m.name]) m.name=RENAME[m.name]; });
+  db.sangriaNamesRenamed=true;
+}
+// Mojito ve Alkolsüz Mojito'ya ekstra malzemesiz "Sade" seçeneği eklendi — tek seferlik
+if(!db.mojitoSadeAdded){
+  ['Mojito','Alkolsüz Mojito'].forEach(name=>{
+    const dst=db.menu.find(m=>m.name===name);
+    if(dst && dst.variants && !dst.variants.some(v=>v.label==='Sade')){
+      dst.variants.unshift({label:'Sade', extra:[]});
+    }
+  });
+  db.mojitoSadeAdded=true;
+}
 initSync();
 if(typeof tryReconnectPrinter==='function') tryReconnectPrinter();
 remoteResume().then(resumed=>{

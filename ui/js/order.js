@@ -2,7 +2,7 @@
   
 function orderHTML(){
   const t=getTable(activeTableId);
-  const cats=menuCats().map(c=>`<button class="cat-b ${orderCat===c?'on':''}" onclick="orderCat='${c}';orderSearch='';render()">${c}</button>`).join('');
+  const cats=orderTopCats().map(c=>`<button class="cat-b ${orderCat===c?'on':''}" onclick="orderCat='${c}';orderSubCat=null;orderSearch='';render()">${esc(c)}</button>`).join('');
   return `<div class="ord">
     <div class="ord-head">
       <span class="tname">${esc(displayName(t))}
@@ -12,7 +12,7 @@ function orderHTML(){
       <span class="mi">👤 ${esc(t.openedBy||'')}</span>
       <span class="mi">⏱ ${elapsedMin(t.openedAt)} dk</span>
       <span class="badge cur">${SYM[t.currency]} ${CUR_LABEL[t.currency]}</span>
-      ${t.currency!=='TL'?`<span class="mi muted tiny">Kur: 1${SYM[t.currency]} = ${fmt(rateOf(t.currency))}</span>`:''}
+      <span class="mi muted tiny">$=${fmt(db.rates.USD)} · €=${fmt(db.rates.EUR)}</span>
       <span style="flex:1"></span>
       <button class="btn sm" onclick="openFreeItemModal()">+ Serbest Ürün</button>
       <button class="btn red sm" onclick="cancelTableAsk()">Masayı İptal Et</button>
@@ -21,17 +21,50 @@ function orderHTML(){
     <div class="ord-body">
       <div class="ord-cats">${cats}</div>
       <div class="ord-mid">
-        <input class="inp" value="${esc(orderSearch)}" oninput="orderSearch=this.value;renderProdGrid()">
+        <input class="inp" value="${esc(orderSearch)}" oninput="orderSearch=this.value;renderProdGrid();renderSubCatRow()">
+        <div class="ord-subcats" id="ordSubcats">${subCatChipsHTML()}</div>
         <div class="prod-grid" id="prodGrid">${prodGridHTML()}</div>
       </div>
       <div class="ord-right" id="orderPanel">${orderPanelHTML()}</div>
     </div>
   </div>`;
 }
+/* Çorba..Tatlılar → "Yemekler", Gin..Kadeh Şaraplar → "Alkollü İçecekler" gibi
+   gruplanmış üst kategori düğmeleri (bkz. backend/constants.js MENU_GROUPS).
+   Ürünlerin gerçek .cat alanı değişmiyor — sadece sipariş ekranında toplanıyor. */
+function orderTopCats(){
+  const raw=menuCats(), out=[], seenGroup={};
+  raw.forEach(c=>{
+    const g=Object.keys(MENU_GROUPS).find(k=>MENU_GROUPS[k].includes(c));
+    if(g){ if(!seenGroup[g]){ seenGroup[g]=true; out.push(g); } }
+    else out.push(c);
+  });
+  return out;
+}
+function subCatChipsHTML(){
+  const group=MENU_GROUPS[orderCat];
+  if(!group || orderSearch.trim()) return '';
+  const chips=[{c:null,label:'Tümü'}, ...group.map(c=>({c,label:c}))].map(x=>
+    `<button class="subcat-b ${orderSubCat===x.c?'on':''}" onclick="orderSubCat=${x.c?`'${x.c}'`:'null'};renderProdGrid();renderSubCatRow()">${esc(x.label)}</button>`
+  ).join('');
+  return chips;
+}
+function renderSubCatRow(){const el=$('#ordSubcats'); if(el) el.innerHTML=subCatChipsHTML()}
 function prodGridHTML(){
   const t=getTable(activeTableId);
   const q=orderSearch.trim().toLowerCase();
-  const list=db.menu.filter(m=> q ? m.name.toLowerCase().includes(q) : m.cat===orderCat);
+  let list;
+  if(q){
+    list=db.menu.filter(m=>m.name.toLowerCase().includes(q));
+  }else{
+    const group=MENU_GROUPS[orderCat];
+    if(group){
+      const cats=orderSubCat?[orderSubCat]:group;
+      list=db.menu.filter(m=>cats.includes(m.cat)).slice().sort((a,b)=>a.name.localeCompare(b.name,'tr'));
+    }else{
+      list=db.menu.filter(m=>m.cat===orderCat);
+    }
+  }
   if(!list.length) return `<div class="muted" style="grid-column:1/-1;padding:24px 4px">Ürün bulunamadı.</div>`;
   return list.map(m=>`<button class="prod" onclick="addItem('${m.id}')">
     <span class="prod-ic">🍽️</span>

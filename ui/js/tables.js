@@ -16,6 +16,8 @@ function viewTables(){
   return `<div class="page-head">
       <div><h1>Masa Planı</h1><div class="sub">Toplam ${all.length} masa · İş günü: ${trDate(db.day.date)}</div></div>
       <div class="head-tools">
+        <span class="chip rate-chip">$ = ${fmt(db.rates.USD)}</span>
+        <span class="chip rate-chip">€ = ${fmt(db.rates.EUR)}</span>
         <span class="chip"><span class="dot" style="background:#8b93a7"></span>${empty} Boş</span>
         <span class="chip"><span class="dot" style="background:var(--accent)"></span>${open.length} Dolu</span>
         <button class="chip ${tableFilter==='all'?'on':''}" onclick="tableFilter='all';render()">Tümü <span class="cnt">${all.length}</span></button>
@@ -29,7 +31,7 @@ function viewTables(){
 /* --- masa açma: önce para birimi --- */
 function openTableFlow(id){
   const t=getTable(id);
-  if(t.status==='open'){ activeTableId=id; orderCat=menuCats()[0]; orderSearch=''; view='order'; render(); return; }
+  if(t.status==='open'){ activeTableId=id; orderCat=orderTopCats()[0]; orderSubCat=null; orderSearch=''; view='order'; render(); return; }
   showModal(`<div class="m-head"><h3>Para Birimi Seçin <span class="muted small" style="font-weight:500">&nbsp;${esc(t.name)}</span></h3>
     <button class="icon-b" onclick="closeModal()">✕</button></div>
     <div class="cur-grid">
@@ -43,5 +45,5 @@ function openWith(id,cur){
   t.status='open'; t.currency=cur; t.openedAt=Date.now(); t.openedBy=user.name;
   t.items=[]; t.discount=null; t.service=null;
   saveDB(); closeModal();
-  activeTableId=id; orderCat=menuCats()[0]; orderSearch=''; view='order'; render();
+  activeTableId=id; orderCat=orderTopCats()[0]; orderSubCat=null; orderSearch=''; view='order'; render();
 }

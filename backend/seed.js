@@ -41,7 +41,7 @@ function seedDB(){
     ['Caipirinha','Classic Kokteyl',750],['Whiskey Sour','Classic Kokteyl',750],['Moscow Mule','Classic Kokteyl',750],
     ['Negroni','Classic Kokteyl',750],['Aperol Spritz','Classic Kokteyl',750],['Espresso Martini','Classic Kokteyl',750],
     ['Pornstar Martini','Classic Kokteyl',750],['Long Island Iced Tea','Classic Kokteyl',750],
-    ['Ananas','Sangria',2450],['Kavun','Sangria',2450],['Çilek','Sangria',2450],['Şeftali','Sangria',2450],
+    ['Ananaslı Sangria','Sangria',2450],['Kavunlu Sangria','Sangria',2450],['Çilekli Sangria','Sangria',2450],['Şeftalili Sangria','Sangria',2450],
     ['Sunset (Şişe 1LT)','Şişe Kokteyl',2500],['Azumare Refresh (Şişe 1LT)','Şişe Kokteyl',2500],
     ['Long Island Ice Tea (Şişe 1LT)','Şişe Kokteyl',2750],['Lyncburg Lemonade (Şişe 1LT)','Şişe Kokteyl',2750],
     ['Beyaz Şarap (Pinot Grigio)','Kadeh Şaraplar',450],['Kırmızı Şarap (Pasqua Merlot)','Kadeh Şaraplar',450],
@@ -52,7 +52,7 @@ function seedDB(){
     ['Cola','Soft İçecekler',250],['Fanta','Soft İçecekler',250],['Sprite','Soft İçecekler',250],['Redbull','Soft İçecekler',325],
     ['S. Pelegrino 25cl','Soft İçecekler',200],['S. Pelegrino 70cl','Soft İçecekler',475],
     ['Su 330ml','Soft İçecekler',100],['Su 750ml','Soft İçecekler',150],['Soda','Soft İçecekler',150],['Churchill','Soft İçecekler',170],
-    ['Azumare Sunset','Alkolsüz Kokteyl',500],['Alkolsüz Mojito','Alkolsüz Kokteyl',500],
+    ['Azumare Sunset','Soft İçecekler',500],['Alkolsüz Mojito','Soft İçecekler',500],
     ['Layd Killer','Nargile',1000],['Love 66','Nargile',1000],['Pişmiş Şeftali','Nargile',1000],
     ['Double Apple','Nargile',1000],['Nikotin İçermeyen','Nargile',1000],
     ['Azumare Special Fresh','Nargile',1500],['Azumare Special Tropical','Nargile',1500],
@@ -160,10 +160,10 @@ function seedDB(){
     'S. Pelegrino 25cl':[[sid('S. Pelegrino 25cl'),1]], 'S. Pelegrino 70cl':[[sid('S. Pelegrino 70cl'),1]],
     'Su 330ml':[[sid('Su 330ml'),1]], 'Su 750ml':[[sid('Su 750ml'),1]], 'Soda':[[sid('Soda'),1]],
     // sangria (1LT, 4 lezzet de aynı reçete)
-    'Ananas':  [[sid("Gordon's Day Gin"),10],[sid('Pinot Grigio'),18],[sid('Pinot Grigio Rose'),18],[sid('Tonik'),1]],
-    'Kavun':   [[sid("Gordon's Day Gin"),10],[sid('Pinot Grigio'),18],[sid('Pinot Grigio Rose'),18],[sid('Tonik'),1]],
-    'Çilek':   [[sid("Gordon's Day Gin"),10],[sid('Pinot Grigio'),18],[sid('Pinot Grigio Rose'),18],[sid('Tonik'),1]],
-    'Şeftali': [[sid("Gordon's Day Gin"),10],[sid('Pinot Grigio'),18],[sid('Pinot Grigio Rose'),18],[sid('Tonik'),1]],
+    'Ananaslı Sangria':  [[sid("Gordon's Day Gin"),10],[sid('Pinot Grigio'),18],[sid('Pinot Grigio Rose'),18],[sid('Tonik'),1]],
+    'Kavunlu Sangria':   [[sid("Gordon's Day Gin"),10],[sid('Pinot Grigio'),18],[sid('Pinot Grigio Rose'),18],[sid('Tonik'),1]],
+    'Çilekli Sangria':   [[sid("Gordon's Day Gin"),10],[sid('Pinot Grigio'),18],[sid('Pinot Grigio Rose'),18],[sid('Tonik'),1]],
+    'Şeftalili Sangria': [[sid("Gordon's Day Gin"),10],[sid('Pinot Grigio'),18],[sid('Pinot Grigio Rose'),18],[sid('Tonik'),1]],
     // şişe kokteyl (1LT = 4 porsiyon, tek porsiyon reçetesinin 4 katı — Sunset hariç, o ayrı verildi)
     'Azumare Refresh (Şişe 1LT)':     [[sid("Gordon's Day Gin"),20]],
     'Sunset (Şişe 1LT)':              [[sid('Smirnoff 750'),12],[sid('Campari'),6],[sid('Çilek Püresi'),2],[sid('Çarkıfelek Püresi'),2]],
@@ -175,8 +175,8 @@ function seedDB(){
      Garson üründe tıkladığında hangi seçenek (meyve/aroma) alındığını sorar;
      seçilen seçeneğin "extra" reçetesi, ürünün temel reçetesine EKLENEREK düşülür. */
   const VARIANTS={
-    'Mojito':           [{label:'Çilekli', extra:[[sid('Çilek Püresi'),2]]}, {label:'Elmalı', extra:[[sid('Elma Püresi'),2]]}],
-    'Alkolsüz Mojito':  [{label:'Çilekli', extra:[[sid('Çilek Püresi'),2]]}, {label:'Elmalı', extra:[[sid('Elma Püresi'),2]]}],
+    'Mojito':           [{label:'Sade', extra:[]}, {label:'Çilekli', extra:[[sid('Çilek Püresi'),2]]}, {label:'Elmalı', extra:[[sid('Elma Püresi'),2]]}],
+    'Alkolsüz Mojito':  [{label:'Sade', extra:[]}, {label:'Çilekli', extra:[[sid('Çilek Püresi'),2]]}, {label:'Elmalı', extra:[[sid('Elma Püresi'),2]]}],
     'Ice Latte':        [{label:'Sade', extra:[]}, {label:'Karamelli', extra:[[sid('Karamel Şurubu'),2]]}, {label:'Vanilyalı', extra:[[sid('Vanilya Şurubu'),2]]}]
   };
 
