@@ -13,6 +13,15 @@ function kasaHTML(){
     <button class="btn ghost wide mt12" onclick="logout()">Çıkış Yap</button>
   </div></div>`;
 }
+function remoteDayClosedHTML(){
+  return `<div class="login-wrap"><div class="card kasa-card">
+    <div class="brand" style="margin-bottom:14px"><div class="nm" style="font-size:20px">WALKY</div></div>
+    <h2 style="text-align:center">Kasa Henüz Açılmadı</h2>
+    <p class="muted small" style="text-align:center;margin-top:5px">${esc(user.name)}</p>
+    <div class="kasa-note">Restorandaki kasa cihazından güne başlanması bekleniyor. Uzaktan sipariş girişi ancak kasa açıldıktan sonra mümkün — bu ekran, gün açılır açılmaz otomatik olarak sipariş ekranına geçecek.</div>
+    <button class="btn ghost wide mt24" onclick="remoteLogout()">Çıkış Yap</button>
+  </div></div>`;
+}
 function openDay(){
   const f=num($('#kfVal').value);
   if(f<0){toast('Geçerli bir tutar girin','err');return}

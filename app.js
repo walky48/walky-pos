@@ -8,9 +8,15 @@ function render(){
     const pr=$('#rmPass'); if(pr) pr.onkeydown=e=>{if(e.key==='Enter')remoteLogin()};
     return;
   }
-  // uzak oturumlar (ör. patron telefonundan) fiziksel kasa sayımına tabi değil —
-  // sadece kasadaki fiziksel cihaz gün açılışını yapmak zorunda
-  if((user.role==='garson'||user.role==='admin') && !db.day.open && !remoteMode && !(user.role==='admin' && peekMode)){ app.innerHTML=kasaHTML(); return; }
+  if(!db.day.open){
+    // uzak garson (ör. telefonundan sipariş giren personel) fiziksel kasa
+    // sayımını yapamaz AMA gün açılmadan sipariş de giremez — aksi halde
+    // satışlar hangi iş gününe ait olduğu belirsiz (tarihsiz) kaydedilir.
+    // Sadece kasadaki fiziksel cihaz gün açılışını yapabilir.
+    if(user.role==='garson' && remoteMode){ app.innerHTML=remoteDayClosedHTML(); return; }
+    // uzak admin/patron ise fiziksel kasa sayımına tabi değil (sadece görüntüleme)
+    if((user.role==='garson'||user.role==='admin') && !remoteMode && !(user.role==='admin' && peekMode)){ app.innerHTML=kasaHTML(); return; }
+  }
   if(view==='order' && activeTableId){ app.innerHTML=orderHTML(); return; }
   app.innerHTML=layoutHTML();
 }
