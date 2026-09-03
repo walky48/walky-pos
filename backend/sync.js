@@ -204,7 +204,8 @@ function scheduleRemotePush(){
   clearTimeout(syncTimer);
   syncTimer = setTimeout(remotePushNow, 500);
 }
-async function remotePushNow(){
+async function remotePushNow(retryCount){
+  retryCount = retryCount || 0;
   if(!remoteMode || !remoteSession || syncBusy) return;
   if(!syncPending()) return;
   syncBusy = true;
@@ -226,13 +227,29 @@ async function remotePushNow(){
   }
   syncBusy = false;
   if(conflict){
-    try{
-      const j = await fetch(remoteSession.url + '/api/state', {headers:{'Authorization':'Bearer '+remoteSession.token}}).then(x=>x.json());
-      if(j.ok){
-        adoptState(j);
-        toast('Aynı anda başka bir cihaz işlem yaptı — ekran güncellendi, son işleminizi kontrol edip gerekirse tekrarlayın','err');
-      }
-    }catch(e){}
+    /* başka bir cihaz aynı anda gönderdiği için sunucu reddetti. Eskiden burada
+       doğrudan sunucudaki durum benimsenirdi — bu, az önce burada tamamlanan
+       işlemi (ör. masa kapatma) sessizce siler, masa "kendiliğinden yeniden
+       açılmış" gibi görünürdü. Artık sadece güncel revizyonu alıp AYNI yerel
+       durumu yeniden gönderiyoruz (birkaç kez, kısa aralıklarla) — büyük
+       çoğunlukla bu sadece bir zamanlama çakışmasıdır ve tekrar denemede sorunsuz
+       kabul edilir. Gerçekten uzlaşmaz bir çakışma nadiren birkaç denemeden
+       sonra da sürerse, son çare olarak sunucudaki durum benimsenir. */
+    if(retryCount < 6){
+      try{
+        const j = await fetch(remoteSession.url + '/api/state', {headers:{'Authorization':'Bearer '+remoteSession.token}}).then(x=>x.json());
+        if(j && j.ok) syncServerRev = j.rev;
+      }catch(e){}
+      setTimeout(()=>remotePushNow(retryCount+1), 300 + Math.random()*400);
+    }else{
+      try{
+        const j = await fetch(remoteSession.url + '/api/state', {headers:{'Authorization':'Bearer '+remoteSession.token}}).then(x=>x.json());
+        if(j.ok){
+          adoptState(j);
+          toast('Aynı anda başka bir cihaz işlem yaptı — ekran güncellendi, son işleminizi kontrol edip gerekirse tekrarlayın','err');
+        }
+      }catch(e){}
+    }
   } else if(failed && syncPending()){
     clearTimeout(syncTimer); syncTimer = setTimeout(remotePushNow, 8000);
   }
