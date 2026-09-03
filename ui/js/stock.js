@@ -25,7 +25,7 @@ function viewStock(){
     `<div class="mini-row"><span class="muted small">${trDT(l.ts)} · ${esc(l.u)} · ${esc(l.reason)}</span>
      <span>${esc(l.name)} <b class="${l.delta>=0?'green':'red'}">${l.delta>=0?'+':''}${fmtQ(l.delta)}</b></span></div>`).join('');
   return `<div class="page-head">
-      <div><h1>Stok Durumu</h1><div class="sub">Anlık stok görünümü · Satışta otomatik düşer${user.role==='depo'?' · Depo yalnızca sayım ile artırabilir':''}</div></div>
+      <div><h1>Stok Durumu</h1></div>
       <div class="head-tools">
         <button class="chip ${stockFilter==='all'?'on':''}" onclick="stockFilter='all';render()">Tümü</button>
         <button class="chip ${stockFilter==='ok'?'on':''}" onclick="stockFilter='ok';render()"><span class="dot" style="background:var(--green)"></span>Normal <span class="cnt">${counts.ok}</span></button>

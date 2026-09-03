@@ -6,6 +6,7 @@ function openGunSonu(){
   const drawer=db.day.openingFloat + st.nakitTL + st.tahN;
   showModal(`<div class="m-head"><h3>Gün Sonu — ${trDate(db.day.date)}</h3><button class="icon-b" onclick="closeModal()">✕</button></div>
     <div class="mini-row"><span>💰 Toplam Ciro</span><span class="v accent">${fmt(st.ciro)}</span></div>
+    <div class="mini-row"><span>🍽️ Yemek Satışları</span><span class="v">${fmt(st.yemekTL)}</span></div>
     <div class="mini-row"><span>💵 Nakit (TL)</span><span class="v">${fmt(st.nakitTL)}</span></div>
     <div class="mini-row"><span>💱 Nakit (Döviz, ₺ karşılığı)</span><span class="v">${fmt(st.nakitDvTL)}${(st.dvUSD||st.dvEUR)?` <span class="muted tiny">${st.dvUSD?fmt(st.dvUSD,'USD'):''} ${st.dvEUR?fmt(st.dvEUR,'EUR'):''}</span>`:''}</span></div>
     <div class="mini-row"><span>💳 Kredi Kartı</span><span class="v">${fmt(st.kart)}</span></div>
@@ -16,7 +17,6 @@ function openGunSonu(){
     <div class="mini-row" style="border-color:var(--accent)"><span><b>Beklenen Kasa (TL Nakit)</b></span><span class="v accent">${fmt(drawer)}</span></div>
     <label class="fl">Ertesi güne bırakılan kasa fazlası (₺)</label>
     <input id="nfVal" class="inp" inputmode="decimal">
-    <p class="muted tiny mt8">Sabah ilk müşteriye para üstü verebilmek için kasada bırakılan bozuk paradır. Kasa yarın bu tutarla açılır.</p>
     <div class="m-actions"><button class="btn ghost" onclick="closeModal()">Vazgeç</button>
     <button class="btn accent" onclick="closeDay()">Günü Kapat</button></div>`,true);
 }
@@ -24,7 +24,7 @@ function closeDay(){
   const nf=num($('#nfVal').value);
   if(nf<0){toast('Geçerli bir tutar girin','err');return}
   const st=computeStats(db.day.date, db.day.date);
-  const entry={date:db.day.date, ciro:st.ciro, nakitTL:st.nakitTL, nakitDvTL:st.nakitDvTL,
+  const entry={date:db.day.date, ciro:st.ciro, yemekTL:st.yemekTL, nakitTL:st.nakitTL, nakitDvTL:st.nakitDvTL,
     dvUSD:st.dvUSD, dvEUR:st.dvEUR, kart:st.kart, cari:st.cari, tahN:st.tahN, tahK:st.tahK, count:st.count,
     openingFloat:db.day.openingFloat, nextFloat:nf, closedBy:user.name, closedAt:Date.now()};
   // Aynı tarih için ikinci kez gün sonu alınırsa (örn. aynı gün içinde kasa

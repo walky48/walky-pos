@@ -4,7 +4,7 @@ function viewMenu(){
   const cats=menuCats();
   const sections=cats.map(cat=>{
     const rows=db.menu.filter(m=>m.cat===cat).map(m=>`<tr>
-      <td style="width:30%"><b>${esc(m.name)}</b><div class="muted tiny">${rcpSummary(m)}</div></td>
+      <td style="width:30%"><b>${esc(m.name)}</b>${rcpSummary(m)?`<div class="muted tiny">${rcpSummary(m)}</div>`:''}</td>
       <td data-lbl="TL (₺)"><input class="inp" style="max-width:150px" value="${String(m.price.TL).replace('.',',')}" onchange="setPrice('${m.id}','TL',this.value)"></td>
       <td data-lbl="Dolar ($, otomatik)"><input class="inp" style="max-width:150px" value="${String(m.price.USD).replace('.',',')}" disabled title="Euro fiyatından ve güncel kurdan otomatik hesaplanır"></td>
       <td data-lbl="Euro (€)"><input class="inp" style="max-width:150px" value="${String(m.price.EUR).replace('.',',')}" onchange="setPrice('${m.id}','EUR',this.value)"></td>
@@ -15,7 +15,7 @@ function viewMenu(){
       <tbody>${rows}</tbody></table></div>`;
   }).join('');
   return `<div class="page-head">
-      <div><h1>Menü Yönetimi</h1><div class="sub">TL ve Euro fiyatları elle girilir; Dolar fiyatı Euro'dan ve güncel kurdan otomatik hesaplanır (her zaman yukarı yuvarlanır)</div></div>
+      <div><h1>Menü Yönetimi</h1></div>
       <button class="btn accent" onclick="prodModal('')">+ Yeni Ürün</button>
     </div>
     <div class="panel mb12" style="margin-bottom:20px">
@@ -26,7 +26,6 @@ function viewMenu(){
         <button class="btn accent" onclick="saveRates()">Kurları Kaydet</button>
         ${db.rates.updatedAt?`<span class="muted small">Son güncelleme: ${trDT(db.rates.updatedAt)}</span>`:''}
       </div>
-      <p class="muted tiny mt12">Kur yalnızca döviz masalarında TL karşılığını göstermek ve döviz nakit tahsilatını TL'ye çevirmek için kullanılır. Sistem tamamen offline çalıştığı için kur her sabah TCMB'den kontrol edilip buradan elle girilir; Electron sürümünde internet varken otomatik çekilecektir.</p>
     </div>
     ${sections}`;
 }
@@ -70,7 +69,7 @@ function prodModal(mid){
     <label class="fl">Reçete (stok bağlantısı — ürün satıldıkça bu malzemeler düşer)</label>
     <div id="rcpRows"></div>
     <button class="rowbtn" onclick="rcpAdd()">+ Malzeme Ekle</button>
-    <p class="muted tiny mt8">${KITCHEN_CATS.map(esc).join(' ve ')} kategorisindeki ürünler mutfak fişine dahil edilir. Reçete boş bırakılırsa satışta stok düşümü yapılmaz.</p>
+    <p class="muted tiny mt8">${KITCHEN_CATS.map(esc).join(' ve ')} kategorisindeki ürünler gün sonu raporunda "Yemek Satışları" olarak ayrıca toplanır. Reçete boş bırakılırsa satışta stok düşümü yapılmaz.</p>
     <div class="m-actions"><button class="btn ghost" onclick="closeModal()">Vazgeç</button>
     <button class="btn accent" onclick="saveProduct('${mid||''}')">${m?'Kaydet':'Ürünü Ekle'}</button></div>`,true);
   renderRcpRows();

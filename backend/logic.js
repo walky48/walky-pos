@@ -41,6 +41,26 @@ const ST_LBL={ok:'Normal', low:'Azalıyor', crit:'Kritik'};
 function stockName(sid){const s=db.stock.find(x=>x.id===sid);return s?s.name:'?'}
 function stockUnit(sid){const s=db.stock.find(x=>x.id===sid);return s?s.unit:''}
 
+/* --- bir çekin mutfak (yemek) kalemlerinin, çeke uygulanan indirim düşülmüş
+   TL karşılığı. Yüzde indirim tüm kalemlere orantılı düşer; sabit TL indirim
+   ise (garsonun tarif ettiği kural gereği) çekteki kalem SAYISINA eşit
+   bölünüp her kalemden o pay kadar düşülür. */
+function saleKitchenTotalTL(s){
+  const kLines=(s.items||[]).filter(i=>KITCHEN_CATS.includes(i.cat));
+  if(!kLines.length) return 0;
+  const rawSum=a=>a.reduce((x,i)=>x+i.qty*i.unit,0);
+  let sub;
+  if(s.discount && s.discount.type==='pct'){
+    sub = rawSum(kLines) * (1 - s.discount.value/100);
+  }else if(s.discount && s.discount.type==='amt' && s.items.length){
+    const perLine = s.discount.value / s.items.length;
+    sub = kLines.reduce((a,i)=>a + Math.max(0, i.qty*i.unit - perLine), 0);
+  }else{
+    sub = rawSum(kLines);
+  }
+  return sub * s.rate;
+}
+
 /* --- istatistikler --- */
 function computeStats(f,t){
   const S=db.sales.filter(s=>s.bd>=f && s.bd<=t);
@@ -55,6 +75,10 @@ function computeStats(f,t){
     dvEUR:dv.filter(s=>s.payCur==='EUR').reduce((a,s)=>a+s.total,0),
     kart:sum(S.filter(s=>s.method==='kart')),
     cari:sum(S.filter(s=>s.method==='cari')),
+    yemekTL:S.reduce((a,s)=>a+saleKitchenTotalTL(s),0),
+    guestK:S.reduce((a,s)=>a+(s.couvert?s.couvert.k:0),0),
+    guestE:S.reduce((a,s)=>a+(s.couvert?s.couvert.e:0),0),
+    guestC:S.reduce((a,s)=>a+(s.couvert?s.couvert.c:0),0),
     count:S.length, tahN:0, tahK:0, sales:S
   };
   db.cari.forEach(c=>c.entries.forEach(e=>{
@@ -77,7 +101,7 @@ function cariBalance(c){
 
 /* --- menü reçete özeti --- */
 function rcpSummary(m){
-  if(!m.recipe||!m.recipe.length) return 'Reçete yok — stok düşümü yapılmaz';
+  if(!m.recipe||!m.recipe.length) return '';
   return m.recipe.map(r=>{
     const q=r.q, unit=stockUnit(r.s);
     const qs=(unit==='kg'&&q<1)?(q*1000)+' g':String(q).replace('.',',')+' '+unit;

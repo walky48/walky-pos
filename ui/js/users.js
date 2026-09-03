@@ -7,7 +7,7 @@ function viewUsers(){
     <td class="right tdact">${u.id!==user.id?`<button class="btn sm red" onclick="delUser('${u.id}')">Sil</button>`:'<span class="muted tiny">aktif oturum</span>'}</td>
   </tr>`).join('');
   return `<div class="page-head">
-      <div><h1>Kullanıcılar</h1><div class="sub">Personel hesapları ve rolleri</div></div>
+      <div><h1>Kullanıcılar</h1></div>
       <button class="btn accent" onclick="openAddUser()">+ Yeni Kullanıcı</button></div>
     <table class="dt"><thead><tr><th>Ad</th><th>Kullanıcı Adı</th><th>Rol</th><th></th></tr></thead><tbody>${rows}</tbody></table>
     ${syncPanelHTML()}
@@ -18,19 +18,19 @@ function printerPanelHTML(){
   if(native){
     return `<div class="panel mt16"><div class="st" style="margin-bottom:12px">YAZICI (USB, SESSİZ YAZDIRMA)</div>
       <div class="mini-row"><span>Durum</span><span class="v green">🟢 Native uygulama — otomatik</span></div>
-      <p class="muted tiny mt8">Bu cihazda uygulamanın kendi USB yazıcı desteği aktif. "Hesap Yazdır" ve "Mutfak Fişi" doğrudan bağlı yazıcıya basar; ilk yazdırmada Android bir kerelik "bu cihaza erişime izin ver" penceresi gösterebilir, izin verdikten sonra bir daha sormaz.</p>
+      <p class="muted tiny mt8">Bu cihazda uygulamanın kendi USB yazıcı desteği aktif. "Hesap Yazdır" doğrudan bağlı yazıcıya basar; ilk yazdırmada Android bir kerelik "bu cihaza erişime izin ver" penceresi gösterebilir, izin verdikten sonra bir daha sormaz.</p>
     </div>`;
   }
   const supported = typeof printerSupported==='function' && printerSupported();
   if(!supported){
     return `<div class="panel mt16"><div class="st" style="margin-bottom:12px">YAZICI (USB, SESSİZ YAZDIRMA)</div>
-      <p class="muted small">Bu cihaz/tarayıcı USB yazıcı bağlantısını desteklemiyor. "Hesap Yazdır" ve "Mutfak Fişi" butonları normal yazdırma penceresini açmaya devam edecek.</p></div>`;
+      <p class="muted small">Bu cihaz/tarayıcı USB yazıcı bağlantısını desteklemiyor. "Hesap Yazdır" butonu normal yazdırma penceresini açmaya devam edecek.</p></div>`;
   }
   const connected = typeof printerConnected==='function' && printerConnected();
   const saved = typeof printerSavedInfo==='function' && printerSavedInfo();
   return `<div class="panel mt16"><div class="st" style="margin-bottom:12px">YAZICI (USB, SESSİZ YAZDIRMA)</div>
     <div class="mini-row"><span>Durum</span><span class="v ${connected?'green':(saved?'amber':'')}">${connected?'🟢 Bağlı':(saved?'🟡 Eşleşti, bağlantı bekleniyor':'⚪ Bağlı değil')}</span></div>
-    <p class="muted tiny mt8">USB adisyon/mutfak yazıcınızı bir kere seçin — sonrasında "Hesap Yazdır" ve "Mutfak Fişi" hiçbir pencere açmadan doğrudan bu yazıcıya basar. Bağlantı kurulamazsa otomatik olarak normal yazdırma penceresine döner.</p>
+    <p class="muted tiny mt8">USB adisyon yazıcınızı bir kere seçin — sonrasında "Hesap Yazdır" hiçbir pencere açmadan doğrudan bu yazıcıya basar. Bağlantı kurulamazsa otomatik olarak normal yazdırma penceresine döner.</p>
     <div class="m-actions" style="justify-content:flex-start"><button class="btn accent" onclick="pairPrinter()">🖨️ Yazıcı Seç / Değiştir</button></div>
   </div>`;
 }
@@ -40,7 +40,7 @@ function syncPanelHTML(){
     ? `<div class="mini-row"><span>Durum</span><span class="v ${syncPending()?'amber':'green'}">${syncPending()?'🟡 Bekleyen değişiklik var':'🟢 Senkron'}</span></div>
        <div class="mini-row"><span>Sunucu</span><span class="v small">${esc(syncCfg.url)}</span></div>
        <div class="mini-row"><span>Restoran (kiracı)</span><span class="v">${esc(syncCfg.tenant)}</span></div>`
-    : `<p class="muted small">Kasa bir sunucuya bağlanırsa tüm kullanıcılar (garson, patron, muhasebe, depo) kendi cihazından "Uzaktan Erişim" ile sisteme girip işlem yapabilir; buradaki personel hesapları restoran koduyla uzaktan da geçerlidir. İnternet kesilse bile kasa çalışmaya devam eder; bağlantı gelince veriler otomatik gönderilir.</p>`;
+    : '';
   return `<div class="panel mt16"><div class="st" style="margin-bottom:12px">CANLI SUNUCU BAĞLANTISI (UZAKTAN İZLEME)</div>
     ${st}
     ${syncCfg

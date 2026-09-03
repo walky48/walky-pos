@@ -13,6 +13,7 @@ function orderHTML(){
       <span class="mi">⏱ ${elapsedMin(t.openedAt)} dk</span>
       <span class="badge cur">${SYM[t.currency]} ${CUR_LABEL[t.currency]}</span>
       <span class="mi muted tiny">$=${fmt(db.rates.USD)} · €=${fmt(db.rates.EUR)}</span>
+      <span class="mi muted tiny" style="cursor:pointer" onclick="openCouvertModal()" title="Kuver sayısını değiştir">👥 ${t.couvert?(t.couvert.k+t.couvert.e+t.couvert.c):0}</span>
       <span style="flex:1"></span>
       <button class="btn sm" onclick="openFreeItemModal()">+ Serbest Ürün</button>
       <button class="btn red sm" onclick="cancelTableAsk()">Masayı İptal Et</button>
@@ -78,7 +79,6 @@ function renderOrderPanel(){const p=$('#orderPanel'); if(p) p.innerHTML=orderPan
 
 function orderPanelHTML(){
   const t=getTable(activeTableId), c=t.currency, tot=calcTotals(t);
-  const kCount=t.items.reduce((a,i)=>KITCHEN_CATS.includes(i.cat)?a+(i.qty-i.sent):a,0);
   const lines=t.items.length ? t.items.map(i=>{const lk=i.lid||i.mid; return `<div class="oline">
       <span class="n">${esc(i.name)}${c!=='TL'?`<span class="sub-tl">${fmt(i.unit*rateOf(c))} / adet</span>`:''}</span>
       <span class="qty"><button onclick="decLine('${lk}')">−</button><span class="q">${i.qty}</span><button onclick="incLine('${lk}')">+</button></span>
@@ -99,7 +99,7 @@ function orderPanelHTML(){
       <div class="btn-grid">
         <button class="btn" onclick="openAdjModal('discount')">İndirim</button>
         <button class="btn" onclick="openAdjModal('service')">Servis Ücreti</button>
-        <button class="btn" onclick="printKitchen()">Mutfak Fişi${kCount?` <span class="badge cur">${kCount}</span>`:''}</button>
+        <button class="btn" onclick="sendOrder()">Sipariş Gönder</button>
         <button class="btn" onclick="printReceipt()">Hesap Yazdır</button>
         <button class="btn amber" style="grid-column:1/-1" onclick="openIkramModal()" ${t.items.length?'':'disabled'}>🎁 İkram</button>
         <button class="btn green" style="grid-column:1/-1" onclick="startPayment()" ${t.items.length?'':'disabled'}>Hesap Al</button>
@@ -136,7 +136,7 @@ function addLine(mid, recipe, name, variant){
   if(line) line.qty++;
   else t.items.push({lid:uid(), mid, name, cat:m.cat, qty:1, unit:m.price[t.currency], sent:0, variant, recipe});
   if(warn) toast(m.name+' için stok eksiye düştü!','err');
-  saveDB(); renderOrderPanel();
+  saveDB(true); renderOrderPanel();
 }
 function findLine(lid){ return getTable(activeTableId).items.find(i=>(i.lid||i.mid)===lid); }
 function lineRecipe(line){ if(line.recipe) return line.recipe; const m=db.menu.find(x=>x.id===line.mid); return m?m.recipe:[]; }
@@ -144,20 +144,20 @@ function incLine(lid){
   const line=findLine(lid); if(!line) return;
   applyRecipe({recipe:lineRecipe(line)},1);
   line.qty++;
-  saveDB(); renderOrderPanel();
+  saveDB(true); renderOrderPanel();
 }
 function decLine(lid){
   const t=getTable(activeTableId); const line=findLine(lid); if(!line) return;
   applyRecipe({recipe:lineRecipe(line)},-1);
   line.qty--; if(line.sent>line.qty) line.sent=line.qty;
   if(line.qty<=0) t.items=t.items.filter(i=>i!==line);
-  saveDB(); renderOrderPanel();
+  saveDB(true); renderOrderPanel();
 }
 function removeLine(lid){
   const t=getTable(activeTableId); const line=findLine(lid); if(!line) return;
   applyRecipe({recipe:lineRecipe(line)},-line.qty);
   t.items=t.items.filter(i=>i!==line);
-  saveDB(); renderOrderPanel();
+  saveDB(true); renderOrderPanel();
 }
 
 /* --- indirim / servis ücreti --- */
@@ -258,7 +258,7 @@ function moveTableTo(destId){
   if(!src||!dst||dst.status!=='empty') return;
   dst.status='open'; dst.currency=src.currency; dst.openedAt=src.openedAt; dst.openedBy=src.openedBy;
   dst.customName=src.customName; dst.items=src.items; dst.discount=src.discount;
-  dst.service=src.service; dst.complimentary=src.complimentary;
+  dst.service=src.service; dst.complimentary=src.complimentary; dst.couvert=src.couvert;
   resetTable(src);
   activeTableId=destId;
   saveDB(); closeModal(); render();
@@ -287,7 +287,7 @@ function addFreeItem(){
   if(!name){toast('Ürün adı girin','err');return}
   if(price<=0){toast('Geçerli bir fiyat girin','err');return}
   t.items.push({lid:uid(), mid:null, name, cat:'Diğer', qty:1, unit:price, sent:0, variant:null, recipe:[]});
-  saveDB(); closeModal(); renderOrderPanel(); toast(name+' eklendi ✓','ok');
+  saveDB(true); closeModal(); renderOrderPanel(); toast(name+' eklendi ✓','ok');
 }
 
 /* --- masa iptali --- */
@@ -305,7 +305,7 @@ function cancelTable(){
 }
 function resetTable(t){
   t.status='empty'; t.customName=null; t.currency=null; t.openedAt=null; t.openedBy=null;
-  t.items=[]; t.discount=null; t.service=null; t.complimentary=null;
+  t.items=[]; t.discount=null; t.service=null; t.complimentary=null; t.couvert=null;
 }
 
 /* --- ödeme --- */
@@ -365,11 +365,13 @@ function completePayment(){
   const sale={
     id:uid(), bd:db.day.date, table:displayName(t), origTable:t.name, waiter:t.openedBy,
     currency:t.currency, rate:rateOf(t.currency), openedAt:t.openedAt, closedAt:Date.now(),
-    items:t.items.map(i=>({name:i.name, qty:i.qty, unit:i.unit})),
+    items:t.items.map(i=>({name:i.name, cat:i.cat, qty:i.qty, unit:i.unit})),
     sub:tot.sub, disc:tot.disc, serv:tot.serv, total:tot.total, totalTL:tot.totalTL,
+    discount:t.discount?{...t.discount}:null,
     method:payState.method, payCur:payState.method==='nakit'?payState.payCur:null,
     cariName:payState.method==='cari'?payState.cariName.trim():null,
-    complimentary:t.complimentary?{name:t.complimentary.name, by:t.complimentary.by}:null
+    complimentary:t.complimentary?{name:t.complimentary.name, by:t.complimentary.by}:null,
+    couvert:t.couvert?{...t.couvert}:null
   };
   db.sales.push(sale);
   if(sale.method==='cari'){

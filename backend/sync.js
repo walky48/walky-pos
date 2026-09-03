@@ -89,6 +89,19 @@ function kasaSubscribe(){
       if(p && p.rev > syncServerRev && !syncPending()) adoptState(p);
     }catch(err){}
   });
+  /* uzaktan (telefon) bağlanan bir garson "Hesap Yazdır"/"Sipariş Gönder"
+     bastığında, kendi telefonunda fiziksel yazıcı olmadığı için istek
+     buraya (kasadaki gerçek yazıcıya bağlı cihaza) düşer — bkz. server.js
+     printBroadcast, ui/js/print.js remotePrintRequest */
+  kasaES.addEventListener('print', async e=>{
+    try{
+      const p = JSON.parse(e.data);
+      if(!p || !Array.isArray(p.lines)) return;
+      const silent = typeof printLinesSilently==='function' && await printLinesSilently(p.lines);
+      if(!silent && p.html && typeof doPrint==='function') doPrint(p.html);
+      if(typeof toast==='function') toast((p.kind==='kitchen'?'Uzaktan mutfak fişi':'Uzaktan hesap fişi')+(p.by?' ('+p.by+')':'')+' alındı, yazdırılıyor','ok');
+    }catch(err){}
+  });
 }
 function initSync(){
   loadSyncCfg();
@@ -139,6 +152,7 @@ let remoteMode = false;
 let remoteSession = null; // {url, token, tenantName, user:{name, role, email}}
 let remoteES = null;
 let remoteOfflineWarned = false;
+let syncQueued = false; // syncBusy iken gelen yeni gönderim isteği — mevcut istek bitince hemen tekrar denenir
 
 function loadRemoteSession(){
   try{ const r = localStorage.getItem(REMOTE_KEY); if(r) remoteSession = JSON.parse(r); }catch(e){}
@@ -148,13 +162,14 @@ function saveRemoteSession(){
 }
 async function remoteLogin(){
   const url = $('#rmUrl').value.trim().replace(/\/+$/,''), code = $('#rmCode').value.trim(),
-        login = $('#rmUser').value.trim(), pass = $('#rmPass').value;
+        login = $('#rmUser').value.trim(), pass = $('#rmPass').value,
+        remember = $('#rmRemember') ? $('#rmRemember').checked : true;
   if(!url || !login || !pass){ toast('Sunucu, kullanıcı ve şifre zorunlu','err'); return; }
   if(!login.includes('@') && !code){ toast('Personel girişi için restoran kodu gerekli','err'); return; }
   let r;
   try{
     r = await fetch(url + '/api/login', {method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({username:login, tenant:code, password:pass})}).then(x=>x.json());
+      body: JSON.stringify({username:login, tenant:code, password:pass, remember})}).then(x=>x.json());
   }catch(e){ toast('Sunucuya ulaşılamadı — adresi kontrol edin','err'); return; }
   if(!r.ok){ toast(r.error||'Giriş başarısız','err'); return; }
   remoteSession = {url, token:r.token, tenantName:r.tenantName, user:r.user};
@@ -206,7 +221,13 @@ function scheduleRemotePush(){
 }
 async function remotePushNow(retryCount){
   retryCount = retryCount || 0;
-  if(!remoteMode || !remoteSession || syncBusy) return;
+  if(!remoteMode || !remoteSession) return;
+  if(syncBusy){
+    /* aynı anda ("Sipariş Gönder" art arda basılması gibi) yeni bir gönderim
+       isteği geldi — devam eden istek bitene kadar sıraya alınır, kaybolmaz */
+    if(retryCount===0) syncQueued = true;
+    return;
+  }
   if(!syncPending()) return;
   syncBusy = true;
   const rev = db.rev||0;
@@ -253,6 +274,24 @@ async function remotePushNow(retryCount){
   } else if(failed && syncPending()){
     clearTimeout(syncTimer); syncTimer = setTimeout(remotePushNow, 8000);
   }
+  if(syncQueued){ syncQueued = false; remotePushNow(); }
+}
+/* uzaktan (telefon) oturumda "Hesap Yazdır"/"Sipariş Gönder" basıldığında
+   çağrılır — bu cihazın kendi fiziksel yazıcısı yok, istek kasadaki gerçek
+   yazıcıya bağlı cihaza SSE ile iletilir (bkz. kasaSubscribe 'print' listener). */
+async function remotePrintRequest(kind, lines, html){
+  if(!remoteSession){ if(typeof toast==='function') toast('Bağlantı yok — yazdırılamadı','err'); return; }
+  const label = kind==='kitchen' ? 'Mutfak fişi' : 'Fiş';
+  try{
+    const r = await fetch(remoteSession.url + '/api/print', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+remoteSession.token},
+      body: JSON.stringify({kind, lines, html})
+    }).then(x=>x.json());
+    if(!r.ok){ toast(r.error||'Yazdırma isteği gönderilemedi','err'); return; }
+    if(r.delivered) toast(label+' kasadaki yazıcıya gönderildi ✓','ok');
+    else toast('Kasa şu an bağlı değil — '+label.toLowerCase()+' yazdırılamadı, lütfen kasadan kontrol edin','err');
+  }catch(e){ toast('İnternet yok — yazdırma isteği gönderilemedi','err'); }
 }
 async function remoteResume(){
   loadRemoteSession();

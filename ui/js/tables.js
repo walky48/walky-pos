@@ -23,9 +23,28 @@ function viewTables(){
         <button class="chip ${tableFilter==='all'?'on':''}" onclick="tableFilter='all';render()">Tümü <span class="cnt">${all.length}</span></button>
         <button class="chip ${tableFilter==='empty'?'on':''}" onclick="tableFilter='empty';render()">Boş <span class="cnt">${empty}</span></button>
         <button class="chip ${tableFilter==='open'?'on':''}" onclick="tableFilter='open';render()">Dolu <span class="cnt">${open.length}</span></button>
+        <button class="btn accent sm" onclick="openNewTableModal()">+ Yeni Masa</button>
       </div>
     </div>
     <div class="tgrid">${cards}</div>`;
+}
+
+/* --- yeni masa oluşturma (ör. ek/geçici masa) --- */
+function openNewTableModal(){
+  showModal(`<div class="m-head"><h3>Yeni Masa</h3><button class="icon-b" onclick="closeModal()">✕</button></div>
+    <label class="fl">Masa Adı</label>
+    <input id="ntName" class="inp" autocomplete="off">
+    <div class="m-actions"><button class="btn ghost" onclick="closeModal()">Vazgeç</button>
+    <button class="btn accent" onclick="createNewTable()">Oluştur</button></div>`);
+  $('#ntName').focus();
+}
+function createNewTable(){
+  const name=$('#ntName').value.trim();
+  if(!name){toast('Masa adı girin','err');return}
+  if(db.tables.some(t=>t.name.toLowerCase()===name.toLowerCase())){toast('Bu isimde bir masa zaten var','err');return}
+  db.tables.push({id:uid(), name, customName:null, status:'empty',
+    currency:null, openedAt:null, openedBy:null, items:[], discount:null, service:null, complimentary:null, couvert:null});
+  saveDB(); closeModal(); render(); toast(name+' masası oluşturuldu ✓','ok');
 }
 
 /* --- masa açma: önce para birimi --- */
@@ -43,7 +62,31 @@ function openTableFlow(id){
 function openWith(id,cur){
   const t=getTable(id);
   t.status='open'; t.currency=cur; t.openedAt=Date.now(); t.openedBy=user.name;
-  t.items=[]; t.discount=null; t.service=null;
+  t.items=[]; t.discount=null; t.service=null; t.couvert=null;
   saveDB(); closeModal();
-  activeTableId=id; orderCat=orderTopCats()[0]; orderSubCat=null; orderSearch=''; view='order'; render();
+  activeTableId=id; orderCat=orderTopCats()[0]; orderSubCat=null; orderSearch=''; view='order';
+  render();
+  openCouvertModal();
+}
+
+/* --- masanın ilk açılışında kuver (kadın/erkek/çocuk) sayısı — sipariş
+   ekranı arkada açık dururken modal önde gösterilir --- */
+function openCouvertModal(){
+  const t=getTable(activeTableId);
+  const cv=t.couvert||{k:0,e:0,c:0};
+  showModal(`<div class="m-head"><h3>Kuver Sayısı <span class="muted small" style="font-weight:500">&nbsp;${esc(t.name)}</span></h3></div>
+    <div style="display:flex;gap:10px;margin-top:6px">
+      <div style="flex:1"><label class="fl">Kadın</label><input id="cvK" class="inp" inputmode="numeric" value="${cv.k}"></div>
+      <div style="flex:1"><label class="fl">Erkek</label><input id="cvE" class="inp" inputmode="numeric" value="${cv.e}"></div>
+      <div style="flex:1"><label class="fl">Çocuk</label><input id="cvC" class="inp" inputmode="numeric" value="${cv.c}"></div>
+    </div>
+    <div class="m-actions"><button class="btn accent wide" onclick="applyCouvert()">${t.couvert?'Kaydet':'Devam Et'}</button></div>`);
+  $('#cvK').focus();
+}
+function applyCouvert(){
+  const t=getTable(activeTableId);
+  const k=Math.max(0,Math.round(num($('#cvK').value))), e=Math.max(0,Math.round(num($('#cvE').value))), c=Math.max(0,Math.round(num($('#cvC').value)));
+  if(k+e+c<=0){toast('En az 1 kişi girin','err');return}
+  t.couvert={k,e,c};
+  saveDB(); closeModal(); render();
 }

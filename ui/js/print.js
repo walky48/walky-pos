@@ -98,43 +98,25 @@ function receiptLines(t, tot, sale){
   L.push({text:'Restoran Yönetim Sistemi', align:'c', small:true});
   return L;
 }
-function kitchenLines(t, pend){
-  const L=[
-    {text:'*** MUTFAK ***', align:'c', bold:true, big:true},
-    {text:'--------------------------------'},
-    {text:'Masa: '+displayName(t)+'   '+trTime(Date.now())},
-    {text:'Garson: '+(t.openedBy||'')},
-    {text:'--------------------------------'}
-  ];
-  pend.forEach(p=>L.push({text:p.q+'x '+p.name, bold:true}));
-  L.push({text:'--------------------------------'});
-  return L;
-}
-
 async function printReceipt(sale){
   const t=getTable(activeTableId);
   if(!t||!t.items.length){toast('Yazdırılacak ürün yok','err');return}
   const tot=calcTotals(t), s=sale&&sale.id?sale:null;
-  const silent = typeof printLinesSilently==='function' && await printLinesSilently(receiptLines(t, tot, s));
-  if(!silent) doPrint(receiptHTML(t, tot, s));
+  const lines=receiptLines(t, tot, s), html=receiptHTML(t, tot, s);
+  if(remoteMode){ await remotePrintRequest('receipt', lines, html); return; }
+  const silent = typeof printLinesSilently==='function' && await printLinesSilently(lines);
+  if(!silent) doPrint(html);
 }
-async function printKitchen(){
-  const t=getTable(activeTableId);
-  const pend=t.items.filter(i=>KITCHEN_CATS.includes(i.cat)&&i.qty>i.sent).map(i=>({name:i.name,q:i.qty-i.sent}));
-  if(!pend.length){toast('Mutfağa gönderilecek yeni ürün yok','err');return}
-  const silent = typeof printLinesSilently==='function' && await printLinesSilently(kitchenLines(t, pend));
-  if(!silent){
-    const rows=pend.map(p=>`<div class="rc-k-item">${p.q}x ${esc(p.name)}</div>`).join('');
-    doPrint(`<div class="rc">
-      <div class="rc-big">*** MUTFAK ***</div>
-      <div class="rc-hr"></div>
-      <div class="rc-row"><span>Masa: ${esc(displayName(t))}</span><span>${trTime(Date.now())}</span></div>
-      <div class="rc-row"><span>Garson: ${esc(t.openedBy||'')}</span><span></span></div>
-      <div class="rc-hr"></div>
-      ${rows}
-      <div class="rc-hr"></div>
-    </div>`);
-  }
-  t.items.forEach(i=>{if(KITCHEN_CATS.includes(i.cat)) i.sent=i.qty});
-  saveDB(); renderOrderPanel(); toast(silent?'Mutfak fişi yazıcıya gönderildi ✓':'Mutfak fişi yazdırıldı','ok');
+/* "Sipariş Gönder": mutfak fişi basmaz — yalnızca o ana kadar YALNIZCA
+   yerelde birikmiş olan bütün değişiklikleri (bkz. addLine/incLine/decLine
+   'daki saveDB(true)) sisteme gönderir ve masa planına döner. Uzak (telefon)
+   oturumda ağa gönderim, aynı cihazdan art arda basılan gönderimlerin
+   birbirini yarıda kesmemesi için sırayla işlenir (bkz. backend/sync.js
+   remotePushNow syncQueued). */
+function sendOrder(){
+  saveDB();
+  if(remoteMode && typeof remotePushNow==='function') remotePushNow();
+  else if(typeof syncPushNow==='function') syncPushNow();
+  view='tables'; render();
+  toast('Sipariş sisteme gönderildi ✓','ok');
 }

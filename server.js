@@ -128,6 +128,24 @@ function broadcast(tid, payload){
   if(!set) return;
   set.forEach(res=>{ try{ sseSend(res,'state',payload); }catch(e){} });
 }
+/* uzaktan (telefon) bağlanan bir kullanıcı "Hesap Yazdır" / "Sipariş Gönder"
+   bastığında, o telefonun kendi fiziksel yazıcısı yoktur — fiş kasadaki
+   cihaza bağlı gerçek termal yazıcıdan çıkmalıdır. Bu event'i SADECE kasa
+   dinler (bkz. backend/sync.js kasaSubscribe 'print' listener); diğer uzak
+   istemciler bu event tipini görmezden gelir. */
+function printBroadcast(tid, payload){
+  const set = sseClients.get(tid);
+  if(!set) return false;
+  let any=false;
+  set.forEach(res=>{ try{ sseSend(res,'print',payload); any=true; }catch(e){} });
+  return any;
+}
+function kasaConnected(tid){
+  const set = sseClients.get(tid);
+  if(!set) return false;
+  for(const res of set) if(res._isDevice) return true;
+  return false;
+}
 
 /* ---------- HTTP yardımcıları ---------- */
 const CORS = {
@@ -192,7 +210,8 @@ async function handleAPI(req, res, pathname, q){
       if(!found || !safeEqual(hashPass(pass, found.salt), found.hash)){
         sendJSON(res, 401, {ok:false, error:'E-posta veya şifre hatalı'}); return;
       }
-      const token = signToken({t:tenant.id, u:found.email, n:found.name, r:found.role, exp:Date.now()+12*3600*1000});
+      const exp = Date.now() + (body.remember ? 30*24*3600*1000 : 12*3600*1000);
+      const token = signToken({t:tenant.id, u:found.email, n:found.name, r:found.role, exp});
       sendJSON(res, 200, {ok:true, token, tenantName:tenant.name, user:{name:found.name, role:found.role, email:found.email}});
       return;
     }
@@ -206,7 +225,8 @@ async function handleAPI(req, res, pathname, q){
     if(!t || !su || !safeEqual(String(su.pass||''), pass)){
       sendJSON(res, 401, {ok:false, error:'Restoran kodu, kullanıcı adı veya şifre hatalı'}); return;
     }
-    const token = signToken({t:t.id, u:su.username, n:su.name, r:su.role, exp:Date.now()+12*3600*1000});
+    const exp = Date.now() + (body.remember ? 30*24*3600*1000 : 12*3600*1000);
+    const token = signToken({t:t.id, u:su.username, n:su.name, r:su.role, exp});
     sendJSON(res, 200, {ok:true, token, tenantName:t.name, user:{name:su.name, role:su.role, email:null}});
     return;
   }
@@ -252,10 +272,24 @@ async function handleAPI(req, res, pathname, q){
     res.write(': bağlandı\n\n');
     const st = loadState(p.t);
     sseSend(res, 'state', st);
+    res._isDevice = (p.r === 'device');
     if(!sseClients.has(p.t)) sseClients.set(p.t, new Set());
     sseClients.get(p.t).add(res);
     const hb = setInterval(()=>{ try{ res.write(': ping\n\n'); }catch(e){} }, 25000);
     req.on('close', ()=>{ clearInterval(hb); const s=sseClients.get(p.t); if(s) s.delete(res); });
+    return;
+  }
+
+  /* uzaktan gelen fiş/mutfak fişi yazdırma isteği — kasadaki fiziksel
+     yazıcıya SSE üzerinden anında iletilir (bkz. printBroadcast) */
+  if(pathname === '/api/print' && req.method === 'POST'){
+    if(p.r === 'device'){ sendJSON(res, 400, {ok:false, error:'Kasa doğrudan yazdırır'}); return; }
+    let body;
+    try{ body = JSON.parse(await readBody(req)); }catch(e){ sendJSON(res, 400, {ok:false, error:'Geçersiz istek'}); return; }
+    if(!body || !Array.isArray(body.lines)){ sendJSON(res, 400, {ok:false, error:'lines zorunlu'}); return; }
+    const online = kasaConnected(p.t);
+    printBroadcast(p.t, {lines:body.lines, html:body.html||null, kind:body.kind||'receipt', by:p.n||p.u});
+    sendJSON(res, 200, {ok:true, delivered:online});
     return;
   }
 

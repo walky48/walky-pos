@@ -10,7 +10,19 @@ function miniRows(st){
     <div class="mini-row"><span>💱 Nakit (Döviz)</span><span class="v green">${fmt(st.nakitDvTL)}${(st.dvUSD||st.dvEUR)?` <span class="muted tiny">${st.dvUSD?fmt(st.dvUSD,'USD'):''} ${st.dvEUR?fmt(st.dvEUR,'EUR'):''}</span>`:''}</span></div>
     <div class="mini-row"><span>💳 Kredi Kartı</span><span class="v blue">${fmt(st.kart)}</span></div>
     <div class="mini-row"><span>🧾 Cari (Veresiye)</span><span class="v purple">${fmt(st.cari)}</span></div>
-    <div class="mini-row"><span>🪑 Masa Sayısı</span><span class="v">${st.count}</span></div>`;
+    <div class="mini-row"><span>🪑 Masa Sayısı</span><span class="v">${st.count}</span></div>
+    <div class="mini-row"><span>👥 Misafir Sayısı</span><span class="v">${st.guestK+st.guestE+st.guestC} <span class="muted tiny">(K:${st.guestK} · E:${st.guestE} · Ç:${st.guestC})</span></span></div>`;
+}
+function guestStatCard(st){
+  return statCard('👥', st.guestK+st.guestE+st.guestC, 'Misafir Sayısı', '', `K:${st.guestK} · E:${st.guestE} · Ç:${st.guestC}`);
+}
+function ordersRowsHTML(sales){
+  return sales.slice().reverse().map(s=>`<tr>
+      <td>${trDate(s.bd)}</td><td data-lbl="Masa"><b>${esc(s.table)}</b></td><td class="muted" data-lbl="Garson">${esc(s.waiter||'')}</td>
+      <td data-lbl="Açılış">${trTime(s.openedAt)}</td><td data-lbl="Kapanış">${trTime(s.closedAt)}</td>
+      <td class="num" data-lbl="Tutar">${fmt(s.totalTL)}</td><td data-lbl="Ödeme">${payLabel(s)}</td>
+      <td class="right tdact"><button class="rowbtn" onclick="orderDetail('${s.id}')">Detay</button>
+        ${(user.role==='admin' && s.bd===db.day.date)?`<button class="rowbtn" style="color:var(--red);margin-left:8px" onclick="reopenSaleAsk('${s.id}')">Yeniden Aç</button>`:''}</td></tr>`).join('');
 }
 function viewStats(){
   const today=db.day.open?db.day.date:iso();
@@ -19,22 +31,9 @@ function viewStats(){
   const stM=computeStats(monthStartISO(),iso());
   const listF=statsCustom?statsFrom:today, listT=statsCustom?statsTo:today;
   const stR=computeStats(listF,listT);
-  const orders=stR.sales.slice().reverse().map(s=>`<tr>
-      <td>${trDate(s.bd)}</td><td data-lbl="Masa"><b>${esc(s.table)}</b></td><td class="muted" data-lbl="Garson">${esc(s.waiter||'')}</td>
-      <td data-lbl="Açılış">${trTime(s.openedAt)}</td><td data-lbl="Kapanış">${trTime(s.closedAt)}</td>
-      <td class="num" data-lbl="Tutar">${fmt(s.totalTL)}</td><td data-lbl="Ödeme">${payLabel(s)}</td>
-      <td class="right tdact"><button class="rowbtn" onclick="orderDetail('${s.id}')">Detay</button>
-        ${(user.role==='admin' && s.bd===db.day.date)?`<button class="rowbtn" style="color:var(--red);margin-left:8px" onclick="reopenSaleAsk('${s.id}')">Yeniden Aç</button>`:''}</td></tr>`).join('');
-  // en çok satanlar
-  const agg={};
-  stR.sales.forEach(s=>s.items.forEach(i=>{
-    if(!agg[i.name]) agg[i.name]={q:0, r:0};
-    agg[i.name].q+=i.qty; agg[i.name].r+=i.qty*i.unit*s.rate;
-  }));
-  const top=Object.entries(agg).sort((a,b)=>b[1].r-a[1].r).slice(0,8)
-    .map(([n,v],ix)=>`<div class="mini-row"><span><span class="muted">${ix+1}.</span> ${esc(n)}</span><span><span class="muted small">${fmtQ(v.q)} adet</span> &nbsp;<b>${fmt(v.r)}</b></span></div>`).join('');
+  const orders=ordersRowsHTML(stR.sales);
   const zRows=db.dayHistory.slice().reverse().map(z=>`<tr>
-      <td>${trDate(z.date)}</td><td class="num" data-lbl="Ciro">${fmt(z.ciro)}</td><td data-lbl="Nakit">${fmt(z.nakitTL+z.nakitDvTL)}</td>
+      <td>${trDate(z.date)}</td><td class="num" data-lbl="Ciro">${fmt(z.ciro)}</td><td data-lbl="Yemek">${fmt(z.yemekTL||0)}</td><td data-lbl="Nakit">${fmt(z.nakitTL+z.nakitDvTL)}</td>
       <td data-lbl="Kart">${fmt(z.kart)}</td><td data-lbl="Cari">${fmt(z.cari)}</td><td data-lbl="Masa">${z.count}</td>
       <td data-lbl="Kasa">${fmt(z.openingFloat)} → ${fmt(z.nextFloat)}</td><td class="muted" data-lbl="Kapatan">${esc(z.closedBy)}</td></tr>`).join('');
   const fcRows=(db.floatChecks||[]).slice().reverse().map(c=>`<tr>
@@ -57,6 +56,7 @@ function viewStats(){
         ${statCard('💳',fmt(st.kart),'Kredi Kartı','blue')}
         ${statCard('🧾',fmt(st.cari),'Cari','purple', (st.tahN+st.tahK)?`Tahsilat: ${fmt(st.tahN+st.tahK)}`:'')}
         ${statCard('🪑',st.count,'Masa Sayısı','')}
+        ${guestStatCard(st)}
       </div></div>
     <div class="two-col">
       <div class="panel"><div class="st" style="margin-bottom:10px">BU HAFTA</div>${miniRows(stW)}</div>
@@ -85,12 +85,10 @@ function viewStats(){
                 :`<div class="muted small">Bu aralıkta sipariş bulunmuyor.</div>`}
       </div>
     </div>
-    <div class="two-col mt16">
-      <div class="panel"><div class="st" style="margin-bottom:10px">EN ÇOK SATANLAR</div>${top||'<div class="muted small">Henüz veri yok.</div>'}</div>
-      <div class="panel"><div class="st" style="margin-bottom:10px">GÜN SONU GEÇMİŞİ (Z RAPORLARI)</div>
-        ${zRows?`<table class="dt"><thead><tr><th>Tarih</th><th>Ciro</th><th>Nakit</th><th>Kart</th><th>Cari</th><th>Masa</th><th>Kasa</th><th>Kapatan</th></tr></thead><tbody>${zRows}</tbody></table>`
+    <div class="panel mt16">
+      <div class="st" style="margin-bottom:10px">GÜN SONU GEÇMİŞİ (Z RAPORLARI)</div>
+        ${zRows?`<table class="dt"><thead><tr><th>Tarih</th><th>Ciro</th><th>Yemek</th><th>Nakit</th><th>Kart</th><th>Cari</th><th>Masa</th><th>Kasa</th><th>Kapatan</th></tr></thead><tbody>${zRows}</tbody></table>`
               :'<div class="muted small">Henüz gün sonu alınmadı.</div>'}
-      </div>
     </div>
     <div class="panel mt16">
       <div class="st" style="margin-bottom:10px">İKRAMLAR (${trDate(listF)}${listF!==listT?' – '+trDate(listT):''})</div>
@@ -151,10 +149,11 @@ function reopenSaleTo(saleId, tableId){
   dst.status='open';
   dst.customName = (s.table!==s.origTable) ? s.table : null;
   dst.currency=s.currency; dst.openedAt=s.openedAt; dst.openedBy=s.waiter;
-  dst.items=s.items.map(i=>({lid:uid(), mid:null, name:i.name, cat:'Diğer', qty:i.qty, unit:i.unit, sent:i.qty, variant:null, recipe:[]}));
+  dst.items=s.items.map(i=>({lid:uid(), mid:null, name:i.name, cat:i.cat||'Diğer', qty:i.qty, unit:i.unit, sent:i.qty, variant:null, recipe:[]}));
   dst.complimentary = s.complimentary ? {name:s.complimentary.name, by:s.complimentary.by} : null;
-  dst.discount = dst.complimentary ? {type:'pct', value:100} : (s.disc>0 ? {type:'amt', value:s.disc} : null);
+  dst.discount = s.discount ? {...s.discount} : (dst.complimentary ? {type:'pct', value:100} : (s.disc>0 ? {type:'amt', value:s.disc} : null));
   dst.service = s.serv>0 ? {type:'amt', value:s.serv} : null;
+  dst.couvert = s.couvert ? {...s.couvert} : null;
   if(s.method==='cari' && s.cariName){
     const acc=db.cari.find(x=>x.name.toLowerCase()===s.cariName.toLowerCase());
     if(acc) acc.entries=acc.entries.filter(e=>e.saleId!==s.id);

@@ -27,8 +27,10 @@ function loginHTML(){
     <input id="rmUser" class="inp" autocomplete="off">
     <label class="fl">Şifre</label>
     <input id="rmPass" class="inp" type="password">
-    <button class="btn accent wide mt24" onclick="remoteLogin()">Sisteme Bağlan</button>
-    <p class="muted tiny mt12">Uzaktan erişim internet gerektirir; tüm kullanıcılar (garson dahil) kendi cihazından sisteme girip işlem yapabilir. Değişiklikler tüm cihazlara anında yansır.</p>`;
+    <label class="fl" style="display:flex;align-items:center;gap:8px;cursor:pointer">
+      <input type="checkbox" id="rmRemember" checked> Bilgilerimi Kaydet
+    </label>
+    <button class="btn accent wide mt24" onclick="remoteLogin()">Sisteme Bağlan</button>`;
   return `<div class="login-wrap"><div class="card login-card">
     <div class="brand"><div class="logo">${PLATE}</div><div class="nm">WALKY</div><div class="sub">Restoran Yönetim Sistemi</div></div>
     <div class="seg login-tabs">

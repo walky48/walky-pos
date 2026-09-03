@@ -32,7 +32,7 @@ function viewGiderler(){
       <td class="muted" data-lbl="Giren">${esc(e.by)}</td>
     </tr>`).join('');
   return `<div class="page-head">
-      <div><h1>Giderler</h1><div class="sub">Menüde olmayan günlük gider/malzeme kullanımı</div></div>
+      <div><h1>Giderler</h1></div>
       <button class="btn accent" onclick="openExpenseModal()">+ Yeni Gider</button></div>
     <div class="two-col">
       <div class="panel"><div class="st" style="margin-bottom:10px">BU HAFTA</div>${expenseGroupRows(weekList)}</div>
