@@ -235,3 +235,34 @@ function seedDB(){
     floatChecks:[]
   };
 }
+
+/* Yeni bir restoran (kiracı) için tamamen boş başlangıç durumu — Azumare'ye
+   özel hiçbir masa/menü/reçete/personel içermez, tek bir yönetici hesabıyla
+   açılır; Masa Planı → "+ Yeni Masa" ve Menü Yönetimi → "+ Yeni Ürün" ile
+   sıfırdan kurulur. Aşağıdaki bayraklar, app.js'teki Azumare'ye özel geçmiş
+   tek seferlik veri göçlerinin (personel isimleri, Sangria yeniden adlandırma
+   vb.) bu boş kurulumda hiç çalışmaması için baştan uygulanmış sayılır —
+   göç edilecek eski veri zaten yok. Bu fonksiyon, yeni bir cihaz/tarayıcıda
+   localStorage boşsa (app.js: db = loadDB() || seedDBBlank()) varsayılan
+   olarak kullanılır; mevcut Azumare cihazları kendi kayıtlı verisini
+   bulduğu için hiç buraya uğramaz. */
+function seedDBBlank(){
+  return {
+    users:[{id:'u1', username:'admin', pass:'1234', name:'Yönetici', role:'admin'}],
+    rates:{USD:0, EUR:0, updatedAt:null},
+    stock:[],
+    menu:[],
+    tables:[],
+    sales:[],
+    cari:[],
+    stockLog:[],
+    expenses:[],
+    day:{open:false, date:null, openingFloat:0, openedAt:null, openedBy:null, lastNextFloat:0},
+    dayHistory:[],
+    floatChecks:[],
+    menuRealSeeded:true, stockAlkolSeeded:true, stockNonAlkolRemoved:true, usdFromEurApplied:true,
+    tables25Seeded:true, usersRealSeeded:true, adminUsernameRenamed:true, testDataCleared:true,
+    recipeFix1Applied:true, stockDrinksAdded:true, menuVariantsAdded:true, mahmutAdminAdded:true,
+    alkolsuzKokteylMovedToSoft:true, sangriaNamesRenamed:true, mojitoSadeAdded:true
+  };
+}

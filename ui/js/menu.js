@@ -91,7 +91,10 @@ function pModalUsdPreview(){
   const el=$('#pUSD'); if(!el) return;
   el.value=usdFromEur(num($('#pEUR').value),db.rates);
 }
-function rcpAdd(){rcpTmp.push({s:db.stock[0].id,q:1});renderRcpRows()}
+function rcpAdd(){
+  if(!db.stock.length){toast('Önce Stok Durumu ekranından malzeme ekleyin','err');return}
+  rcpTmp.push({s:db.stock[0].id,q:1});renderRcpRows();
+}
 function rcpChgS(i,v){rcpTmp[i].s=v;renderRcpRows()}
 function rcpChgQ(i,v){rcpTmp[i].q=num(v)}
 function rcpDel(i){rcpTmp.splice(i,1);renderRcpRows()}

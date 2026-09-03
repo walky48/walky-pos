@@ -190,7 +190,7 @@ async function remoteFetchAndEnter(){
 }
 function enterRemoteMode(statePayload){
   remoteMode = true;
-  db = statePayload.state || seedDB();
+  db = statePayload.state || seedDBBlank();
   if(!db.stockLog) db.stockLog=[];
   if(!db.dayHistory) db.dayHistory=[];
   if(!db.cari) db.cari=[];
@@ -309,7 +309,7 @@ async function remoteResume(){
 function remoteLogout(){
   if(remoteES){ remoteES.close(); remoteES = null; }
   remoteMode = false; remoteSession = null; saveRemoteSession();
-  user = null; db = loadDB() || seedDB();
+  user = null; db = loadDB() || seedDBBlank();
   loadSyncCfg(); /* bu cihaz aynı zamanda eşleştirilmiş kasaysa sayaçlarını geri yükle */
   if(syncCfg) kasaSubscribe();
   render();

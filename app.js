@@ -22,7 +22,11 @@ function render(){
 }
 
 /* ---------- başlatma ---------- */
-db = loadDB() || seedDB();
+/* localStorage'ı boş olan yeni bir cihaz/tarayıcı (ör. başka bir restoranın
+   kasası) tamamen boş kurulumla başlar — bkz. backend/seed.js seedDBBlank().
+   Azumare'nin kendi cihazları zaten kayıtlı gerçek verisini bulduğu için
+   bu satıra hiç uğramaz. */
+db = loadDB() || seedDBBlank();
 // eski kayıtlarda eksik alan kalmasın
 if(!db.stockLog) db.stockLog=[];
 if(!db.dayHistory) db.dayHistory=[];
