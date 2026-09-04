@@ -147,6 +147,16 @@ function syncUnpair(){
 }
 
 /* ---------- UZAK İSTEMCİ (tam erişim, internet gerektirir) ---------- */
+/* Kalabalık + zayıf internet altında birden fazla telefonun aynı anda
+   sunucuya yazması, arka arkaya çakışmalara ve (birkaç tekrar denemeden
+   sonra son çare olarak sunucu durumunun benimsenmesi yüzünden) masa/sipariş
+   verisinin sessizce kaybolmasına yol açtı. Kalıcı, hiçbir zaman veri
+   kaybetmeyen bir çözüm test edilip devreye alınana kadar, uzaktan erişim
+   geçici olarak tamamen kapatıldı — sadece kasadaki tek cihazdan çalışılır
+   (tek yazıcı olduğu için bu sınıftaki çakışmalar hiç oluşamaz). Yeniden
+   açmak için bunu true yapmak yeterli. */
+const REMOTE_ACCESS_ENABLED = false;
+const REMOTE_DISABLED_MSG = 'Uzaktan erişim geçici olarak kapalı — yoğunluk nedeniyle şu an yalnızca kasadan işlem yapılabiliyor.';
 const REMOTE_KEY = 'walky_remote_v1';
 let remoteMode = false;
 let remoteSession = null; // {url, token, tenantName, user:{name, role, email}}
@@ -161,6 +171,7 @@ function saveRemoteSession(){
   try{ remoteSession ? localStorage.setItem(REMOTE_KEY, JSON.stringify(remoteSession)) : localStorage.removeItem(REMOTE_KEY); }catch(e){}
 }
 async function remoteLogin(){
+  if(!REMOTE_ACCESS_ENABLED){ toast(REMOTE_DISABLED_MSG,'err'); return; }
   const url = $('#rmUrl').value.trim().replace(/\/+$/,''), code = $('#rmCode').value.trim(),
         login = $('#rmUser').value.trim(), pass = $('#rmPass').value,
         remember = $('#rmRemember') ? $('#rmRemember').checked : true;
@@ -295,6 +306,10 @@ async function remotePrintRequest(kind, lines, html){
 }
 async function remoteResume(){
   loadRemoteSession();
+  if(!REMOTE_ACCESS_ENABLED){
+    if(remoteSession){ remoteSession = null; saveRemoteSession(); }
+    return false;
+  }
   if(!remoteSession) return false;
   try{
     const j = await fetch(remoteSession.url + '/api/state', {headers:{'Authorization':'Bearer '+remoteSession.token}}).then(x=>x.json());

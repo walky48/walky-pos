@@ -18,7 +18,10 @@ function loginHTML(){
     <label class="fl">Şifre</label>
     <input id="loginPass" class="inp" type="password">
     <button class="btn accent wide mt24" onclick="doLogin()">Giriş Yap</button>`;
-  const remote = `
+  const remoteDisabled = typeof REMOTE_ACCESS_ENABLED!=='undefined' && !REMOTE_ACCESS_ENABLED;
+  const remote = remoteDisabled ? `
+    <div class="kasa-note" style="margin-top:14px">${esc(REMOTE_DISABLED_MSG)}</div>
+    <p class="muted small mt12">Lütfen "🖥️ Kasa Girişi" sekmesinden, restorandaki kasa cihazından giriş yapın.</p>` : `
     <label class="fl">Sunucu Adresi</label>
     <input id="rmUrl" class="inp" value="${esc((remoteSession&&remoteSession.url)||location.origin)}" autocomplete="off">
     <label class="fl">Restoran Kodu</label>
