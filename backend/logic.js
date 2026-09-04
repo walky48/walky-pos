@@ -3,6 +3,7 @@
 
 /* --- sipariş kalemleri & stok düşümü --- */
 function applyRecipe(m,delta){ // delta adet: + eklendi, − çıkarıldı
+  if(!STOCK_ENABLED) return false; // bkz. backend/constants.js STOCK_ENABLED
   let warn=false;
   (m.recipe||[]).forEach(r=>{
     const s=db.stock.find(x=>x.id===r.s);

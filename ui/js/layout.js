@@ -3,7 +3,7 @@
 function navItems(){
   const r=user.role, items=[];
   if((r==='garson'||r==='admin') && db.day.open) items.push(['tables','🪑','Masa Planı']);
-  if(r==='depo'||r==='admin')   items.push(['stock','📦','Stok']);
+  if(STOCK_ENABLED && (r==='depo'||r==='admin')) items.push(['stock','📦','Stok']);
   if(r==='garson'||r==='depo'||r==='admin') items.push(['expenses','🧾','Giderler']);
   if(r==='muhasebe'||r==='admin') items.push(['stats','📊','İstatistikler'],['cari','📒','Cari Hesaplar']);
   else if(r==='garson') items.push(['stats','📊','İstatistikler']);

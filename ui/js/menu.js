@@ -4,7 +4,7 @@ function viewMenu(){
   const cats=menuCats();
   const sections=cats.map(cat=>{
     const rows=db.menu.filter(m=>m.cat===cat).map(m=>`<tr>
-      <td style="width:30%"><b>${esc(m.name)}</b>${rcpSummary(m)?`<div class="muted tiny">${rcpSummary(m)}</div>`:''}</td>
+      <td style="width:30%"><b>${esc(m.name)}</b>${(STOCK_ENABLED && rcpSummary(m))?`<div class="muted tiny">${rcpSummary(m)}</div>`:''}</td>
       <td data-lbl="TL (₺)"><input class="inp" style="max-width:150px" value="${String(m.price.TL).replace('.',',')}" onchange="setPrice('${m.id}','TL',this.value)"></td>
       <td data-lbl="Dolar ($, otomatik)"><input class="inp" style="max-width:150px" value="${String(m.price.USD).replace('.',',')}" disabled title="Euro fiyatından ve güncel kurdan otomatik hesaplanır"></td>
       <td data-lbl="Euro (€)"><input class="inp" style="max-width:150px" value="${String(m.price.EUR).replace('.',',')}" onchange="setPrice('${m.id}','EUR',this.value)"></td>
@@ -66,13 +66,13 @@ function prodModal(mid){
       <div class="fld"><span>€</span><input id="pEUR" class="inp" style="width:110px" inputmode="decimal" value="${m?String(m.price.EUR).replace('.',','):''}" oninput="pModalUsdPreview()"></div>
       <div class="fld"><span>$</span><input id="pUSD" class="inp" style="width:110px" disabled value="${m?usdFromEur(m.price.EUR,db.rates):0}"></div>
     </div>
-    <label class="fl">Reçete (stok bağlantısı — ürün satıldıkça bu malzemeler düşer)</label>
+    ${STOCK_ENABLED?`<label class="fl">Reçete (stok bağlantısı — ürün satıldıkça bu malzemeler düşer)</label>
     <div id="rcpRows"></div>
-    <button class="rowbtn" onclick="rcpAdd()">+ Malzeme Ekle</button>
-    <p class="muted tiny mt8">${KITCHEN_CATS.map(esc).join(' ve ')} kategorisindeki ürünler gün sonu raporunda "Yemek Satışları" olarak ayrıca toplanır. Reçete boş bırakılırsa satışta stok düşümü yapılmaz.</p>
+    <button class="rowbtn" onclick="rcpAdd()">+ Malzeme Ekle</button>`:''}
+    <p class="muted tiny mt8">${KITCHEN_CATS.map(esc).join(' ve ')} kategorisindeki ürünler gün sonu raporunda "Yemek Satışları" olarak ayrıca toplanır.</p>
     <div class="m-actions"><button class="btn ghost" onclick="closeModal()">Vazgeç</button>
     <button class="btn accent" onclick="saveProduct('${mid||''}')">${m?'Kaydet':'Ürünü Ekle'}</button></div>`,true);
-  renderRcpRows();
+  if(STOCK_ENABLED) renderRcpRows();
 }
 function renderRcpRows(){
   const box=$('#rcpRows'); if(!box) return;
