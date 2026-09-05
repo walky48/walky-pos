@@ -6,7 +6,7 @@ function doLogin(){
   if(!f){toast('Kullanıcı adı veya şifre hatalı','err');return}
   user=f; view=defaultView(f.role); tableFilter='all'; peekMode=false; render();
 }
-function defaultView(r){return r==='depo'?(STOCK_ENABLED?'stock':'expenses') : r==='muhasebe'?'stats' : 'tables'}
+function defaultView(r){return r==='depo'?(db.settings.stockEnabled?'stock':'expenses') : r==='muhasebe'?'stats' : 'tables'}
 function logout(){user=null; peekMode=false; render()}
 
 let loginTab = 'local';

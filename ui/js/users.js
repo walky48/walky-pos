@@ -10,8 +10,21 @@ function viewUsers(){
       <div><h1>Kullanıcılar</h1></div>
       <button class="btn accent" onclick="openAddUser()">+ Yeni Kullanıcı</button></div>
     <table class="dt"><thead><tr><th>Ad</th><th>Kullanıcı Adı</th><th>Rol</th><th></th></tr></thead><tbody>${rows}</tbody></table>
+    ${settingsPanelHTML()}
     ${syncPanelHTML()}
     ${printerPanelHTML()}`;
+}
+function settingsPanelHTML(){
+  return `<div class="panel mt16"><div class="st" style="margin-bottom:12px">AYARLAR</div>
+    <label class="fl" style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:0">
+      <input type="checkbox" ${db.settings.stockEnabled?'checked':''} onchange="toggleStockEnabled(this.checked)"> Stok Takibi (reçete ile otomatik düşüm, Stok Durumu sekmesi, stok uyarıları)
+    </label>
+  </div>`;
+}
+function toggleStockEnabled(v){
+  db.settings.stockEnabled=v;
+  saveDB(); render();
+  toast(v?'Stok takibi açıldı ✓':'Stok takibi kapatıldı','ok');
 }
 function printerPanelHTML(){
   const native = typeof nativePrinterAvailable==='function' && nativePrinterAvailable();

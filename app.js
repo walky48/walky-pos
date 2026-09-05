@@ -160,6 +160,15 @@ if(!db.mojitoSadeAdded){
   });
   db.mojitoSadeAdded=true;
 }
+// stok takibi artık restorana özel bir ayar (db.settings.stockEnabled) — eskiden
+// tek/paylaşılan bir koddu. Azumare şu an stok takibi kullanmadığını belirttiği
+// için mevcut kurulumuna bir kerelik false uygulanır; yeni (boş) kurulumlar
+// zaten seedDBBlank()'ten true ile başlar ve bu düzeltmeye hiç uğramaz.
+if(!db.settings) db.settings={stockEnabled:true};
+if(!db.stockSettingApplied){
+  db.settings.stockEnabled=false;
+  db.stockSettingApplied=true;
+}
 initSync();
 if(typeof tryReconnectPrinter==='function') tryReconnectPrinter();
 remoteResume().then(resumed=>{

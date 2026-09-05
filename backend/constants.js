@@ -10,12 +10,6 @@ const MENU_GROUPS = {
   'Yemekler': KITCHEN_CATS,
   'Alkollü İçecekler': ['Gin','Whiskey','Rom','Biralar','Vodka','İmza Kokteyller','Classic Kokteyl','Sangria','Şişe Kokteyl','Kadeh Şaraplar']
 };
-/* Azumare şu an stok takibi kullanmıyor — "silme, yorum satırı yap, sonra
-   lazım olunca baştan yazmayalım" talebiyle, kodu hiç silmeden tek bir
-   bayrakla tamamen kapatıldı: Stok Durumu sekmesi gizlenir, reçete/stok
-   düşümü hiç işlemez, Menü Yönetimi'ndeki reçete bölümü gösterilmez.
-   Geri açmak için bunu true yapmak yeterli — hiçbir veri silinmedi. */
-const STOCK_ENABLED = false;
 const KADEH_CL = 5;
 const ROLES = {admin:'Yönetici', garson:'Garson', depo:'Depo', muhasebe:'Muhasebe'};
 const DB_KEY = 'walky_pos_v1';

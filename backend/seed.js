@@ -232,7 +232,8 @@ function seedDB(){
     expenses:[],
     day:{open:false, date:null, openingFloat:0, openedAt:null, openedBy:null, lastNextFloat:0},
     dayHistory:[],
-    floatChecks:[]
+    floatChecks:[],
+    settings:{stockEnabled:true}
   };
 }
 
@@ -260,9 +261,11 @@ function seedDBBlank(){
     day:{open:false, date:null, openingFloat:0, openedAt:null, openedBy:null, lastNextFloat:0},
     dayHistory:[],
     floatChecks:[],
+    settings:{stockEnabled:true},
     menuRealSeeded:true, stockAlkolSeeded:true, stockNonAlkolRemoved:true, usdFromEurApplied:true,
     tables25Seeded:true, usersRealSeeded:true, adminUsernameRenamed:true, testDataCleared:true,
     recipeFix1Applied:true, stockDrinksAdded:true, menuVariantsAdded:true, mahmutAdminAdded:true,
-    alkolsuzKokteylMovedToSoft:true, sangriaNamesRenamed:true, mojitoSadeAdded:true
+    alkolsuzKokteylMovedToSoft:true, sangriaNamesRenamed:true, mojitoSadeAdded:true,
+    stockSettingApplied:true
   };
 }
