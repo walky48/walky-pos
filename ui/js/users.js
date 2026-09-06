@@ -19,12 +19,21 @@ function settingsPanelHTML(){
     <label class="fl" style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:0">
       <input type="checkbox" ${db.settings.stockEnabled?'checked':''} onchange="toggleStockEnabled(this.checked)"> Stok Takibi (reçete ile otomatik düşüm, Stok Durumu sekmesi, stok uyarıları)
     </label>
+    <label class="fl" style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:12px">
+      <input type="checkbox" ${db.settings.remoteOrderingEnabled?'checked':''} onchange="toggleRemoteOrdering(this.checked)"> Uzaktan Sipariş Girişi (garsonlar telefonla "Uzaktan Erişim" ile giriş yapıp sipariş girebilir)
+    </label>
+    <p class="muted tiny mt8">⚠️ Kalabalık ve zayıf internet altında birden fazla telefon aynı anda yazarsa, nadir de olsa çakışma yaşanıp bir işlemin kaybolması riski vardır. Sakin bir dönemde deneyerek açmanız önerilir.</p>
   </div>`;
 }
 function toggleStockEnabled(v){
   db.settings.stockEnabled=v;
   saveDB(); render();
   toast(v?'Stok takibi açıldı ✓':'Stok takibi kapatıldı','ok');
+}
+function toggleRemoteOrdering(v){
+  db.settings.remoteOrderingEnabled=v;
+  saveDB(); render();
+  toast(v?'Uzaktan sipariş girişi açıldı ✓':'Uzaktan sipariş girişi kapatıldı','ok');
 }
 function printerPanelHTML(){
   const native = typeof nativePrinterAvailable==='function' && nativePrinterAvailable();

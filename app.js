@@ -172,6 +172,9 @@ if(!db.stockSettingApplied){
   db.settings.stockEnabled=false;
   db.stockSettingApplied=true;
 }
+// uzaktan sipariş girişi de restorana özel bir ayar (db.settings.remoteOrderingEnabled) —
+// varsayılan kapalı, isteyen restoran Kullanıcılar > Ayarlar'dan kendi açar.
+if(db.settings.remoteOrderingEnabled===undefined) db.settings.remoteOrderingEnabled=false;
 initSync();
 if(typeof tryReconnectPrinter==='function') tryReconnectPrinter();
 remoteResume().then(resumed=>{

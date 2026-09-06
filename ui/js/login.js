@@ -33,7 +33,7 @@ function loginHTML(){
     <label class="fl" style="display:flex;align-items:center;gap:8px;cursor:pointer">
       <input type="checkbox" id="rmRemember" checked> Bilgilerimi Kaydet
     </label>
-    <p class="muted small mt8">Yönetici hesabıyla (kasadaki kullanıcı adı/şifre) salt-okunur görüntüleme için uzaktan giriş yapılabiliyor.</p>
+    <p class="muted small mt8">Yönetici hesabıyla (kasadaki kullanıcı adı/şifre) her zaman salt-okunur görüntüleme yapılabilir. Garson hesabıyla sipariş girişi ise sadece bu restoran Kullanıcılar > Ayarlar'dan açtıysa çalışır.</p>
     <button class="btn accent wide mt24" onclick="remoteLogin()">Sisteme Bağlan</button>`;
   return `<div class="login-wrap"><div class="card login-card">
     <div class="brand"><div class="logo">${PLATE}</div><div class="nm">WALKY</div><div class="sub">Restoran Yönetim Sistemi</div></div>

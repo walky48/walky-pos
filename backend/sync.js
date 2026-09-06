@@ -156,15 +156,20 @@ function syncUnpair(){
    Buna karşın uzaktan salt-okunur GÖRÜNTÜLEME (Masa Planı + İstatistikler)
    güvenlidir: hiçbir değişiklik göndermediği için yukarıdaki çakışma hiç
    oluşamaz. Bu yüzden mevcut YÖNETİCİ (admin rolündeki kasa hesapları, ör.
-   Bahar/Mahmut — veya e-posta ile tanımlı "patron" hesabı) uzaktan giriş
-   yapabilir ama salt-okunur kalır (bkz. layout.js navItems, tables.js
-   openTableFlow, server.js /api/push 'patron'/'admin' reddi); garson/depo/
-   muhasebe rolündeki hesaplar (asıl riskin kaynağı olan sipariş girişi)
-   uzaktan giriş yapamaz. */
+   Bahar/Mahmut — veya e-posta ile tanımlı "patron" hesabı) HER RESTORANDA
+   uzaktan giriş yapabilir ama salt-okunur kalır (bkz. layout.js navItems,
+   tables.js openTableFlow, server.js /api/push 'patron'/'admin' reddi).
+   garson/depo/muhasebe (asıl riskin kaynağı olan sipariş girişi) rolündeki
+   hesaplar ise ancak İLGİLİ RESTORAN kendi isteğiyle bunu açtıysa uzaktan
+   girebilir — bkz. db.settings.remoteOrderingEnabled (Kullanıcılar > Ayarlar).
+   Bu, restoran bazında ayarlanabilir: ör. Azumare'de kapalı kalırken yeni/
+   düşük yoğunluklu bir restoranda (FreshPress gibi) açılabilir — ama kapatan
+   kalıcı mimari sorun düzeltilmedi, sadece riski göze alan restoran için
+   bilinçli bir seçime dönüştürüldü. */
 const REMOTE_VIEWER_ENABLED = true;
 const REMOTE_VIEWER_ROLES = ['patron','admin'];
 const REMOTE_DISABLED_MSG = 'Uzaktan erişim şu an kapalı.';
-const REMOTE_VIEWER_ROLE_MSG = 'Uzaktan sadece yönetici hesabıyla, salt-okunur görüntüleme için giriş yapılabiliyor — garson/depo/muhasebe hesapları uzaktan sipariş giremez.';
+const REMOTE_VIEWER_ROLE_MSG = 'Uzaktan sipariş girişi bu restoran için açık değil — yönetici hesabıyla salt-okunur görüntüleme yapabilirsiniz, sipariş girmek için Kullanıcılar > Ayarlar\'dan açılması gerekir.';
 const REMOTE_KEY = 'walky_remote_v1';
 let remoteMode = false;
 let remoteSession = null; // {url, token, tenantName, user:{name, role, email}}
@@ -191,24 +196,35 @@ async function remoteLogin(){
       body: JSON.stringify({username:login, tenant:code, password:pass, remember})}).then(x=>x.json());
   }catch(e){ toast('Sunucuya ulaşılamadı — adresi kontrol edin','err'); return; }
   if(!r.ok){ toast(r.error||'Giriş başarısız','err'); return; }
-  /* sadece yönetici (admin) rolündeki kasa hesapları veya e-posta ile
-     tanımlı patron hesabı uzaktan salt-okunur girebilir — garson/depo/
-     muhasebe hesapları (asıl riskin kaynağı olan sipariş girişi) uzaktan
-     giremez, kasadan devam eder */
-  if(REMOTE_VIEWER_ROLES.indexOf(r.user.role) < 0){ toast(REMOTE_VIEWER_ROLE_MSG,'err'); return; }
   remoteSession = {url, token:r.token, tenantName:r.tenantName, user:r.user};
   saveRemoteSession();
-  await remoteFetchAndEnter();
+  await remoteFetchAndEnter(false);
 }
-async function remoteFetchAndEnter(){
+/* yönetici (admin) rolündeki kasa hesapları ve e-posta ile tanımlı patron
+   hesabı her zaman uzaktan salt-okunur girebilir. garson/depo/muhasebe
+   hesapları için ise uzaktan SİPARİŞ GİRİŞİ (yazma) her restoranda ayrı
+   ayarlanabilir — bkz. Kullanıcılar > Ayarlar db.settings.remoteOrderingEnabled.
+   Bu ayar tenant'ın kendi durumunda (state) tutulduğu için önce /api/state
+   çekilip kontrol edilir; bu yüzden rol kontrolü login anında değil burada
+   yapılır. silent=true iken (app açılışında otomatik oturum devamı) hata
+   toast'ı gösterilmez. */
+async function remoteFetchAndEnter(silent){
   try{
     const j = await fetch(remoteSession.url + '/api/state', {headers:{'Authorization':'Bearer '+remoteSession.token}}).then(x=>x.json());
     if(!j.ok) throw new Error();
+    const role = remoteSession.user.role;
+    const isViewer = REMOTE_VIEWER_ROLES.indexOf(role) >= 0;
+    const orderingEnabled = !!(j.state && j.state.settings && j.state.settings.remoteOrderingEnabled);
+    if(!isViewer && !orderingEnabled){
+      remoteSession = null; saveRemoteSession();
+      if(!silent) toast(REMOTE_VIEWER_ROLE_MSG,'err');
+      return false;
+    }
     enterRemoteMode(j);
     return true;
   }catch(e){
     remoteSession = null; saveRemoteSession();
-    toast('Bağlantı kurulamadı','err');
+    if(!silent) toast('Bağlantı kurulamadı','err');
     return false;
   }
 }
@@ -320,20 +336,12 @@ async function remotePrintRequest(kind, lines, html){
 async function remoteResume(){
   loadRemoteSession();
   if(!remoteSession) return false;
-  const allowed = REMOTE_VIEWER_ENABLED && remoteSession.user && REMOTE_VIEWER_ROLES.indexOf(remoteSession.user.role) >= 0;
-  if(!allowed){
-    remoteSession = null; saveRemoteSession();
-    return false;
-  }
-  try{
-    const j = await fetch(remoteSession.url + '/api/state', {headers:{'Authorization':'Bearer '+remoteSession.token}}).then(x=>x.json());
-    if(!j.ok) throw new Error();
-    enterRemoteMode(j);
-    return true;
-  }catch(e){
-    remoteSession = null; saveRemoteSession();
-    return false;
-  }
+  if(!REMOTE_VIEWER_ENABLED){ remoteSession = null; saveRemoteSession(); return false; }
+  /* rol + restorana-özel sipariş-girişi izni kontrolü remoteFetchAndEnter
+     içinde (güncel /api/state ile) yapılır — bir garsonun izni sonradan
+     kapatılırsa otomatik oturum devamı da burada engellenir. silent=true:
+     uygulama açılışında sessizce normal giriş ekranına düşer, hata göstermez. */
+  return await remoteFetchAndEnter(true);
 }
 function remoteLogout(){
   if(remoteES){ remoteES.close(); remoteES = null; }
