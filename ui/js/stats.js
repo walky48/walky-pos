@@ -32,11 +32,13 @@ function viewStats(){
   const listF=statsCustom?statsFrom:today, listT=statsCustom?statsTo:today;
   const stR=computeStats(listF,listT);
   const orders=ordersRowsHTML(stR.sales);
-  const zRows=db.dayHistory.slice().reverse().map(z=>`<tr>
+  const zList=zHistoryExpanded?db.dayHistory:db.dayHistory.slice(-3);
+  const zRows=zList.slice().reverse().map(z=>`<tr>
       <td>${trDate(z.date)}</td><td class="num" data-lbl="Ciro">${fmt(z.ciro)}</td><td data-lbl="Yemek">${fmt(z.yemekTL||0)}</td><td data-lbl="Nakit">${fmt(z.nakitTL+z.nakitDvTL)}</td>
       <td data-lbl="Kart">${fmt(z.kart)}</td><td data-lbl="Cari">${fmt(z.cari)}</td><td data-lbl="Masa">${z.count}</td>
       <td data-lbl="Kasa">${fmt(z.openingFloat)} → ${fmt(z.nextFloat)}</td><td class="muted" data-lbl="Kapatan">${esc(z.closedBy)}</td></tr>`).join('');
-  const fcRows=(db.floatChecks||[]).slice().reverse().map(c=>`<tr>
+  const fcList=floatHistoryExpanded?(db.floatChecks||[]):(db.floatChecks||[]).slice(-3);
+  const fcRows=fcList.slice().reverse().map(c=>`<tr>
       <td>${trDate(c.date)}</td><td data-lbl="Beklenen">${fmt(c.expected)}</td><td data-lbl="Girilen">${fmt(c.actual)}</td>
       <td data-lbl="Durum">${c.match?'<span class="green">✓ Uyumlu</span>':'<span class="red">⚠ Uyuşmuyor</span>'}</td>
       <td class="muted" data-lbl="Açan">${esc(c.by)}</td><td class="muted" data-lbl="Saat">${trDT(c.at)}</td></tr>`).join('');
@@ -86,7 +88,10 @@ function viewStats(){
       </div>
     </div>
     <div class="panel mt16">
-      <div class="st" style="margin-bottom:10px">GÜN SONU GEÇMİŞİ (Z RAPORLARI)</div>
+      <div class="page-head" style="margin-bottom:10px">
+        <div class="st">GÜN SONU GEÇMİŞİ (Z RAPORLARI)${zHistoryExpanded?'':' — SON 3 GÜN'}</div>
+        ${db.dayHistory.length>3?`<button class="btn sm ghost" onclick="zHistoryExpanded=!zHistoryExpanded;render()">${zHistoryExpanded?'Son 3 Günü Göster':'Tüm Geçmişi Göster'}</button>`:''}
+      </div>
         ${zRows?`<table class="dt"><thead><tr><th>Tarih</th><th>Ciro</th><th>Yemek</th><th>Nakit</th><th>Kart</th><th>Cari</th><th>Masa</th><th>Kasa</th><th>Kapatan</th></tr></thead><tbody>${zRows}</tbody></table>`
               :'<div class="muted small">Henüz gün sonu alınmadı.</div>'}
     </div>
@@ -96,7 +101,10 @@ function viewStats(){
             :'<div class="muted small">Bu aralıkta ikram kaydı yok.</div>'}
     </div>
     <div class="panel mt16">
-      <div class="st" style="margin-bottom:10px">KASA AÇILIŞ KONTROLLERİ</div>
+      <div class="page-head" style="margin-bottom:10px">
+        <div class="st">KASA AÇILIŞ KONTROLLERİ${floatHistoryExpanded?'':' — SON 3 GÜN'}</div>
+        ${(db.floatChecks||[]).length>3?`<button class="btn sm ghost" onclick="floatHistoryExpanded=!floatHistoryExpanded;render()">${floatHistoryExpanded?'Son 3 Günü Göster':'Tüm Geçmişi Göster'}</button>`:''}
+      </div>
       ${fcRows?`<table class="dt"><thead><tr><th>Tarih</th><th>Beklenen (Dün Bırakılan)</th><th>Girilen</th><th>Durum</th><th>Açan</th><th>Saat</th></tr></thead><tbody>${fcRows}</tbody></table>`
             :'<div class="muted small">Henüz kasa açılış kaydı yok.</div>'}
     </div>`;

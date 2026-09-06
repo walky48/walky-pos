@@ -11,6 +11,7 @@ let tableFilter = 'all';
 let stockFilter = 'all';
 let payState = null;
 let statsFrom = iso(), statsTo = iso(), statsCustom = false;
+let zHistoryExpanded = false, floatHistoryExpanded = false; // Z raporu / kasa açılış geçmişi varsayılan son 3 kayıt
 let gidFrom = weekStartISO(), gidTo = iso(), gidCustom = false;
 let sidebarOpen = false;
 let peekMode = false; // admin: kasa açılmadan sadece görüntüleme (istatistik vb.)
