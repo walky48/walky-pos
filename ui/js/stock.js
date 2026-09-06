@@ -17,7 +17,8 @@ function viewStock(){
         <td data-lbl="Durum"><span class="badge ${stockStatus(s)}">${ST_LBL[stockStatus(s)]}</span></td>
         <td class="right tdact">
           <button class="btn sm" onclick="openStockAdd('${s.id}')">+ Sayım</button>
-          ${canEdit?`<button class="btn sm ghost" onclick="openStockEdit('${s.id}')">Düzenle</button>`:''}
+          ${canEdit?`<button class="btn sm ghost" onclick="openStockEdit('${s.id}')">Düzenle</button>
+          <button class="btn sm red" onclick="askDelStock('${s.id}')">Sil</button>`:''}
         </td></tr>`).join('');
     if(!rows) return '';
     return `<div class="sect"><div class="st">${esc(cat)}</div>
@@ -93,6 +94,26 @@ function createStockItem(){
   if(db.stock.some(s=>s.name.toLowerCase()===name.toLowerCase())){toast('Bu isimde bir stok kalemi zaten var','err');return}
   db.stock.push({id:uid(), name, cat, qty:0, unit, low, crit});
   saveDB(); closeModal(); render(); toast(name+' stok listesine eklendi ✓','ok');
+}
+/* --- stok kalemi silme — admin. Bir ürünün reçetesinde kullanılıyorsa
+   önce oradan çıkarılması istenir, aksi halde o reçete tanımsız malzemeye
+   işaret eder kalır. --- */
+function askDelStock(sid){
+  const s=db.stock.find(x=>x.id===sid); if(!s) return;
+  const usedBy=db.menu.filter(m=>(m.recipe||[]).some(r=>r.s===sid));
+  if(usedBy.length){
+    toast(esc(s.name)+' şu ürünlerin reçetesinde kullanılıyor: '+usedBy.map(m=>m.name).join(', ')+' — önce reçeteden çıkarın','err');
+    return;
+  }
+  showModal(`<div class="m-head"><h3>Stok Kalemini Sil</h3><button class="icon-b" onclick="closeModal()">✕</button></div>
+    <p><b>${esc(s.name)}</b> stok listesinden kalıcı olarak silinecek. Geçmiş stok hareketleri etkilenmez.</p>
+    <div class="m-actions"><button class="btn ghost" onclick="closeModal()">Vazgeç</button>
+    <button class="btn red" onclick="delStock('${sid}')">Evet, Sil</button></div>`);
+}
+function delStock(sid){
+  const s=db.stock.find(x=>x.id===sid); if(!s) return;
+  db.stock=db.stock.filter(x=>x.id!==sid);
+  saveDB(); closeModal(); render(); toast(s.name+' stok listesinden silindi','ok');
 }
 function openStockAdd(sid){
   const s=db.stock.find(x=>x.id===sid);
