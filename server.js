@@ -76,6 +76,16 @@ function addUser(tenantId, email, name, role, pass){
   t.users.push({email, name, role, salt, hash:hashPass(pass, salt), createdAt:Date.now()});
   saveTenants(tenants);
 }
+function delUser(tenantId, email){
+  const tenants = loadTenants();
+  const t = tenants.find(x=>x.id===tenantId);
+  if(!t) throw new Error('Kiracı bulunamadı: '+tenantId);
+  email = String(email).trim().toLowerCase();
+  const before = t.users.length;
+  t.users = t.users.filter(u=>u.email!==email);
+  if(t.users.length===before) throw new Error('Bu e-posta bu kiracıda kayıtlı değil: '+email);
+  saveTenants(tenants);
+}
 function stateFile(tid){ return 'state_' + tid.replace(/[^a-z0-9-]/g,'') + '.json'; }
 function loadState(tid){ return readJSON(stateFile(tid), {rev:0, updatedAt:null, state:null}); }
 function saveState(tid, obj){ writeJSON(stateFile(tid), obj); }
@@ -107,6 +117,12 @@ if(argv[0] === '--add-tenant'){
 if(argv[0] === '--add-user'){
   bootstrap();
   try{ addUser(argv[1], argv[2], argv[3], argv[4], argv[5]); console.log('Kullanıcı eklendi: '+argv[2]+' ('+argv[4]+') → '+argv[1]); }
+  catch(e){ console.error('Hata: '+e.message); process.exit(1); }
+  process.exit(0);
+}
+if(argv[0] === '--del-user'){
+  bootstrap();
+  try{ delUser(argv[1], argv[2]); console.log('Kullanıcı silindi: '+argv[2]+' ('+argv[1]+')'); }
   catch(e){ console.error('Hata: '+e.message); process.exit(1); }
   process.exit(0);
 }
@@ -250,6 +266,14 @@ async function handleAPI(req, res, pathname, q){
      istemci önce güncel durumu alıp işlemi tekrarlar */
   if(pathname === '/api/push' && req.method === 'POST'){
     if(p.r === 'device'){ sendJSON(res, 400, {ok:false, error:'Kasa /api/sync kullanır'}); return; }
+    /* patron (e-posta) ve yönetici (admin — kasadaki mevcut hesaplar, ör.
+       Bahar/Mahmut) uzaktan sadece görüntüleme içindir (Masa Planı +
+       İstatistikler, salt okunur) — istemci tarafında da düzenleme ekranlarına
+       yol yok, ama her ihtimale karşı sunucu da bu hesaplardan gelen hiçbir
+       yazmayı kabul etmesin: geçmişteki "çakışan yazmalar veri kaybettirdi"
+       olayı yalnızca yazma yapabilen (garson/depo/muhasebe) uzak
+       oturumlarda mümkündür — onlar hâlâ /api/push kullanamaz. */
+    if(p.r === 'patron' || p.r === 'admin'){ sendJSON(res, 403, {ok:false, error:'Bu hesapla değişiklik gönderilemez (salt okunur erişim)'}); return; }
     let body;
     try{ body = JSON.parse(await readBody(req)); }catch(e){ sendJSON(res, 400, {ok:false, error:'Geçersiz istek'}); return; }
     if(!body || typeof body.baseRev !== 'number' || !body.state){ sendJSON(res, 400, {ok:false, error:'baseRev ve state zorunlu'}); return; }
