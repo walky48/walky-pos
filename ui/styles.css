@@ -93,6 +93,8 @@ label.fl{display:block;font-size:13px;color:var(--muted);margin:14px 0 6px}
 .tcard{background:var(--panel2);border:1px solid var(--border);border-radius:12px;min-height:128px;padding:15px 16px;cursor:pointer;
   display:flex;flex-direction:column;transition:.15s;text-align:left}
 .tcard:hover{border-color:var(--border2);transform:translateY(-2px)}
+.tcard:disabled{cursor:default;opacity:1}
+.tcard:disabled:hover{transform:none}
 .tcard.open{border-color:rgba(245,166,35,.55);background:linear-gradient(180deg,rgba(245,166,35,.07),rgba(245,166,35,.02)),var(--panel2)}
 .tcard .top{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .tcard .nm{font-weight:800;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

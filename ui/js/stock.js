@@ -1,10 +1,13 @@
 'use strict';
 
+function stockCatList(){
+  return [...new Set([...db.stockCats, ...db.stock.map(s=>s.cat)])];
+}
 function viewStock(){
   const canEdit = user.role==='admin';
   const counts={ok:0,low:0,crit:0};
   db.stock.forEach(s=>counts[stockStatus(s)]++);
-  const cats=[...new Set(db.stock.map(s=>s.cat))];
+  const cats=stockCatList();
   const sections=cats.map(cat=>{
     const rows=db.stock.filter(s=>s.cat===cat && (stockFilter==='all'||stockStatus(s)===stockFilter))
       .map(s=>`<tr>
@@ -31,16 +34,34 @@ function viewStock(){
         <button class="chip ${stockFilter==='ok'?'on':''}" onclick="stockFilter='ok';render()"><span class="dot" style="background:var(--green)"></span>Normal <span class="cnt">${counts.ok}</span></button>
         <button class="chip ${stockFilter==='low'?'on':''}" onclick="stockFilter='low';render()"><span class="dot" style="background:var(--amber)"></span>Azalıyor <span class="cnt">${counts.low}</span></button>
         <button class="chip ${stockFilter==='crit'?'on':''}" onclick="stockFilter='crit';render()"><span class="dot" style="background:var(--red)"></span>Kritik <span class="cnt">${counts.crit}</span></button>
-        ${canEdit?`<button class="btn accent sm" onclick="openNewStockModal()">+ Yeni Stok Kalemi</button>`:''}
+        ${canEdit?`<button class="btn sm" onclick="openNewStockCatModal()">+ Yeni Kategori</button>
+        <button class="btn accent sm" onclick="openNewStockModal()">+ Yeni Stok Kalemi</button>`:''}
       </div></div>
     ${sections}
     ${log?`<div class="sect"><div class="st">Son Stok Hareketleri</div>${log}</div>`:''}`;
 }
+/* --- yeni kategori (henüz hiç malzemesi olmasa da açılır listede görünsün) --- */
+function openNewStockCatModal(){
+  showModal(`<div class="m-head"><h3>Yeni Kategori</h3><button class="icon-b" onclick="closeModal()">✕</button></div>
+    <label class="fl">Kategori Adı</label>
+    <input id="nscName" class="inp" autocomplete="off">
+    <div class="m-actions"><button class="btn ghost" onclick="closeModal()">Vazgeç</button>
+    <button class="btn accent" onclick="createStockCat()">Ekle</button></div>`);
+  $('#nscName').focus();
+}
+function createStockCat(){
+  const name=$('#nscName').value.trim();
+  if(!name){toast('Kategori adı girin','err');return}
+  if(stockCatList().some(c=>c.toLowerCase()===name.toLowerCase())){toast('Bu kategori zaten var','err');return}
+  db.stockCats.push(name);
+  saveDB(); closeModal(); render(); toast(name+' kategorisi eklendi ✓','ok');
+}
 /* --- yeni stok kalemi (malzeme) oluşturma — admin --- */
 function openNewStockModal(){
-  const cats=[...new Set(db.stock.map(s=>s.cat))];
+  const cats=stockCatList();
   const catOpts=cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('')
     +`<option value="__new">➕ Yeni kategori…</option>`;
+  const unitOpts=STOCK_UNITS.map(u=>`<option value="${u}">${u}</option>`).join('');
   showModal(`<div class="m-head"><h3>Yeni Stok Kalemi</h3><button class="icon-b" onclick="closeModal()">✕</button></div>
     <label class="fl">Malzeme Adı</label>
     <input id="nsName" class="inp" autocomplete="off">
@@ -51,7 +72,7 @@ function openNewStockModal(){
       <input id="nsCatNew" class="inp">
     </div>
     <label class="fl">Birim</label>
-    <input id="nsUnit" class="inp" placeholder="kg, lt, adet, cl...">
+    <select id="nsUnit" class="inp">${unitOpts}</select>
     <label class="fl">Uyarı Eşikleri</label>
     <div class="range-bar">
       <div class="fld"><span>Az Uyarı</span><input id="nsLow" class="inp" style="width:110px" inputmode="decimal" value="10"></div>
@@ -66,8 +87,7 @@ function createStockItem(){
   if(!name){toast('Malzeme adı girin','err');return}
   let cat=$('#nsCat').value;
   if(cat==='__new'){cat=$('#nsCatNew').value.trim();if(!cat){toast('Kategori adı girin','err');return}}
-  const unit=$('#nsUnit').value.trim();
-  if(!unit){toast('Birim girin','err');return}
+  const unit=$('#nsUnit').value;
   const low=num($('#nsLow').value), crit=num($('#nsCrit').value);
   if(low<0||crit<0){toast('Geçerli eşik değerleri girin','err');return}
   if(db.stock.some(s=>s.name.toLowerCase()===name.toLowerCase())){toast('Bu isimde bir stok kalemi zaten var','err');return}

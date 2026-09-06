@@ -8,6 +8,7 @@ function orderHTML(){
       <span class="tname">${esc(displayName(t))}
         <button class="icon-b" title="Masayı yeniden adlandır" onclick="openRename()">✏️</button>
         <button class="icon-b" title="Masayı başka bir masaya taşı" onclick="openMoveTable()">🔀</button></span>
+      <span class="badge gray">Çek #${fmtCheckNo(t.checkNo)}</span>
       <span class="sep"></span>
       <span class="mi">👤 ${esc(t.openedBy||'')}</span>
       <span class="mi">⏱ ${elapsedMin(t.openedAt)} dk</span>
@@ -258,7 +259,7 @@ function moveTableTo(destId){
   if(!src||!dst||dst.status!=='empty') return;
   dst.status='open'; dst.currency=src.currency; dst.openedAt=src.openedAt; dst.openedBy=src.openedBy;
   dst.customName=src.customName; dst.items=src.items; dst.discount=src.discount;
-  dst.service=src.service; dst.complimentary=src.complimentary; dst.couvert=src.couvert;
+  dst.service=src.service; dst.complimentary=src.complimentary; dst.couvert=src.couvert; dst.checkNo=src.checkNo;
   resetTable(src);
   activeTableId=destId;
   saveDB(); closeModal(); render();
@@ -305,7 +306,7 @@ function cancelTable(){
 }
 function resetTable(t){
   t.status='empty'; t.customName=null; t.currency=null; t.openedAt=null; t.openedBy=null;
-  t.items=[]; t.discount=null; t.service=null; t.complimentary=null; t.couvert=null;
+  t.items=[]; t.discount=null; t.service=null; t.complimentary=null; t.couvert=null; t.checkNo=null;
 }
 
 /* --- ödeme --- */
@@ -363,7 +364,7 @@ function completePayment(){
   if(!payState||!payState.method) return;
   if(payState.method==='cari' && !(payState.cariName||'').trim()){toast('Cari için bir isim girin','err');return}
   const sale={
-    id:uid(), bd:db.day.date, table:displayName(t), origTable:t.name, waiter:t.openedBy,
+    id:uid(), bd:db.day.date, checkNo:t.checkNo, table:displayName(t), origTable:t.name, waiter:t.openedBy,
     currency:t.currency, rate:rateOf(t.currency), openedAt:t.openedAt, closedAt:Date.now(),
     items:t.items.map(i=>({name:i.name, cat:i.cat, qty:i.qty, unit:i.unit})),
     sub:tot.sub, disc:tot.disc, serv:tot.serv, total:tot.total, totalTL:tot.totalTL,

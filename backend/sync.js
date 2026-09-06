@@ -146,17 +146,25 @@ function syncUnpair(){
   syncCfg = null; saveSyncCfg(); render(); toast('Sunucu bağlantısı kesildi','ok');
 }
 
-/* ---------- UZAK İSTEMCİ (tam erişim, internet gerektirir) ---------- */
+/* ---------- UZAK İSTEMCİ (internet gerektirir) ---------- */
 /* Kalabalık + zayıf internet altında birden fazla telefonun aynı anda
    sunucuya yazması, arka arkaya çakışmalara ve (birkaç tekrar denemeden
    sonra son çare olarak sunucu durumunun benimsenmesi yüzünden) masa/sipariş
    verisinin sessizce kaybolmasına yol açtı. Kalıcı, hiçbir zaman veri
-   kaybetmeyen bir çözüm test edilip devreye alınana kadar, uzaktan erişim
-   geçici olarak tamamen kapatıldı — sadece kasadaki tek cihazdan çalışılır
-   (tek yazıcı olduğu için bu sınıftaki çakışmalar hiç oluşamaz). Yeniden
-   açmak için bunu true yapmak yeterli. */
-const REMOTE_ACCESS_ENABLED = false;
-const REMOTE_DISABLED_MSG = 'Uzaktan erişim geçici olarak kapalı — yoğunluk nedeniyle şu an yalnızca kasadan işlem yapılabiliyor.';
+   kaybetmeyen bir çözüm test edilip devreye alınana kadar, uzaktan YAZMA
+   (sipariş girme) tamamen kapalı kalıyor — sadece kasadaki tek cihaz yazabilir.
+   Buna karşın uzaktan salt-okunur GÖRÜNTÜLEME (Masa Planı + İstatistikler)
+   güvenlidir: hiçbir değişiklik göndermediği için yukarıdaki çakışma hiç
+   oluşamaz. Bu yüzden mevcut YÖNETİCİ (admin rolündeki kasa hesapları, ör.
+   Bahar/Mahmut — veya e-posta ile tanımlı "patron" hesabı) uzaktan giriş
+   yapabilir ama salt-okunur kalır (bkz. layout.js navItems, tables.js
+   openTableFlow, server.js /api/push 'patron'/'admin' reddi); garson/depo/
+   muhasebe rolündeki hesaplar (asıl riskin kaynağı olan sipariş girişi)
+   uzaktan giriş yapamaz. */
+const REMOTE_VIEWER_ENABLED = true;
+const REMOTE_VIEWER_ROLES = ['patron','admin'];
+const REMOTE_DISABLED_MSG = 'Uzaktan erişim şu an kapalı.';
+const REMOTE_VIEWER_ROLE_MSG = 'Uzaktan sadece yönetici hesabıyla, salt-okunur görüntüleme için giriş yapılabiliyor — garson/depo/muhasebe hesapları uzaktan sipariş giremez.';
 const REMOTE_KEY = 'walky_remote_v1';
 let remoteMode = false;
 let remoteSession = null; // {url, token, tenantName, user:{name, role, email}}
@@ -171,8 +179,8 @@ function saveRemoteSession(){
   try{ remoteSession ? localStorage.setItem(REMOTE_KEY, JSON.stringify(remoteSession)) : localStorage.removeItem(REMOTE_KEY); }catch(e){}
 }
 async function remoteLogin(){
-  if(!REMOTE_ACCESS_ENABLED){ toast(REMOTE_DISABLED_MSG,'err'); return; }
-  const url = $('#rmUrl').value.trim().replace(/\/+$/,''), code = $('#rmCode').value.trim(),
+  if(!REMOTE_VIEWER_ENABLED){ toast(REMOTE_DISABLED_MSG,'err'); return; }
+  const url = $('#rmUrl').value.trim().replace(/\/+$/,''), code = $('#rmCode') ? $('#rmCode').value.trim() : '',
         login = $('#rmUser').value.trim(), pass = $('#rmPass').value,
         remember = $('#rmRemember') ? $('#rmRemember').checked : true;
   if(!url || !login || !pass){ toast('Sunucu, kullanıcı ve şifre zorunlu','err'); return; }
@@ -183,6 +191,11 @@ async function remoteLogin(){
       body: JSON.stringify({username:login, tenant:code, password:pass, remember})}).then(x=>x.json());
   }catch(e){ toast('Sunucuya ulaşılamadı — adresi kontrol edin','err'); return; }
   if(!r.ok){ toast(r.error||'Giriş başarısız','err'); return; }
+  /* sadece yönetici (admin) rolündeki kasa hesapları veya e-posta ile
+     tanımlı patron hesabı uzaktan salt-okunur girebilir — garson/depo/
+     muhasebe hesapları (asıl riskin kaynağı olan sipariş girişi) uzaktan
+     giremez, kasadan devam eder */
+  if(REMOTE_VIEWER_ROLES.indexOf(r.user.role) < 0){ toast(REMOTE_VIEWER_ROLE_MSG,'err'); return; }
   remoteSession = {url, token:r.token, tenantName:r.tenantName, user:r.user};
   saveRemoteSession();
   await remoteFetchAndEnter();
@@ -306,11 +319,12 @@ async function remotePrintRequest(kind, lines, html){
 }
 async function remoteResume(){
   loadRemoteSession();
-  if(!REMOTE_ACCESS_ENABLED){
-    if(remoteSession){ remoteSession = null; saveRemoteSession(); }
+  if(!remoteSession) return false;
+  const allowed = REMOTE_VIEWER_ENABLED && remoteSession.user && REMOTE_VIEWER_ROLES.indexOf(remoteSession.user.role) >= 0;
+  if(!allowed){
+    remoteSession = null; saveRemoteSession();
     return false;
   }
-  if(!remoteSession) return false;
   try{
     const j = await fetch(remoteSession.url + '/api/state', {headers:{'Authorization':'Bearer '+remoteSession.token}}).then(x=>x.json());
     if(!j.ok) throw new Error();

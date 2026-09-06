@@ -18,8 +18,8 @@ function loginHTML(){
     <label class="fl">Şifre</label>
     <input id="loginPass" class="inp" type="password">
     <button class="btn accent wide mt24" onclick="doLogin()">Giriş Yap</button>`;
-  const remoteDisabled = typeof REMOTE_ACCESS_ENABLED!=='undefined' && !REMOTE_ACCESS_ENABLED;
-  const remote = remoteDisabled ? `
+  const viewerEnabled = typeof REMOTE_VIEWER_ENABLED!=='undefined' && REMOTE_VIEWER_ENABLED;
+  const remote = !viewerEnabled ? `
     <div class="kasa-note" style="margin-top:14px">${esc(REMOTE_DISABLED_MSG)}</div>
     <p class="muted small mt12">Lütfen "🖥️ Kasa Girişi" sekmesinden, restorandaki kasa cihazından giriş yapın.</p>` : `
     <label class="fl">Sunucu Adresi</label>
@@ -33,6 +33,7 @@ function loginHTML(){
     <label class="fl" style="display:flex;align-items:center;gap:8px;cursor:pointer">
       <input type="checkbox" id="rmRemember" checked> Bilgilerimi Kaydet
     </label>
+    <p class="muted small mt8">Yönetici hesabıyla (kasadaki kullanıcı adı/şifre) salt-okunur görüntüleme için uzaktan giriş yapılabiliyor.</p>
     <button class="btn accent wide mt24" onclick="remoteLogin()">Sisteme Bağlan</button>`;
   return `<div class="login-wrap"><div class="card login-card">
     <div class="brand"><div class="logo">${PLATE}</div><div class="nm">WALKY</div><div class="sub">Restoran Yönetim Sistemi</div></div>

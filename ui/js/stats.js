@@ -18,11 +18,11 @@ function guestStatCard(st){
 }
 function ordersRowsHTML(sales){
   return sales.slice().reverse().map(s=>`<tr>
-      <td>${trDate(s.bd)}</td><td data-lbl="Masa"><b>${esc(s.table)}</b></td><td class="muted" data-lbl="Garson">${esc(s.waiter||'')}</td>
+      <td>${trDate(s.bd)}</td><td data-lbl="Çek No">#${fmtCheckNo(s.checkNo)}</td><td data-lbl="Masa"><b>${esc(s.table)}</b></td><td class="muted" data-lbl="Garson">${esc(s.waiter||'')}</td>
       <td data-lbl="Açılış">${trTime(s.openedAt)}</td><td data-lbl="Kapanış">${trTime(s.closedAt)}</td>
       <td class="num" data-lbl="Tutar">${fmt(s.totalTL)}</td><td data-lbl="Ödeme">${payLabel(s)}</td>
       <td class="right tdact"><button class="rowbtn" onclick="orderDetail('${s.id}')">Detay</button>
-        ${(user.role==='admin' && s.bd===db.day.date)?`<button class="rowbtn" style="color:var(--red);margin-left:8px" onclick="reopenSaleAsk('${s.id}')">Yeniden Aç</button>`:''}</td></tr>`).join('');
+        ${(user.role==='admin' && !remoteMode && s.bd===db.day.date)?`<button class="rowbtn" style="color:var(--red);margin-left:8px" onclick="reopenSaleAsk('${s.id}')">Yeniden Aç</button>`:''}</td></tr>`).join('');
 }
 function viewStats(){
   const today=db.day.open?db.day.date:iso();
@@ -81,7 +81,7 @@ function viewStats(){
     <div class="two-col mt16">
       <div class="panel" style="grid-column:1/-1">
         <div class="st" style="margin-bottom:12px">SİPARİŞLER (${trDate(listF)}${listF!==listT?' – '+trDate(listT):''})</div>
-        ${orders?`<table class="dt"><thead><tr><th>Tarih</th><th>Masa</th><th>Garson</th><th>Açılış</th><th>Kapanış</th><th>Tutar</th><th>Ödeme</th><th></th></tr></thead><tbody>${orders}</tbody></table>`
+        ${orders?`<table class="dt"><thead><tr><th>Tarih</th><th>Çek No</th><th>Masa</th><th>Garson</th><th>Açılış</th><th>Kapanış</th><th>Tutar</th><th>Ödeme</th><th></th></tr></thead><tbody>${orders}</tbody></table>`
                 :`<div class="muted small">Bu aralıkta sipariş bulunmuyor.</div>`}
       </div>
     </div>
@@ -110,7 +110,7 @@ function orderDetail(id){
   const s=db.sales.find(x=>x.id===id); if(!s) return;
   const c=s.currency;
   const items=s.items.map(i=>`<div class="sum-line"><span>${esc(i.name)} <span class="muted">x${i.qty}</span></span><b>${fmt(i.qty*i.unit,c)}</b></div>`).join('');
-  showModal(`<div class="m-head"><h3>Sipariş Detayı — ${esc(s.table)}</h3><button class="icon-b" onclick="closeModal()">✕</button></div>
+  showModal(`<div class="m-head"><h3>Sipariş Detayı — ${esc(s.table)} <span class="muted small" style="font-weight:500">Çek #${fmtCheckNo(s.checkNo)}</span></h3><button class="icon-b" onclick="closeModal()">✕</button></div>
     <div class="muted small mb12">${trDate(s.bd)} · Garson: ${esc(s.waiter||'')} · Açılış ${trTime(s.openedAt)} → Kapanış ${trTime(s.closedAt)}
       ${s.origTable!==s.table?`<br>Orijinal masa: ${esc(s.origTable)}`:''}</div>
     ${items}
@@ -123,14 +123,14 @@ function orderDetail(id){
       <div class="trow"><span>Ödeme Yöntemi</span><b>${payLabel(s)}</b></div>
     </div>
     <div class="m-actions">
-      ${(user.role==='admin' && s.bd===db.day.date)?`<button class="btn red" onclick="reopenSaleAsk('${s.id}')">Çeki Yeniden Aç</button>`:''}
+      ${(user.role==='admin' && !remoteMode && s.bd===db.day.date)?`<button class="btn red" onclick="reopenSaleAsk('${s.id}')">Çeki Yeniden Aç</button>`:''}
       <button class="btn accent" onclick="closeModal()">Kapat</button>
     </div>`);
 }
 
 /* --- yanlışlıkla kapatılan çeki yeniden açma (sadece admin) --- */
 function reopenSaleAsk(id){
-  if(!user || user.role!=='admin') return;
+  if(!user || user.role!=='admin' || remoteMode) return;
   const s=db.sales.find(x=>x.id===id); if(!s) return;
   if(s.bd!==db.day.date){toast('Yalnızca bugünün çekleri yeniden açılabilir','err');return}
   const empties=db.tables.filter(x=>x.status==='empty');
@@ -142,7 +142,7 @@ function reopenSaleAsk(id){
     <div class="cur-grid">${cards}</div>`,true);
 }
 function reopenSaleTo(saleId, tableId){
-  if(!user || user.role!=='admin') return;
+  if(!user || user.role!=='admin' || remoteMode) return;
   const idx=db.sales.findIndex(x=>x.id===saleId); if(idx<0) return;
   const s=db.sales[idx];
   const dst=getTable(tableId); if(!dst||dst.status!=='empty') return;
@@ -154,6 +154,7 @@ function reopenSaleTo(saleId, tableId){
   dst.discount = s.discount ? {...s.discount} : (dst.complimentary ? {type:'pct', value:100} : (s.disc>0 ? {type:'amt', value:s.disc} : null));
   dst.service = s.serv>0 ? {type:'amt', value:s.serv} : null;
   dst.couvert = s.couvert ? {...s.couvert} : null;
+  dst.checkNo = s.checkNo || null;
   if(s.method==='cari' && s.cariName){
     const acc=db.cari.find(x=>x.name.toLowerCase()===s.cariName.toLowerCase());
     if(acc) acc.entries=acc.entries.filter(e=>e.saleId!==s.id);

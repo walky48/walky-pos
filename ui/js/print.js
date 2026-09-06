@@ -31,7 +31,7 @@ function receiptHTML(t, tot, sale){
     <div class="rc-hr"></div>
     <div class="rc-row"><span>Masa: ${esc(displayName(t))}</span><span>${trTime(Date.now())}</span></div>
     <div class="rc-row"><span>Garson: ${esc(t.openedBy||'')}</span><span>${trDate(db.day.date||iso())}</span></div>
-    <div class="rc-row"><span></span><span>${CUR_LABEL[c]}</span></div>
+    <div class="rc-row"><span>Çek No: #${fmtCheckNo(t.checkNo)}</span><span>${CUR_LABEL[c]}</span></div>
     <div class="rc-hr"></div>
     ${lines}
     <div class="rc-hr"></div>
@@ -74,7 +74,7 @@ function receiptLines(t, tot, sale){
     {text:'--------------------------------'},
     {text:'Masa: '+displayName(t)+'   '+trTime(Date.now())},
     {text:'Garson: '+(t.openedBy||'')+'   '+trDate(db.day.date||iso())},
-    {text:CUR_LABEL[c], align:'r'},
+    {text: padLine('Çek No: #'+fmtCheckNo(t.checkNo), CUR_LABEL[c])},
     {text:'--------------------------------'}
   ];
   t.items.forEach(i=>{

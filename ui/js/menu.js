@@ -16,7 +16,10 @@ function viewMenu(){
   }).join('');
   return `<div class="page-head">
       <div><h1>Menü Yönetimi</h1></div>
-      <button class="btn accent" onclick="prodModal('')">+ Yeni Ürün</button>
+      <div class="head-tools">
+        <button class="btn sm" onclick="openNewMenuCatModal()">+ Yeni Kategori</button>
+        <button class="btn accent" onclick="prodModal('')">+ Yeni Ürün</button>
+      </div>
     </div>
     <div class="panel mb12" style="margin-bottom:20px">
       <div class="st" style="margin-bottom:12px">GÜNLÜK KUR (TCMB)</div>
@@ -44,11 +47,26 @@ function saveRates(){
   saveDB(); render(); toast('Kurlar güncellendi, Dolar fiyatları yeniden hesaplandı ✓','ok');
 }
 
+function openNewMenuCatModal(){
+  showModal(`<div class="m-head"><h3>Yeni Kategori</h3><button class="icon-b" onclick="closeModal()">✕</button></div>
+    <label class="fl">Kategori Adı</label>
+    <input id="nmcName" class="inp" autocomplete="off">
+    <div class="m-actions"><button class="btn ghost" onclick="closeModal()">Vazgeç</button>
+    <button class="btn accent" onclick="createMenuCat()">Ekle</button></div>`);
+  $('#nmcName').focus();
+}
+function createMenuCat(){
+  const name=$('#nmcName').value.trim();
+  if(!name){toast('Kategori adı girin','err');return}
+  if(menuCatList().some(c=>c.toLowerCase()===name.toLowerCase())){toast('Bu kategori zaten var','err');return}
+  db.menuCatList.push(name);
+  saveDB(); closeModal(); render(); toast(name+' kategorisi eklendi ✓','ok');
+}
 let rcpTmp=[];
 function prodModal(mid){
   const m=mid?db.menu.find(x=>x.id===mid):null;
-  rcpTmp=m&&m.recipe?m.recipe.map(r=>({s:r.s,q:r.q})):[];
-  const cats=menuCats();
+  rcpTmp=m&&m.recipe?m.recipe.map(r=>({s:r.s,q:r.q,u:stockUnit(r.s)})):[];
+  const cats=menuCatList();
   const catOpts=cats.map(c=>`<option value="${esc(c)}" ${m&&m.cat===c?'selected':''}>${esc(c)}</option>`).join('')
     +`<option value="__new">➕ Yeni kategori…</option>`;
   showModal(`<div class="m-head"><h3>${m?'Ürünü Düzenle':'Yeni Ürün'}</h3><button class="icon-b" onclick="closeModal()">✕</button></div>
@@ -60,16 +78,13 @@ function prodModal(mid){
       <label class="fl">Yeni Kategori Adı</label>
       <input id="pCatNew" class="inp">
     </div>
-    <label class="fl">Fiyatlar (TL ve Euro elle girilir, Dolar Euro'dan otomatik hesaplanır)</label>
     <div class="range-bar">
       <div class="fld"><span>₺</span><input id="pTL" class="inp" style="width:110px" inputmode="decimal" value="${m?String(m.price.TL).replace('.',','):''}"></div>
       <div class="fld"><span>€</span><input id="pEUR" class="inp" style="width:110px" inputmode="decimal" value="${m?String(m.price.EUR).replace('.',','):''}" oninput="pModalUsdPreview()"></div>
       <div class="fld"><span>$</span><input id="pUSD" class="inp" style="width:110px" disabled value="${m?usdFromEur(m.price.EUR,db.rates):0}"></div>
     </div>
-    ${db.settings.stockEnabled?`<label class="fl">Reçete (stok bağlantısı — ürün satıldıkça bu malzemeler düşer)</label>
-    <div id="rcpRows"></div>
+    ${db.settings.stockEnabled?`<div id="rcpRows"></div>
     <button class="rowbtn" onclick="rcpAdd()">+ Malzeme Ekle</button>`:''}
-    <p class="muted tiny mt8">${KITCHEN_CATS.map(esc).join(' ve ')} kategorisindeki ürünler gün sonu raporunda "Yemek Satışları" olarak ayrıca toplanır.</p>
     <div class="m-actions"><button class="btn ghost" onclick="closeModal()">Vazgeç</button>
     <button class="btn accent" onclick="saveProduct('${mid||''}')">${m?'Kaydet':'Ürünü Ekle'}</button></div>`,true);
   if(db.settings.stockEnabled) renderRcpRows();
@@ -79,10 +94,14 @@ function renderRcpRows(){
   if(!rcpTmp.length){box.innerHTML='<div class="muted tiny" style="padding:6px 0">Malzeme eklenmedi.</div>';return}
   box.innerHTML=rcpTmp.map((r,i)=>{
     const opts=db.stock.map(s=>`<option value="${s.id}" ${r.s===s.id?'selected':''}>${esc(s.name)}</option>`).join('');
+    const group=STOCK_UNIT_GROUPS[stockUnit(r.s)]||[r.u];
+    const uOpts=group.map(u=>`<option value="${u}" ${r.u===u?'selected':''}>${u}</option>`).join('');
     return `<div class="range-bar" style="margin-bottom:8px">
       <select class="inp" style="flex:1;min-width:160px" onchange="rcpChgS(${i},this.value)">${opts}</select>
-      <input class="inp" style="width:90px" inputmode="decimal" value="${String(r.q).replace('.',',')}" oninput="rcpChgQ(${i},this.value)">
-      <span class="muted small" style="min-width:40px">${esc(stockUnit(r.s))}</span>
+      <input class="inp" style="width:80px" inputmode="decimal" value="${String(r.q).replace('.',',')}" oninput="rcpChgQ(${i},this.value)">
+      ${group.length>1
+        ? `<select class="inp" style="width:80px" onchange="rcpChgU(${i},this.value)">${uOpts}</select>`
+        : `<span class="muted small" style="min-width:40px">${esc(r.u)}</span>`}
       <button class="icon-b" onclick="rcpDel(${i})">✕</button>
     </div>`;
   }).join('');
@@ -93,10 +112,11 @@ function pModalUsdPreview(){
 }
 function rcpAdd(){
   if(!db.stock.length){toast('Önce Stok Durumu ekranından malzeme ekleyin','err');return}
-  rcpTmp.push({s:db.stock[0].id,q:1});renderRcpRows();
+  rcpTmp.push({s:db.stock[0].id,q:1,u:stockUnit(db.stock[0].id)});renderRcpRows();
 }
-function rcpChgS(i,v){rcpTmp[i].s=v;renderRcpRows()}
+function rcpChgS(i,v){rcpTmp[i].s=v; rcpTmp[i].u=stockUnit(v); renderRcpRows()}
 function rcpChgQ(i,v){rcpTmp[i].q=num(v)}
+function rcpChgU(i,v){rcpTmp[i].u=v}
 function rcpDel(i){rcpTmp.splice(i,1);renderRcpRows()}
 function saveProduct(mid){
   const name=$('#pName').value.trim();
@@ -107,7 +127,7 @@ function saveProduct(mid){
   if(tl<=0){toast('TL fiyatı zorunludur','err');return}
   if(eur<0){toast('Geçersiz fiyat','err');return}
   const usd=usdFromEur(eur,db.rates);
-  const recipe=rcpTmp.filter(r=>r.s&&r.q>0).map(r=>({s:r.s,q:r.q}));
+  const recipe=rcpTmp.filter(r=>r.s&&r.q>0).map(r=>({s:r.s,q:convStockUnit(r.q,r.u,stockUnit(r.s))}));
   if(mid){
     const m=db.menu.find(x=>x.id===mid);
     m.name=name; m.cat=cat; m.price={TL:tl,USD:usd,EUR:eur}; m.recipe=recipe;

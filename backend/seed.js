@@ -233,6 +233,9 @@ function seedDB(){
     day:{open:false, date:null, openingFloat:0, openedAt:null, openedBy:null, lastNextFloat:0},
     dayHistory:[],
     floatChecks:[],
+    stockCats:[],
+    menuCatList:[],
+    nextCheckNo:1,
     settings:{stockEnabled:true}
   };
 }
@@ -261,6 +264,9 @@ function seedDBBlank(){
     day:{open:false, date:null, openingFloat:0, openedAt:null, openedBy:null, lastNextFloat:0},
     dayHistory:[],
     floatChecks:[],
+    stockCats:[],
+    menuCatList:[],
+    nextCheckNo:1,
     settings:{stockEnabled:true},
     menuRealSeeded:true, stockAlkolSeeded:true, stockNonAlkolRemoved:true, usdFromEurApplied:true,
     tables25Seeded:true, usersRealSeeded:true, adminUsernameRenamed:true, testDataCleared:true,

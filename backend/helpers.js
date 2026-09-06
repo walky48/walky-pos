@@ -6,6 +6,15 @@ function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').
 function num(v){const n=parseFloat(String(v??'').trim().replace(',','.'));return isNaN(n)?0:n}
 function fmt(n,cur){cur=cur||'TL';return SYM[cur]+Number(n||0).toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2})}
 function fmtQ(n){return Number(n||0).toLocaleString('tr-TR',{maximumFractionDigits:2})}
+function fmtCheckNo(n){return n?String(n).padStart(3,'0'):'---'}
+/* 001'den başlayıp 999'dan sonra tekrar 001'e dönen döngüsel çek numarası —
+   masa açılırken (openWith) atanır, taşınsa/yeniden açılsa bile aynı çekle
+   birlikte taşınır, karışıklığı önlemek için */
+function assignCheckNo(t){
+  const n=db.nextCheckNo||1;
+  t.checkNo=n;
+  db.nextCheckNo=n>=999?1:n+1;
+}
 function rateOf(c){return c==='TL'?1:(db.rates[c]||1)}
 function uid(){return 'x'+Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
 function iso(d){d=d||new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
