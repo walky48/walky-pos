@@ -3,6 +3,23 @@
 function stockCatList(){
   return [...new Set([...db.stockCats, ...db.stock.map(s=>s.cat)])];
 }
+function stockCatChipsHTML(){
+  if(!db.stockCats.length) return '';
+  const used=new Set(db.stock.map(s=>s.cat));
+  return `<div class="sect"><div class="st">KATEGORİLER</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+    ${db.stockCats.map((c,i)=>{
+      const empty=!used.has(c);
+      return `<span class="chip">${esc(c)}${empty?` <span style="cursor:pointer;font-weight:800" onclick="delStockCat(${i})" title="Boş kategoriyi sil">✕</span>`:''}</span>`;
+    }).join('')}
+    </div></div>`;
+}
+function delStockCat(i){
+  const name=db.stockCats[i]; if(name===undefined) return;
+  if(db.stock.some(s=>s.cat===name)){toast('Bu kategoride malzeme var, önce malzemeleri taşıyın/silin','err');return}
+  db.stockCats.splice(i,1);
+  saveDB(); render(); toast(name+' kategorisi silindi','ok');
+}
 function viewStock(){
   const canEdit = user.role==='admin';
   const counts={ok:0,low:0,crit:0};
@@ -38,6 +55,7 @@ function viewStock(){
         ${canEdit?`<button class="btn sm" onclick="openNewStockCatModal()">+ Yeni Kategori</button>
         <button class="btn accent sm" onclick="openNewStockModal()">+ Yeni Stok Kalemi</button>`:''}
       </div></div>
+    ${canEdit?stockCatChipsHTML():''}
     ${sections}
     ${log?`<div class="sect"><div class="st">Son Stok Hareketleri</div>${log}</div>`:''}`;
 }

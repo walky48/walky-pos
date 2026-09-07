@@ -21,6 +21,7 @@ function viewMenu(){
         <button class="btn accent" onclick="prodModal('')">+ Yeni Ürün</button>
       </div>
     </div>
+    ${menuCatChipsHTML()}
     <div class="panel mb12" style="margin-bottom:20px">
       <div class="st" style="margin-bottom:12px">GÜNLÜK KUR (TCMB)</div>
       <div class="range-bar">
@@ -47,6 +48,23 @@ function saveRates(){
   saveDB(); render(); toast('Kurlar güncellendi, Dolar fiyatları yeniden hesaplandı ✓','ok');
 }
 
+function menuCatChipsHTML(){
+  if(!db.menuCatList.length) return '';
+  const used=new Set(db.menu.map(m=>m.cat));
+  return `<div class="panel mb12" style="margin-bottom:20px"><div class="st" style="margin-bottom:10px">KATEGORİLER</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+    ${db.menuCatList.map((c,i)=>{
+      const empty=!used.has(c);
+      return `<span class="chip">${esc(c)}${empty?` <span style="cursor:pointer;font-weight:800" onclick="delMenuCat(${i})" title="Boş kategoriyi sil">✕</span>`:''}</span>`;
+    }).join('')}
+    </div></div>`;
+}
+function delMenuCat(i){
+  const name=db.menuCatList[i]; if(name===undefined) return;
+  if(db.menu.some(m=>m.cat===name)){toast('Bu kategoride ürün var, önce ürünleri taşıyın/silin','err');return}
+  db.menuCatList.splice(i,1);
+  saveDB(); render(); toast(name+' kategorisi silindi','ok');
+}
 function openNewMenuCatModal(){
   showModal(`<div class="m-head"><h3>Yeni Kategori</h3><button class="icon-b" onclick="closeModal()">✕</button></div>
     <label class="fl">Kategori Adı</label>
