@@ -5,7 +5,7 @@ function viewTables(){
   const shown=all.filter(t=> tableFilter==='all' ? true : tableFilter==='open' ? t.status==='open' : t.status==='empty');
   const cards=shown.map(t=>{
     const tot=t.status==='open'?calcTotals(t):null;
-    return `<button class="tcard ${t.status==='open'?'open':''}" ${remoteMode?'disabled':`onclick="openTableFlow('${t.id}')"`}>
+    return `<button class="tcard ${t.status==='open'?'open':''}" ${remoteViewOnly()?'disabled':`onclick="openTableFlow('${t.id}')"`}>
       <div class="top"><span class="nm">${esc(displayName(t))}${t.status==='open'?` <span class="muted tiny">#${fmtCheckNo(t.checkNo)}</span>`:''}</span>
         ${t.status==='open'?`<span class="badge cur">${CUR_LABEL[t.currency]}</span>`:`<span class="badge gray">BOŞ</span>`}</div>
       ${t.status==='open'?`<div class="meta">
@@ -23,7 +23,7 @@ function viewTables(){
         <button class="chip ${tableFilter==='all'?'on':''}" onclick="tableFilter='all';render()">Tümü <span class="cnt">${all.length}</span></button>
         <button class="chip ${tableFilter==='empty'?'on':''}" onclick="tableFilter='empty';render()">Boş <span class="cnt">${empty}</span></button>
         <button class="chip ${tableFilter==='open'?'on':''}" onclick="tableFilter='open';render()">Dolu <span class="cnt">${open.length}</span></button>
-        ${!remoteMode?`<button class="btn accent sm" onclick="openNewTableModal()">+ Yeni Masa</button>`:''}
+        ${!remoteViewOnly()?`<button class="btn accent sm" onclick="openNewTableModal()">+ Yeni Masa</button>`:''}
       </div>
     </div>
     <div class="tgrid">${cards}</div>`;
@@ -31,7 +31,7 @@ function viewTables(){
 
 /* --- yeni masa oluşturma (ör. ek/geçici masa) --- */
 function openNewTableModal(){
-  if(remoteMode) return;
+  if(remoteViewOnly()) return;
   showModal(`<div class="m-head"><h3>Yeni Masa</h3><button class="icon-b" onclick="closeModal()">✕</button></div>
     <label class="fl">Masa Adı</label>
     <input id="ntName" class="inp" autocomplete="off">
@@ -50,7 +50,7 @@ function createNewTable(){
 
 /* --- masa açma: önce para birimi --- */
 function openTableFlow(id){
-  if(remoteMode) return; /* patron uzaktan salt-okunur görüntüler, masa açıp sipariş giremez */
+  if(remoteViewOnly()) return; /* restoran uzaktan sipariş girişini açmadıysa patron salt-okunur kalır */
   const t=getTable(id);
   if(t.status==='open'){ activeTableId=id; orderCat=orderTopCats()[0]; orderSubCat=null; orderSearch=''; view='order'; render(); return; }
   showModal(`<div class="m-head"><h3>Para Birimi Seçin <span class="muted small" style="font-weight:500">&nbsp;${esc(t.name)}</span></h3>

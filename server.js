@@ -266,18 +266,22 @@ async function handleAPI(req, res, pathname, q){
      istemci önce güncel durumu alıp işlemi tekrarlar */
   if(pathname === '/api/push' && req.method === 'POST'){
     if(p.r === 'device'){ sendJSON(res, 400, {ok:false, error:'Kasa /api/sync kullanır'}); return; }
-    /* patron (e-posta) ve yönetici (admin — kasadaki mevcut hesaplar, ör.
-       Bahar/Mahmut) uzaktan sadece görüntüleme içindir (Masa Planı +
-       İstatistikler, salt okunur) — istemci tarafında da düzenleme ekranlarına
-       yol yok, ama her ihtimale karşı sunucu da bu hesaplardan gelen hiçbir
-       yazmayı kabul etmesin: geçmişteki "çakışan yazmalar veri kaybettirdi"
-       olayı yalnızca yazma yapabilen (garson/depo/muhasebe) uzak
-       oturumlarda mümkündür — onlar hâlâ /api/push kullanamaz. */
-    if(p.r === 'patron' || p.r === 'admin'){ sendJSON(res, 403, {ok:false, error:'Bu hesapla değişiklik gönderilemez (salt okunur erişim)'}); return; }
     let body;
     try{ body = JSON.parse(await readBody(req)); }catch(e){ sendJSON(res, 400, {ok:false, error:'Geçersiz istek'}); return; }
     if(!body || typeof body.baseRev !== 'number' || !body.state){ sendJSON(res, 400, {ok:false, error:'baseRev ve state zorunlu'}); return; }
     const cur = loadState(p.t);
+    /* patron (e-posta) ve yönetici (admin — kasadaki mevcut hesaplar, ör.
+       Bahar/Mahmut) varsayılan olarak uzaktan sadece görüntüleme içindir
+       (salt okunur) — istemci tarafında da düzenleme ekranlarına yol yok,
+       ama her ihtimale karşı sunucu da bu hesaplardan gelen yazmayı kabul
+       etmesin. TEK istisna: bu restoran kendi isteğiyle "Uzaktan Sipariş
+       Girişi"ni açtıysa (db.settings.remoteOrderingEnabled, bkz. Kullanıcılar
+       > Ayarlar) — o zaman patron/admin de garson gibi tam yetkiyle yazabilir. */
+    const remoteOrderingEnabled = !!(cur.state && cur.state.settings && cur.state.settings.remoteOrderingEnabled);
+    if((p.r === 'patron' || p.r === 'admin') && !remoteOrderingEnabled){
+      sendJSON(res, 403, {ok:false, error:'Bu hesapla değişiklik gönderilemez (salt okunur erişim) — bu restoran uzaktan sipariş girişini açmadı'});
+      return;
+    }
     if(body.baseRev !== cur.rev){
       sendJSON(res, 409, {ok:false, error:'conflict', rev:cur.rev});
       return;

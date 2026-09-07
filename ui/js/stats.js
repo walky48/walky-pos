@@ -22,7 +22,7 @@ function ordersRowsHTML(sales){
       <td data-lbl="Açılış">${trTime(s.openedAt)}</td><td data-lbl="Kapanış">${trTime(s.closedAt)}</td>
       <td class="num" data-lbl="Tutar">${fmt(s.totalTL)}</td><td data-lbl="Ödeme">${payLabel(s)}</td>
       <td class="right tdact"><button class="rowbtn" onclick="orderDetail('${s.id}')">Detay</button>
-        ${(user.role==='admin' && !remoteMode && s.bd===db.day.date)?`<button class="rowbtn" style="color:var(--red);margin-left:8px" onclick="reopenSaleAsk('${s.id}')">Yeniden Aç</button>`:''}</td></tr>`).join('');
+        ${(user.role==='admin' && !remoteViewOnly() && s.bd===db.day.date)?`<button class="rowbtn" style="color:var(--red);margin-left:8px" onclick="reopenSaleAsk('${s.id}')">Yeniden Aç</button>`:''}</td></tr>`).join('');
 }
 function viewStats(){
   const today=db.day.open?db.day.date:iso();
@@ -131,14 +131,14 @@ function orderDetail(id){
       <div class="trow"><span>Ödeme Yöntemi</span><b>${payLabel(s)}</b></div>
     </div>
     <div class="m-actions">
-      ${(user.role==='admin' && !remoteMode && s.bd===db.day.date)?`<button class="btn red" onclick="reopenSaleAsk('${s.id}')">Çeki Yeniden Aç</button>`:''}
+      ${(user.role==='admin' && !remoteViewOnly() && s.bd===db.day.date)?`<button class="btn red" onclick="reopenSaleAsk('${s.id}')">Çeki Yeniden Aç</button>`:''}
       <button class="btn accent" onclick="closeModal()">Kapat</button>
     </div>`);
 }
 
 /* --- yanlışlıkla kapatılan çeki yeniden açma (sadece admin) --- */
 function reopenSaleAsk(id){
-  if(!user || user.role!=='admin' || remoteMode) return;
+  if(!user || user.role!=='admin' || remoteViewOnly()) return;
   const s=db.sales.find(x=>x.id===id); if(!s) return;
   if(s.bd!==db.day.date){toast('Yalnızca bugünün çekleri yeniden açılabilir','err');return}
   const empties=db.tables.filter(x=>x.status==='empty');
@@ -150,7 +150,7 @@ function reopenSaleAsk(id){
     <div class="cur-grid">${cards}</div>`,true);
 }
 function reopenSaleTo(saleId, tableId){
-  if(!user || user.role!=='admin' || remoteMode) return;
+  if(!user || user.role!=='admin' || remoteViewOnly()) return;
   const idx=db.sales.findIndex(x=>x.id===saleId); if(idx<0) return;
   const s=db.sales[idx];
   const dst=getTable(tableId); if(!dst||dst.status!=='empty') return;

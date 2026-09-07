@@ -12,9 +12,12 @@ function render(){
     // uzak garson (ör. telefonundan sipariş giren personel) fiziksel kasa
     // sayımını yapamaz AMA gün açılmadan sipariş de giremez — aksi halde
     // satışlar hangi iş gününe ait olduğu belirsiz (tarihsiz) kaydedilir.
-    // Sadece kasadaki fiziksel cihaz gün açılışını yapabilir.
-    if(user.role==='garson' && remoteMode){ app.innerHTML=remoteDayClosedHTML(); return; }
-    // uzak admin/patron ise fiziksel kasa sayımına tabi değil (sadece görüntüleme)
+    // Sadece kasadaki fiziksel cihaz gün açılışını yapabilir. Bu restoran
+    // "Uzaktan Sipariş Girişi"ni açtıysa (remoteViewOnly()===false) uzaktan
+    // bağlanan yönetici de aynı şekilde gün açılana kadar bekler; sadece
+    // salt-okunur kalan yönetici (remoteViewOnly) geçmiş istatistikleri
+    // görüntülemeye devam edebilsin diye bu ekrana düşmez.
+    if(remoteMode && !remoteViewOnly()){ app.innerHTML=remoteDayClosedHTML(); return; }
     if((user.role==='garson'||user.role==='admin') && !remoteMode && !(user.role==='admin' && peekMode)){ app.innerHTML=kasaHTML(); return; }
   }
   if(view==='order' && activeTableId){ app.innerHTML=orderHTML(); return; }

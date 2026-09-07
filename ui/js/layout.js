@@ -2,13 +2,11 @@
 
 function navItems(){
   const r=user.role, items=[];
-  if(remoteMode && r==='admin'){
-    /* yönetici (patron veya kasadaki admin hesabı) uzaktan sadece görüntüleme
-       yapabilir — Masa Planı + İstatistikler, hiçbir düzenleme ekranına (Menü,
-       Kullanıcılar, Stok, Gün Sonu...) uzaktan erişim yok. Geçmişteki
-       çakışan-yazma sorunu sadece YAZMA yapan uzak oturumlarda (garson sipariş
-       girişi) yaşandı, bu görüntüleme hiç yazma göndermediği için o riski
-       taşımaz — bkz. backend/sync.js REMOTE_VIEWER_ROLES. */
+  if(remoteViewOnly()){
+    /* restoran "Uzaktan Sipariş Girişi"ni açmadıysa yönetici (patron/admin)
+       uzaktan sadece görüntüleme yapabilir — Masa Planı + İstatistikler,
+       hiçbir düzenleme ekranına (Menü, Kullanıcılar, Stok, Gün Sonu...)
+       uzaktan erişim yok. bkz. backend/state.js remoteViewOnly(). */
     if(db.day.open) items.push(['tables','🪑','Masa Planı']);
     items.push(['stats','📊','İstatistikler']);
     return items;
@@ -26,7 +24,7 @@ function toggleSidebar(open){ sidebarOpen=open; render() }
 function layoutHTML(){
   const items=navItems().map(([v,ic,lb])=>
     `<button class="nav-i ${view===v?'on':''}" onclick="navTo('${v}')"><span class="ic">${ic}</span>${lb}</button>`).join('');
-  const gunsonu=((user.role==='garson'||user.role==='admin') && db.day.open && !remoteMode)
+  const gunsonu=((user.role==='garson'||user.role==='admin') && db.day.open && !remoteViewOnly())
     ? `<button class="nav-i" onclick="sidebarOpen=false;openGunSonu()"><span class="ic">🌙</span>Gün Sonu</button>` : '';
   const peekBar=(!db.day.open && user.role==='admin')
     ? (remoteMode
