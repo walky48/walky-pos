@@ -178,6 +178,14 @@ if(!db.stockSettingApplied){
 // uzaktan sipariş girişi de restorana özel bir ayar (db.settings.remoteOrderingEnabled) —
 // varsayılan kapalı, isteyen restoran Kullanıcılar > Ayarlar'dan kendi açar.
 if(db.settings.remoteOrderingEnabled===undefined) db.settings.remoteOrderingEnabled=false;
+// yönetici (patron/admin) uzaktan tam erişimi eskiden remoteOrderingEnabled ile
+// BİRLİKTE aynı anahtardı; artık garson sipariş girişinden bağımsız, ayrı bir
+// ayar (bir restoran garsonu kapalı tutup sadece yöneticiye tam erişim
+// verebilsin, ya da tam tersi). Bu ayarı daha önce hiç görmemiş bir kurulum,
+// eski tek-anahtarlı davranışını kaybetmesin diye eski değerini devralır —
+// remoteOrderingEnabled zaten açıksa (ör. FreshPress) yönetici de açık
+// başlar; hiç açılmamışsa (ör. Azumare) o da kapalı kalır.
+if(db.settings.remoteAdminFullAccess===undefined) db.settings.remoteAdminFullAccess=!!db.settings.remoteOrderingEnabled;
 initSync();
 if(typeof tryReconnectPrinter==='function') tryReconnectPrinter();
 remoteResume().then(resumed=>{

@@ -17,13 +17,16 @@ let sidebarOpen = false;
 let peekMode = false; // admin: kasa açılmadan sadece görüntüleme (istatistik vb.)
 
 function getTable(id){return db.tables.find(t=>t.id===id)}
-/* yönetici (patron / kasadaki admin hesabı) uzaktan bağlandığında, o
-   RESTORAN "Uzaktan Sipariş Girişi"ni (db.settings.remoteOrderingEnabled)
-   açmadıysa salt-okunur kalır — sadece Masa Planı + İstatistikler görüntüler,
-   hiçbir şey düzenleyemez. Restoran bu ayarı açtıysa (ör. FreshPress) patron
-   da garson gibi tam yetkiyle çalışabilir. bkz. Kullanıcılar > Ayarlar. */
+/* yönetici (patron / kasadaki admin hesabı) uzaktan bağlandığında, o RESTORAN
+   "Yönetici Tam Erişimi"ni (db.settings.remoteAdminFullAccess) açmadıysa
+   salt-okunur kalır — sadece Masa Planı + İstatistikler görüntüler, hiçbir
+   şey düzenleyemez. Bu, garsonların uzaktan sipariş girmesinden (bkz.
+   db.settings.remoteOrderingEnabled) KASITLI olarak ayrı bir ayar: bir
+   restoran (ör. Azumare) garson sipariş girişini kapalı tutup sadece
+   yönetici hesaplarına tam erişim verebilir, ya da tam tersi. bkz.
+   Kullanıcılar > Ayarlar. */
 function remoteViewOnly(){
-  return !!(remoteMode && user && user.role==='admin' && !(db.settings && db.settings.remoteOrderingEnabled));
+  return !!(remoteMode && user && user.role==='admin' && !(db.settings && db.settings.remoteAdminFullAccess));
 }
 function menuCats(){return [...new Set(db.menu.map(m=>m.cat))]}
 /* Menü Yönetimi'nde ürün eklemeden önce de kategori oluşturulabilsin diye

@@ -274,12 +274,16 @@ async function handleAPI(req, res, pathname, q){
        Bahar/Mahmut) varsayılan olarak uzaktan sadece görüntüleme içindir
        (salt okunur) — istemci tarafında da düzenleme ekranlarına yol yok,
        ama her ihtimale karşı sunucu da bu hesaplardan gelen yazmayı kabul
-       etmesin. TEK istisna: bu restoran kendi isteğiyle "Uzaktan Sipariş
-       Girişi"ni açtıysa (db.settings.remoteOrderingEnabled, bkz. Kullanıcılar
-       > Ayarlar) — o zaman patron/admin de garson gibi tam yetkiyle yazabilir. */
-    const remoteOrderingEnabled = !!(cur.state && cur.state.settings && cur.state.settings.remoteOrderingEnabled);
-    if((p.r === 'patron' || p.r === 'admin') && !remoteOrderingEnabled){
-      sendJSON(res, 403, {ok:false, error:'Bu hesapla değişiklik gönderilemez (salt okunur erişim) — bu restoran uzaktan sipariş girişini açmadı'});
+       etmesin. TEK istisna: bu restoran kendi isteğiyle "Yönetici Tam
+       Erişimi"ni açtıysa (db.settings.remoteAdminFullAccess, bkz.
+       Kullanıcılar > Ayarlar) — o zaman patron/admin de tam yetkiyle
+       yazabilir. Bu, garsonların uzaktan sipariş girmesinden (bkz.
+       remoteOrderingEnabled, aşağıda garson/depo/muhasebe pushu için hiç
+       kontrol edilmez) KASITLI olarak ayrı bir ayardır — bir restoran
+       garson girişini kapalı tutup sadece yöneticiye tam erişim verebilir. */
+    const remoteAdminFullAccess = !!(cur.state && cur.state.settings && cur.state.settings.remoteAdminFullAccess);
+    if((p.r === 'patron' || p.r === 'admin') && !remoteAdminFullAccess){
+      sendJSON(res, 403, {ok:false, error:'Bu hesapla değişiklik gönderilemez (salt okunur erişim) — bu restoran yönetici hesapları için tam erişimi açmadı'});
       return;
     }
     if(body.baseRev !== cur.rev){

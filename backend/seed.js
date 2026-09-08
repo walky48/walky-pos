@@ -236,7 +236,7 @@ function seedDB(){
     stockCats:[],
     menuCatList:[],
     nextCheckNo:1,
-    settings:{stockEnabled:true, remoteOrderingEnabled:false}
+    settings:{stockEnabled:true, remoteOrderingEnabled:false, remoteAdminFullAccess:false}
   };
 }
 
@@ -267,7 +267,7 @@ function seedDBBlank(){
     stockCats:[],
     menuCatList:[],
     nextCheckNo:1,
-    settings:{stockEnabled:true, remoteOrderingEnabled:false},
+    settings:{stockEnabled:true, remoteOrderingEnabled:false, remoteAdminFullAccess:false},
     menuRealSeeded:true, stockAlkolSeeded:true, stockNonAlkolRemoved:true, usdFromEurApplied:true,
     tables25Seeded:true, usersRealSeeded:true, adminUsernameRenamed:true, testDataCleared:true,
     recipeFix1Applied:true, stockDrinksAdded:true, menuVariantsAdded:true, mahmutAdminAdded:true,
