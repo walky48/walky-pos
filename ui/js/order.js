@@ -269,10 +269,14 @@ function moveTableTo(destId){
 /* --- menüde olmayan, serbest fiyatlı ürün ekleme --- */
 function openFreeItemModal(){
   const t=getTable(activeTableId);
+  const catOpts=menuCatList().map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('')
+    + `<option value="Diğer">Diğer</option>`;
   showModal(`<div class="m-head"><h3>Serbest Ürün Ekle</h3><button class="icon-b" onclick="closeModal()">✕</button></div>
     <p class="muted small">Menüde olmayan bir sipariş için isim ve fiyat girin.</p>
     <label class="fl">Ürün Adı</label>
     <input id="fiName" class="inp" autocomplete="off">
+    <label class="fl">Kategori</label>
+    <select id="fiCat" class="inp">${catOpts}</select>
     <label class="fl">Fiyat (${CUR_LABEL[t.currency]})</label>
     <input id="fiPrice" class="inp" inputmode="decimal">
     <div class="m-actions">
@@ -285,9 +289,10 @@ function addFreeItem(){
   const t=getTable(activeTableId);
   const name=$('#fiName').value.trim();
   const price=num($('#fiPrice').value);
+  const cat=$('#fiCat').value||'Diğer';
   if(!name){toast('Ürün adı girin','err');return}
   if(price<=0){toast('Geçerli bir fiyat girin','err');return}
-  t.items.push({lid:uid(), mid:null, name, cat:'Diğer', qty:1, unit:price, sent:0, variant:null, recipe:[]});
+  t.items.push({lid:uid(), mid:null, name, cat, qty:1, unit:price, sent:0, variant:null, recipe:[]});
   saveDB(true); closeModal(); renderOrderPanel(); toast(name+' eklendi ✓','ok');
 }
 
