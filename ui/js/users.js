@@ -16,7 +16,12 @@ function viewUsers(){
 }
 function settingsPanelHTML(){
   return `<div class="panel mt16"><div class="st" style="margin-bottom:12px">AYARLAR</div>
-    <label class="fl" style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:0">
+    <label class="fl" style="margin-top:0">İşletme Adı (fişin en üstünde basılır)</label>
+    <div class="range-bar">
+      <input id="bizName" class="inp" style="max-width:260px" value="${esc(db.settings.businessName||'')}" autocomplete="off">
+      <button class="btn accent" onclick="saveBusinessName()">Kaydet</button>
+    </div>
+    <label class="fl" style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:16px">
       <input type="checkbox" ${db.settings.stockEnabled?'checked':''} onchange="toggleStockEnabled(this.checked)"> Stok Takibi (reçete ile otomatik düşüm, Stok Durumu sekmesi, stok uyarıları)
     </label>
     <label class="fl" style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:12px">
@@ -28,6 +33,13 @@ function settingsPanelHTML(){
     </label>
     <p class="muted tiny mt8">⚠️ Bu, yukarıdaki garson ayarından bağımsızdır. Uzaktan bağlanan yönetici, kasadaki cihazla AYNI ANDA bir masayı düzenlerse yine nadir bir çakışma riski taşır.</p>
   </div>`;
+}
+function saveBusinessName(){
+  const v=$('#bizName').value.trim();
+  if(!v){toast('İşletme adı boş olamaz','err');return}
+  db.settings.businessName=v;
+  saveDB(); render();
+  toast('İşletme adı kaydedildi ✓','ok');
 }
 function toggleStockEnabled(v){
   db.settings.stockEnabled=v;

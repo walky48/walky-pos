@@ -186,6 +186,13 @@ if(db.settings.remoteOrderingEnabled===undefined) db.settings.remoteOrderingEnab
 // remoteOrderingEnabled zaten açıksa (ör. FreshPress) yönetici de açık
 // başlar; hiç açılmamışsa (ör. Azumare) o da kapalı kalır.
 if(db.settings.remoteAdminFullAccess===undefined) db.settings.remoteAdminFullAccess=!!db.settings.remoteOrderingEnabled;
+// fişteki işletme adı da restorana özel bir ayar (db.settings.businessName) —
+// eskiden kodda sabit "Azumare Lounge" yazıyordu. Bunu daha önce hiç
+// görmemiş HERHANGİ bir kurulum (Azumare dahil FreshPress de), o ana kadar
+// zaten fişte basılı olan ismi (Azumare Lounge) bir kerelik devralır — hiçbir
+// restoranın fişi görünürde değişmez; her restoran Kullanıcılar > Ayarlar'dan
+// kendi adını girip değiştirebilir.
+if(db.settings.businessName===undefined) db.settings.businessName='Azumare Lounge';
 initSync();
 if(typeof tryReconnectPrinter==='function') tryReconnectPrinter();
 remoteResume().then(resumed=>{

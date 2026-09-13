@@ -27,7 +27,7 @@ function receiptHTML(t, tot, sale){
   const payLbl = sale ? (sale.method==='nakit' ? 'Nakit ('+CUR_LABEL[sale.payCur]+')'
                     : sale.method==='kart' ? 'Kredi Kartı' : 'Cari: '+esc(sale.cariName)) : null;
   return `<div class="rc">
-    <div class="rc-brand">Azumare Lounge</div>
+    <div class="rc-brand">${esc(db.settings.businessName||'Azumare Lounge')}</div>
     <div class="rc-hr"></div>
     <div class="rc-row"><span>Masa: ${esc(displayName(t))}</span><span>${trTime(Date.now())}</span></div>
     <div class="rc-row"><span>Garson: ${esc(t.openedBy||'')}</span><span>${trDate(db.day.date||iso())}</span></div>
@@ -70,7 +70,7 @@ function receiptLines(t, tot, sale){
   const payLbl = sale ? (sale.method==='nakit' ? 'Nakit ('+CUR_LABEL[sale.payCur]+')'
                     : sale.method==='kart' ? 'Kredi Kartı' : 'Cari: '+sale.cariName) : null;
   const L=[
-    {text:'Azumare Lounge', align:'c', bold:true, big:true},
+    {text: db.settings.businessName||'Azumare Lounge', align:'c', bold:true, big:true},
     {text:'--------------------------------'},
     {text:'Masa: '+displayName(t)+'   '+trTime(Date.now())},
     {text:'Garson: '+(t.openedBy||'')+'   '+trDate(db.day.date||iso())},
