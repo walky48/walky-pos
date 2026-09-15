@@ -16,8 +16,11 @@ function render(){
     // "Uzaktan Sipariş Girişi"ni açtıysa (remoteViewOnly()===false) uzaktan
     // bağlanan yönetici de aynı şekilde gün açılana kadar bekler; sadece
     // salt-okunur kalan yönetici (remoteViewOnly) geçmiş istatistikleri
-    // görüntülemeye devam edebilsin diye bu ekrana düşmez.
-    if(remoteMode && !remoteViewOnly()){ app.innerHTML=remoteDayClosedHTML(); return; }
+    // görüntülemeye devam edebilsin diye bu ekrana düşmez. muhasebe de hiç
+    // sipariş girmediği (yalnızca İstatistikler/Stok/Cari görüntülediği) için
+    // aynı şekilde muaf — gün kapalıyken de (ör. mesai dışı ay sonu kontrolü)
+    // uzaktan bağlanıp bakabilmeli, kasanın açılmasını beklemesine gerek yok.
+    if(remoteMode && !remoteViewOnly() && user.role!=='muhasebe'){ app.innerHTML=remoteDayClosedHTML(); return; }
     if((user.role==='garson'||user.role==='admin') && !remoteMode && !(user.role==='admin' && peekMode)){ app.innerHTML=kasaHTML(); return; }
   }
   if(view==='order' && activeTableId){ app.innerHTML=orderHTML(); return; }

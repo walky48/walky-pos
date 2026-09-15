@@ -159,15 +159,23 @@ function syncUnpair(){
    Bahar/Mahmut — veya e-posta ile tanımlı "patron" hesabı) HER RESTORANDA
    uzaktan giriş yapabilir ama salt-okunur kalır (bkz. layout.js navItems,
    tables.js openTableFlow, server.js /api/push 'patron'/'admin' reddi).
-   garson/depo/muhasebe (asıl riskin kaynağı olan sipariş girişi) rolündeki
-   hesaplar ise ancak İLGİLİ RESTORAN kendi isteğiyle bunu açtıysa uzaktan
-   girebilir — bkz. db.settings.remoteOrderingEnabled (Kullanıcılar > Ayarlar).
-   Bu, restoran bazında ayarlanabilir: ör. Azumare'de kapalı kalırken yeni/
+   garson/depo (asıl riskin kaynağı olan sipariş girişini yapan roller) ise
+   ancak İLGİLİ RESTORAN kendi isteğiyle bunu açtıysa uzaktan girebilir —
+   bkz. db.settings.remoteOrderingEnabled (Kullanıcılar > Ayarlar). Bu,
+   restoran bazında ayarlanabilir: ör. Azumare'de kapalı kalırken yeni/
    düşük yoğunluklu bir restoranda (FreshPress gibi) açılabilir — ama kapatan
    kalıcı mimari sorun düzeltilmedi, sadece riski göze alan restoran için
-   bilinçli bir seçime dönüştürüldü. */
+   bilinçli bir seçime dönüştürüldü.
+   muhasebe ise hiç sipariş girmediği (yalnızca İstatistikler/Stok/Cari
+   Hesaplar görüntülediği, ara sıra stok sayımı girdiği) için bu riskin
+   kaynağı değil — o yüzden remoteOrderingEnabled'a bakılmaksızın yönetici
+   gibi HER RESTORANDA uzaktan giriş yapabilir, ama admin'in aksine ekranda
+   salt-okunura zorlanmaz (kasadaki normal muhasebe yetkileriyle çalışır —
+   server.js zaten muhasebe pushunu hiç kısıtlamıyor, bkz. server.js
+   /api/push). Sadece gün kapalıyken bekletilme kuralından da muaftır
+   (bkz. app.js render() — user.role!=='muhasebe' kontrolü). */
 const REMOTE_VIEWER_ENABLED = true;
-const REMOTE_VIEWER_ROLES = ['patron','admin'];
+const REMOTE_VIEWER_ROLES = ['patron','admin','muhasebe'];
 const REMOTE_DISABLED_MSG = 'Uzaktan erişim şu an kapalı.';
 const REMOTE_VIEWER_ROLE_MSG = 'Uzaktan sipariş girişi bu restoran için açık değil — yönetici hesabıyla salt-okunur görüntüleme yapabilirsiniz, sipariş girmek için Kullanıcılar > Ayarlar\'dan açılması gerekir.';
 const REMOTE_KEY = 'walky_remote_v1';
