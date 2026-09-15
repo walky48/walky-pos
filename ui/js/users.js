@@ -27,11 +27,9 @@ function settingsPanelHTML(){
     <label class="fl" style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:12px">
       <input type="checkbox" ${db.settings.remoteOrderingEnabled?'checked':''} onchange="toggleRemoteOrdering(this.checked)"> Uzaktan Sipariş Girişi (garsonlar telefonla "Uzaktan Erişim" ile giriş yapıp sipariş girebilir)
     </label>
-    <p class="muted tiny mt8">⚠️ Kalabalık ve zayıf internet altında birden fazla telefon aynı anda yazarsa, nadir de olsa çakışma yaşanıp bir işlemin kaybolması riski vardır. Sakin bir dönemde deneyerek açmanız önerilir.</p>
     <label class="fl" style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:12px">
       <input type="checkbox" ${db.settings.remoteAdminFullAccess?'checked':''} onchange="toggleRemoteAdminFullAccess(this.checked)"> Yönetici Tam Erişimi (uzaktan bağlanan yönetici hesapları salt-okunur değil, her şeyi yapabilir — fiş yazdırma dahil)
     </label>
-    <p class="muted tiny mt8">⚠️ Bu, yukarıdaki garson ayarından bağımsızdır. Uzaktan bağlanan yönetici, kasadaki cihazla AYNI ANDA bir masayı düzenlerse yine nadir bir çakışma riski taşır.</p>
   </div>`;
 }
 function saveBusinessName(){
