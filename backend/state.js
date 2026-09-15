@@ -8,7 +8,6 @@ let orderCat = 'Yiyecek';
 let orderSubCat = null; // Yemekler/Alkollü İçecekler gibi gruplanmış üst kategori içindeki alt filtre
 let orderSearch = '';
 let tableFilter = 'all';
-let stockFilter = 'all';
 let payState = null;
 let statsFrom = iso(), statsTo = iso(), statsCustom = false;
 let zHistoryExpanded = false, floatHistoryExpanded = false; // Z raporu / kasa açılış geçmişi varsayılan son 3 kayıt

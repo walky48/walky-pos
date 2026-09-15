@@ -83,7 +83,7 @@ function createMenuCat(){
 let rcpTmp=[];
 function prodModal(mid){
   const m=mid?db.menu.find(x=>x.id===mid):null;
-  rcpTmp=m&&m.recipe?m.recipe.map(r=>({s:r.s,q:r.q,u:stockUnit(r.s)})):[];
+  rcpTmp=m&&m.recipe?m.recipe.map(r=>({s:r.s,q:r.q,u:recipeUnit(r.s)})):[];
   const cats=menuCatList();
   const catOpts=cats.map(c=>`<option value="${esc(c)}" ${m&&m.cat===c?'selected':''}>${esc(c)}</option>`).join('')
     +`<option value="__new">➕ Yeni kategori…</option>`;
@@ -112,7 +112,7 @@ function renderRcpRows(){
   if(!rcpTmp.length){box.innerHTML='<div class="muted tiny" style="padding:6px 0">Malzeme eklenmedi.</div>';return}
   box.innerHTML=rcpTmp.map((r,i)=>{
     const opts=db.stock.map(s=>`<option value="${s.id}" ${r.s===s.id?'selected':''}>${esc(s.name)}</option>`).join('');
-    const group=STOCK_UNIT_GROUPS[stockUnit(r.s)]||[r.u];
+    const group=STOCK_UNIT_GROUPS[recipeUnit(r.s)]||[r.u];
     const uOpts=group.map(u=>`<option value="${u}" ${r.u===u?'selected':''}>${u}</option>`).join('');
     return `<div class="range-bar" style="margin-bottom:8px">
       <select class="inp" style="flex:1;min-width:160px" onchange="rcpChgS(${i},this.value)">${opts}</select>
@@ -130,9 +130,9 @@ function pModalUsdPreview(){
 }
 function rcpAdd(){
   if(!db.stock.length){toast('Önce Stok Durumu ekranından malzeme ekleyin','err');return}
-  rcpTmp.push({s:db.stock[0].id,q:1,u:stockUnit(db.stock[0].id)});renderRcpRows();
+  rcpTmp.push({s:db.stock[0].id,q:1,u:recipeUnit(db.stock[0].id)});renderRcpRows();
 }
-function rcpChgS(i,v){rcpTmp[i].s=v; rcpTmp[i].u=stockUnit(v); renderRcpRows()}
+function rcpChgS(i,v){rcpTmp[i].s=v; rcpTmp[i].u=recipeUnit(v); renderRcpRows()}
 function rcpChgQ(i,v){rcpTmp[i].q=num(v)}
 function rcpChgU(i,v){rcpTmp[i].u=v}
 function rcpDel(i){rcpTmp.splice(i,1);renderRcpRows()}
@@ -145,7 +145,7 @@ function saveProduct(mid){
   if(tl<=0){toast('TL fiyatı zorunludur','err');return}
   if(eur<0){toast('Geçersiz fiyat','err');return}
   const usd=usdFromEur(eur,db.rates);
-  const recipe=rcpTmp.filter(r=>r.s&&r.q>0).map(r=>({s:r.s,q:convStockUnit(r.q,r.u,stockUnit(r.s))}));
+  const recipe=rcpTmp.filter(r=>r.s&&r.q>0).map(r=>({s:r.s,q:convStockUnit(r.q,r.u,recipeUnit(r.s))}));
   if(mid){
     const m=db.menu.find(x=>x.id===mid);
     m.name=name; m.cat=cat; m.price={TL:tl,USD:usd,EUR:eur}; m.recipe=recipe;

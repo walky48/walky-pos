@@ -8,8 +8,18 @@ function applyRecipe(m,delta){ // delta adet: + eklendi, − çıkarıldı
   (m.recipe||[]).forEach(r=>{
     const s=db.stock.find(x=>x.id===r.s);
     if(!s) return;
-    s.qty=+(s.qty - r.q*delta).toFixed(3);
-    if(delta>0 && s.qty<0) warn=true;
+    if(s.bottleCl){
+      // şişeli takip: reçete miktarı hep cl'dir (bkz. recipeUnit) — toplam cl'den
+      // düşülüp adet+açık cl'ye geri bölünür (bir şişe biterse bir sonrakinden
+      // otomatik "açılmış" sayılır)
+      const total=+(stockTotalCl(s) - r.q*delta).toFixed(3);
+      s.qty=Math.floor(total/s.bottleCl);
+      s.extraCl=+(total - s.qty*s.bottleCl).toFixed(3);
+      if(delta>0 && total<0) warn=true;
+    }else{
+      s.qty=+(s.qty - r.q*delta).toFixed(3);
+      if(delta>0 && s.qty<0) warn=true;
+    }
   });
   return warn;
 }
@@ -37,10 +47,19 @@ function calcTotals(t){
 }
 
 /* --- stok durumu --- */
-function stockStatus(s){return s.qty<=s.crit?'crit' : s.qty<=s.low?'low' : 'ok'}
-const ST_LBL={ok:'Normal', low:'Azalıyor', crit:'Kritik'};
+/* şişeli takip edilen kalemler (bkz. stock.js — adet + açık şişe cl'si) için
+   reçete düşümü hep TOPLAM cl üzerinden yapılır. */
+function stockTotalCl(s){ return s.bottleCl ? (s.qty||0)*s.bottleCl + (s.extraCl||0) : (s.qty||0); }
+function stockLineValue(s){
+  if(!s.bottleCl) return (s.qty||0)*(s.price||0);
+  return (s.qty||0)*(s.price||0) + (s.bottleCl ? ((s.extraCl||0)/s.bottleCl)*(s.price||0) : 0);
+}
 function stockName(sid){const s=db.stock.find(x=>x.id===sid);return s?s.name:'?'}
 function stockUnit(sid){const s=db.stock.find(x=>x.id===sid);return s?s.unit:''}
+/* reçete satırlarında girilen/gösterilen birim — şişeli takip edilen kalemler
+   için stoğun kendi birimi 'adet' olsa da reçete her zaman cl üzerinden girilir
+   (bir kokteyle "0,07 şişe" değil "5 cl" yazılır). bkz. ui/js/menu.js reçete satırları */
+function recipeUnit(sid){ const s=db.stock.find(x=>x.id===sid); if(!s) return ''; return s.bottleCl ? 'cl' : s.unit; }
 
 /* --- bir çekin mutfak (yemek) kalemlerinin, çeke uygulanan indirim düşülmüş
    TL karşılığı. Yüzde indirim tüm kalemlere orantılı düşer; sabit TL indirim
@@ -104,7 +123,7 @@ function cariBalance(c){
 function rcpSummary(m){
   if(!m.recipe||!m.recipe.length) return '';
   return m.recipe.map(r=>{
-    const q=r.q, unit=stockUnit(r.s);
+    const q=r.q, unit=recipeUnit(r.s);
     const qs=(unit==='kg'&&q<1)?(q*1000)+' g':String(q).replace('.',',')+' '+unit;
     return esc(stockName(r.s))+' × '+qs;
   }).join(' · ');

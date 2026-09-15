@@ -39,6 +39,7 @@ if(!db.expenses) db.expenses=[];
 if(!db.stockCats) db.stockCats=[];
 if(!db.menuCatList) db.menuCatList=[];
 if(!db.nextCheckNo) db.nextCheckNo=1;
+(db.stock||[]).forEach(s=>{ if(s.price===undefined) s.price=0; });
 if(!db.menuRealSeeded){
   db.menu=seedDB().menu;
   db.menuRealSeeded=true;
@@ -52,6 +53,51 @@ if(!db.stockAlkolSeeded){
 if(!db.stockNonAlkolRemoved){
   db.stock=db.stock.filter(s=>s.cat==='Alkol');
   db.stockNonAlkolRemoved=true;
+}
+/* alkol stoğu artık adet + açık şişe cl'si olarak takip ediliyor (bkz. ui/js/stock.js),
+   tek "Alkol" kategorisi Biralar/Şaraplar/Ağır Alkoller olarak üçe ayrıldı, ve gerçek
+   şişe sayımı + geliş fiyatlarıyla dolduruldu (bkz. backend/seed.js ALKOL_SAYIM) —
+   tek seferlik. Eşleşen kalemler id/isim korunarak yerinde güncellenir (reçeteler
+   bozulmaz), fotoğrafta karşılığı olmayan markalar yeni kalem olarak eklenir. */
+if(!db.stockBottleTrackApplied){
+  const freshAlk=seedDB().stock.filter(s=>['Biralar','Şaraplar','Ağır Alkoller'].includes(s.cat));
+  freshAlk.forEach(fresh=>{
+    const existing=db.stock.find(s=>s.name===fresh.name && (s.cat==='Alkol'||['Biralar','Şaraplar','Ağır Alkoller'].includes(s.cat)));
+    if(existing){
+      existing.cat=fresh.cat; existing.unit='adet'; existing.bottleCl=fresh.bottleCl;
+      existing.low=fresh.low; existing.crit=fresh.crit;
+      existing.qty=fresh.qty; existing.extraCl=fresh.extraCl; existing.price=fresh.price;
+    }else{
+      // seedDB()'nin kendi "alkNN" id sayacı bu kurulumun MEVCUT stok id'leriyle
+      // hiç ilişkili değil (canlıda çok daha önce, farklı bir sayımla atanmış) —
+      // çakışmayı önlemek için burada yeni, garanti benzersiz bir id üretilir
+      db.stock.push({...fresh, id:uid()});
+    }
+  });
+  // rakı markaları artık 35CL/70CL diye ayrı iki havuz (geliş fiyatı farklı olduğu
+  // için) — eski tek-havuzlu kalemler (ör. "Tekirdağ Göbek") bu ayrımla yer değiştirdi.
+  // Kadeh (4/6/8cl) satışı ve kokteyl malzemesi olarak kullanım hep 70CL havuzundan düşer.
+  const oldRakiNames=['Tekirdağ Göbek','Beylerbeyi Göbek','Sarı Zeybek 3 Meşe','Yeni Rakı Yeni Seri','Yeni Rakı'];
+  const oldRakiEntries=db.stock.filter(s=>s.cat==='Alkol' && oldRakiNames.includes(s.name));
+  const rakiIdMap={}; // eski tek-havuz id -> yeni 70CL havuz id
+  oldRakiEntries.forEach(old=>{
+    const pool70=db.stock.find(s=>s.name===old.name+' 70CL');
+    if(pool70) rakiIdMap[old.id]=pool70.id;
+  });
+  db.stock=db.stock.filter(s=>!(s.cat==='Alkol' && oldRakiNames.includes(s.name)));
+  const rakiPoolId=(brand,cl)=>{
+    const s=db.stock.find(x=>x.name===brand+' '+((cl===35||cl===70)?cl:70)+'CL');
+    return s?s.id:null;
+  };
+  db.menu.forEach(m=>{
+    if(m.cat==='Rakılar'){
+      const mm=m.name.match(/^(.+) (\d+)cl$/i);
+      if(mm){ const pid=rakiPoolId(mm[1],+mm[2]); if(pid) m.recipe=[{s:pid, q:+mm[2]}]; }
+    }else{
+      (m.recipe||[]).forEach(r=>{ if(rakiIdMap[r.s]) r.s=rakiIdMap[r.s]; });
+    }
+  });
+  db.stockBottleTrackApplied=true;
 }
 // Dolar fiyatları artık Euro fiyatından ve güncel kurdan otomatik hesaplanıyor — mevcut menüye bir kerelik uygulanır
 if(!db.usdFromEurApplied){

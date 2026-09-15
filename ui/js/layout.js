@@ -12,11 +12,11 @@ function navItems(){
     return items;
   }
   if((r==='garson'||r==='admin') && db.day.open) items.push(['tables','🪑','Masa Planı']);
-  if(db.settings.stockEnabled && (r==='depo'||r==='admin')) items.push(['stock','📦','Stok']);
+  if(db.settings.stockEnabled && (r==='depo'||r==='admin'||r==='muhasebe')) items.push(['stock','📦','Stok']);
   if(r==='garson'||r==='depo'||r==='admin') items.push(['expenses','🧾','Giderler']);
   if(r==='muhasebe'||r==='admin') items.push(['stats','📊','İstatistikler'],['cari','📒','Cari Hesaplar']);
   else if(r==='garson') items.push(['stats','📊','İstatistikler']);
-  if(r==='admin') items.push(['menu','🍽️','Menü'],['users','👥','Kullanıcılar']);
+  if(r==='admin') items.push(['menu','🍽️','Menü'],['users','⚙️','Ayarlar']);
   return items;
 }
 function navTo(v){view=v; sidebarOpen=false; render()}

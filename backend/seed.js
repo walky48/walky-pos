@@ -93,26 +93,198 @@ function seedDB(){
   ];
 
   /* ---------- alkol stok havuzları ----------
-     Her marka için TEK bir cl havuzu var; o markanın şişe satışı, kadeh satışı
-     ve içinde geçtiği her kokteyl aynı havuzdan düşer. Şişe/kadeh kategorilerindeki
-     markalar menü satırlarından otomatik türetilir (isim eşleşmesiyle karışıklık
-     olmasın diye), sadece menüde tek başına satılmayan likörler ve Prosecco elle eklenir.
-  */
+     Her marka için TEK bir şişeli takip havuzu var (adet + açık şişede kalan cl,
+     bkz. STOCK bottleCl/extraCl — ui/js/stock.js); o markanın şişe satışı, kadeh
+     satışı ve içinde geçtiği her kokteyl aynı havuzdan (toplam cl) düşer. Şişe/kadeh
+     kategorilerindeki markalar menü satırlarından otomatik türetilir (isim eşleşmesiyle
+     karışıklık olmasın diye), sadece menüde tek başına satılmayan likörler ve Prosecco
+     elle eklenir. Kategoriler: Biralar / Şaraplar / Ağır Alkoller.
+     Gerçek şişe sayımı + geliş fiyatları ALKOL_SAYIM altında, marka adına göre eşleşerek
+     uygulanır (reçetelerin baktığı stok id/isim hiç değişmez); fotoğrafta karşılığı
+     olmayan markalarda geçmişteki gibi 0'dan başlar. */
   let alkId=0; const nid=()=>'alk'+(++alkId);
   const BOTTLE_CATS=['Şampanyalar','Rose Şaraplar','Kırmızı Yerli Şaraplar','Kırmızı İtal Şaraplar','Beyaz Yerli Şaraplar','Beyaz İtal Şaraplar'];
   const KADEH_SPIRIT_CATS=['Gin','Whiskey','Rom','Vodka'];
   const alkStock=[];
   MENU_ROWS.forEach(([name,cat])=>{
-    if(BOTTLE_CATS.includes(cat)) alkStock.push({id:nid(),name,cat:'Alkol',qty:0,unit:'cl',low:150,crit:75});
-    else if(KADEH_SPIRIT_CATS.includes(cat)) alkStock.push({id:nid(),name,cat:'Alkol',qty:0,unit:'cl',low:140,crit:70});
-    else if(cat==='Biralar') alkStock.push({id:nid(),name,cat:'Alkol',qty:0,unit:'adet',low:24,crit:6});
+    if(BOTTLE_CATS.includes(cat)) alkStock.push({id:nid(),name,cat:'Şaraplar',qty:0,unit:'adet',bottleCl:75,extraCl:0,price:0,low:150,crit:75});
+    else if(KADEH_SPIRIT_CATS.includes(cat)) alkStock.push({id:nid(),name,cat:'Ağır Alkoller',qty:0,unit:'adet',bottleCl:70,extraCl:0,price:0,low:140,crit:70});
+    else if(cat==='Biralar'){
+      const m=name.match(/(\d+)\s*cl$/i); const bcl=m?+m[1]:33;
+      alkStock.push({id:nid(),name,cat:'Biralar',qty:0,unit:'adet',bottleCl:bcl,extraCl:0,price:0,low:24*bcl,crit:6*bcl});
+    }
   });
 
+  /* rakı: 35cl ve 70cl şişelerin geliş fiyatı birbirinden farklı olduğu için her marka
+     İKİ AYRI havuz olarak tutulur (35CL / 70CL); kadeh (4/6/8cl) satışları/kokteyl
+     malzemesi olarak kullanımı ise her zaman 70CL havuzundan düşer — bkz. aşağıdaki
+     rakiPool() ve menü reçetesi üretimi. */
   const rakiBrands=[...new Set(MENU_ROWS.filter(r=>r[1]==='Rakılar').map(r=>r[0].match(/^(.+) \d+cl$/)[1]))];
-  rakiBrands.forEach(name=>alkStock.push({id:nid(),name,cat:'Alkol',qty:0,unit:'cl',low:140,crit:70}));
+  const rakiPool=(brand,cl)=> brand+' '+((cl===35||cl===70)?cl:70)+'CL';
+  rakiBrands.forEach(name=>{
+    alkStock.push({id:nid(),name:name+' 70CL',cat:'Ağır Alkoller',qty:0,unit:'adet',bottleCl:70,extraCl:0,price:0,low:140,crit:70});
+    alkStock.push({id:nid(),name:name+' 35CL',cat:'Ağır Alkoller',qty:0,unit:'adet',bottleCl:35,extraCl:0,price:0,low:70,crit:35});
+  });
 
-  ['Prosecco','Don Julio','Havana Club','Garrone Triple Sec','Garrone Rosso','Martini Rosso','Campari','Amaretto','Kahlua','Aperol']
-    .forEach(name=>alkStock.push({id:nid(),name,cat:'Alkol',qty:0,unit:'cl',low:100,crit:40}));
+  alkStock.push({id:nid(),name:'Prosecco',cat:'Şaraplar',qty:0,unit:'adet',bottleCl:75,extraCl:0,price:0,low:150,crit:75});
+  ['Don Julio','Havana Club','Garrone Triple Sec','Garrone Rosso','Martini Rosso','Campari','Amaretto','Kahlua','Aperol']
+    .forEach(name=>alkStock.push({id:nid(),name,cat:'Ağır Alkoller',qty:0,unit:'adet',bottleCl:70,extraCl:0,price:0,low:140,crit:70}));
+
+  /* ---------- gerçek şişe sayımı (fiziksel depo sayımı, TL geliş fiyatlarıyla) ----------
+     Mevcut markalarda cat/unit/bottleCl zaten yukarıda doğru atandı; burada sadece
+     qty/extraCl/price gerçek sayımla güncelleniyor. Fotoğrafta karşılığı bulunamayan
+     markalar 0'da kalır (daha önce de öyleydi), kullanıcı Stok Durumu'ndan tamamlayabilir. */
+  const ALKOL_SAYIM={
+    'Erdinger 33cl':{qty:3,extraCl:0,price:175}, 'Corona 33cl':{qty:34,extraCl:0,price:152},
+    'Bud 33cl':{qty:36,extraCl:0,price:106}, 'Miller 33cl':{qty:20,extraCl:0,price:120},
+    'Becks 33cl':{qty:23,extraCl:0,price:120}, 'Heineken 33cl':{qty:23,extraCl:0,price:135},
+    'Efes Malt 50cl':{qty:72,extraCl:0,price:106}, 'Efes 50cl':{qty:93,extraCl:0,price:128},
+    'Bomonti Filtresiz 50cl':{qty:85,extraCl:0,price:118},
+
+    'Umurbey Blush':{qty:14,extraCl:0,price:450}, 'Umurbey Sauvignon Blanc':{qty:1,extraCl:0,price:450},
+    'Umurbey Cabernet':{qty:1,extraCl:0,price:450}, 'Urla Chardonnay':{qty:1,extraCl:0,price:0},
+    'Urla Geminus':{qty:0,extraCl:0,price:1850}, 'Urla Sauvignon Blanc':{qty:1,extraCl:0,price:1300},
+    'Urla Tempus':{qty:0,extraCl:0,price:1573}, 'Urla Vourla':{qty:2,extraCl:0,price:1055},
+    'Chandon Garden Spritz':{qty:10,extraCl:0,price:763}, 'Porta Diverti Merlot':{qty:11,extraCl:0,price:1200},
+    'Porta Diverti Rose':{qty:1,extraCl:0,price:988}, 'Likya Fox':{qty:1,extraCl:0,price:585},
+    'Whispering Angel':{qty:1,extraCl:0,price:1800}, 'Roseblood':{qty:4,extraCl:0,price:2100},
+    'Likya Opramoas':{qty:6,extraCl:0,price:1458}, 'Likya Narince':{qty:12,extraCl:0,price:900},
+    'Pasqua Merlot':{qty:47,extraCl:0,price:480}, 'Pinot Grigio':{qty:53,extraCl:0,price:480},
+    'Pinot Grigio Rose':{qty:47,extraCl:0,price:480}, 'Clarendelle Bordeaux':{qty:1,extraCl:0,price:1500},
+    'Viña Collada Rioja':{qty:1,extraCl:0,price:850}, 'Château Haut-Reys Graves':{qty:2,extraCl:0,price:1200},
+    'Marqués de Riscal Rioja Reserve':{qty:2,extraCl:0,price:1400}, 'Famille Perrin Côtes du Rhône':{qty:1,extraCl:0,price:1100},
+    'Il Pino di Biserno':{qty:1,extraCl:0,price:3650}, 'Juan Hús Cariñena':{qty:1,extraCl:0,price:1150},
+    '7 Bilgeler Anaxagoras':{qty:0,extraCl:0,price:1033}, '7 Bilgeler Khilon Sauvignon Blanc':{qty:0,extraCl:0,price:1033},
+    'Wheinhaus Ress Riesling':{qty:3,extraCl:0,price:780}, 'Miraval Provence':{qty:3,extraCl:0,price:2300},
+
+    'Kahlua':{qty:0,extraCl:40,price:1500,bottleCl:100}, 'Campari':{qty:0,extraCl:60,price:0,bottleCl:100},
+    'Aperol':{qty:2,extraCl:80,price:1953,bottleCl:100}, 'Garrone Triple Sec':{qty:1,extraCl:35,price:1270,bottleCl:100},
+    'Gin Mare Mediterranean':{qty:0,extraCl:12,price:2250}, "Jack Daniel's":{qty:0,extraCl:20,price:1446},
+    'Johnnie Walker Black Label':{qty:3,extraCl:45,price:1600},
+    'Johnnie Walker Red Label':{qty:2,extraCl:0,price:1250}, 'Johnnie Walker Gold Label':{qty:1,extraCl:55,price:2700},
+    'Johnie Walker Double Black':{qty:1,extraCl:20,price:1600}, 'Johnie Walker Blue Label':{qty:2,extraCl:0,price:10350},
+    'Martini Rosso':{qty:0,extraCl:20,price:1200}, 'Gentleman Jack':{qty:0,extraCl:50,price:1300},
+    "Gordon's Premium Pink":{qty:2,extraCl:30,price:1152}, "Gordon's Day Gin":{qty:2,extraCl:30,price:1152},
+    'Tanqueray No Ten':{qty:1,extraCl:60,price:2280}, 'Tanqueray Flor De Sevilla':{qty:2,extraCl:0,price:1725},
+    'Tanqueray London Dry Gin':{qty:1,extraCl:0,price:1635},
+    'Captain Morgan White':{qty:0,extraCl:12,price:1300}, 'Captain Morgan Gold':{qty:2,extraCl:0,price:1800},
+    'The Singleton of Dufftown 15 YO':{qty:2,extraCl:0,price:3300}, 'Ciroc Vodka':{qty:2,extraCl:0,price:2350},
+    'Smirnoff North':{qty:0,extraCl:12,price:1140}, 'Smirnoff 750':{qty:0,extraCl:0,price:1140},
+    'Don Julio':{qty:1,extraCl:0,price:2570},
+    // rakılar: 35cl ve 70cl şişelerin geliş fiyatı farklı olduğu için ayrı havuzlar
+    // (bkz. yukarıdaki rakiPool()) — kadeh (4/6/8cl) satışları hep 70CL havuzundan düşer
+    'Tekirdağ Göbek 70CL':{qty:6,extraCl:50,price:1505}, 'Tekirdağ Göbek 35CL':{qty:10,extraCl:0,price:860},
+    'Beylerbeyi Göbek 70CL':{qty:0,extraCl:0,price:1745}, 'Beylerbeyi Göbek 35CL':{qty:0,extraCl:0,price:970},
+    'Sarı Zeybek 3 Meşe 70CL':{qty:9,extraCl:0,price:1729}, 'Sarı Zeybek 3 Meşe 35CL':{qty:20,extraCl:0,price:1000},
+    'Yeni Rakı Yeni Seri 70CL':{qty:11,extraCl:0,price:1245}, 'Yeni Rakı Yeni Seri 35CL':{qty:14,extraCl:0,price:705}
+  };
+  alkStock.forEach(s=>{
+    const d=ALKOL_SAYIM[s.name];
+    if(!d) return;
+    s.qty=d.qty; s.extraCl=d.extraCl; s.price=d.price;
+    if(d.bottleCl) s.bottleCl=d.bottleCl;
+  });
+
+  /* fotoğraflarda olup menüde/reçetede hiç karşılığı olmayan (dolayısıyla yukarıdaki
+     otomatik türetmede hiç oluşmayan) markalar — kendi yeni stok kalemi olarak eklenir,
+     hiçbir reçeteye bağlı değildir, istenirse Menü Yönetimi'nden sonradan bağlanabilir */
+  const YENI_ALKOL=[
+    {name:'Strongbow Bira', cat:'Biralar', bottleCl:33, qty:17, extraCl:0, price:199},
+    {name:'Bitburger',      cat:'Biralar', bottleCl:33, qty:23, extraCl:0, price:80},
+
+    {name:'Kastro Tirelli Elaia',   cat:'Şaraplar', bottleCl:75, qty:1,  extraCl:0, price:550},
+    {name:'Suvla Clairet',          cat:'Şaraplar', bottleCl:75, qty:1,  extraCl:0, price:950},
+    {name:'Paşaeli Blush',          cat:'Şaraplar', bottleCl:75, qty:1,  extraCl:0, price:300},
+    {name:'Kastro Tirelli Beyaz',   cat:'Şaraplar', bottleCl:75, qty:3,  extraCl:0, price:800},
+    {name:'Barton&Guestier',        cat:'Şaraplar', bottleCl:75, qty:2,  extraCl:0, price:1200},
+    {name:'Porta Caeli Pacem',      cat:'Şaraplar', bottleCl:75, qty:5,  extraCl:0, price:1431},
+    {name:'Prodom Rose',            cat:'Şaraplar', bottleCl:75, qty:1,  extraCl:0, price:388},
+    {name:'Chateau Bertineau',      cat:'Şaraplar', bottleCl:75, qty:1,  extraCl:0, price:1800},
+    {name:'Porta Caeli Felici 1.5LT Rose', cat:'Şaraplar', bottleCl:150, qty:1, extraCl:0, price:1400},
+    {name:'Porta Caeli Felici 75CL Rose',  cat:'Şaraplar', bottleCl:75,  qty:15,extraCl:0, price:750},
+    {name:'Porta Caeli 2021',       cat:'Şaraplar', bottleCl:75, qty:1,  extraCl:0, price:2500},
+    {name:'Porta Caeli Ament Blend',cat:'Şaraplar', bottleCl:75, qty:13, extraCl:0, price:1900},
+    {name:'Domaines Ott',           cat:'Şaraplar', bottleCl:75, qty:1,  extraCl:0, price:2700},
+    {name:'Prodom Tellus Merlot',   cat:'Şaraplar', bottleCl:75, qty:1,  extraCl:0, price:850},
+    {name:'Sevilen 900 Füme Blanc', cat:'Şaraplar', bottleCl:75, qty:1,  extraCl:0, price:750},
+    {name:'Sobran Nebbianca Beyaz', cat:'Şaraplar', bottleCl:75, qty:2,  extraCl:0, price:1300},
+    {name:'Chateau de Seguin Merlot', cat:'Şaraplar', bottleCl:75, qty:1, extraCl:0, price:1100},
+    {name:'Jolie Rose',             cat:'Şaraplar', bottleCl:75, qty:2,  extraCl:0, price:1100},
+    {name:'Doluca Signium Cabernet Sauvignon', cat:'Şaraplar', bottleCl:75, qty:4, extraCl:0, price:1334},
+    {name:'Arcadia Pinot Gris Rose',cat:'Şaraplar', bottleCl:75, qty:6,  extraCl:0, price:850},
+    {name:'Sevilen Sıcak Şarap',    cat:'Şaraplar', bottleCl:75, qty:2,  extraCl:0, price:600},
+    {name:'Domaine Chablis',        cat:'Şaraplar', bottleCl:75, qty:8,  extraCl:0, price:3000},
+    {name:'Moet İce Rose',          cat:'Şaraplar', bottleCl:75, qty:1,  extraCl:0, price:5500},
+    {name:'Moet İce İmperial 75CL', cat:'Şaraplar', bottleCl:75, qty:2,  extraCl:0, price:4600},
+    {name:'Luc Belaire',            cat:'Şaraplar', bottleCl:75, qty:3,  extraCl:0, price:2000},
+    {name:'Moet N.I.R',             cat:'Şaraplar', bottleCl:75, qty:1,  extraCl:0, price:4500},
+    {name:'Chamlija Tharacian Beyaz', cat:'Şaraplar', bottleCl:75, qty:1, extraCl:0, price:945},
+    {name:'Chamlija Felix Culpa',   cat:'Şaraplar', bottleCl:75, qty:1,  extraCl:0, price:664.93},
+    {name:'Miraval Provence 3LT',   cat:'Şaraplar', bottleCl:300,qty:1,  extraCl:0, price:9500},
+    {name:'Chiarli Mio',            cat:'Şaraplar', bottleCl:75, qty:20, extraCl:0, price:450},
+    {name:'Broglia La Meirana',     cat:'Şaraplar', bottleCl:75, qty:1,  extraCl:0, price:0},
+    {name:'Likya Arkeo Açıkara Kırmızı 75CL', cat:'Şaraplar', bottleCl:75, qty:11, extraCl:0, price:1350},
+    {name:'La Cantina 1919 Cuvee Brut', cat:'Şaraplar', bottleCl:75, qty:30, extraCl:0, price:0},
+
+    {name:'Tia Maria',              cat:'Ağır Alkoller', bottleCl:70,  qty:0, extraCl:50, price:800},
+    {name:'Napoleon Brandy',        cat:'Ağır Alkoller', bottleCl:70,  qty:0, extraCl:8,  price:520},
+    {name:'Martel V.S',             cat:'Ağır Alkoller', bottleCl:70,  qty:0, extraCl:30, price:1310.75},
+    {name:'Martel V.S.O.P',         cat:'Ağır Alkoller', bottleCl:70,  qty:0, extraCl:35, price:1734.81},
+    {name:'Baileys',                cat:'Ağır Alkoller', bottleCl:70,  qty:0, extraCl:5,  price:1000},
+    {name:'Safari',                 cat:'Ağır Alkoller', bottleCl:70,  qty:0, extraCl:12, price:960},
+    {name:'Southern Comfort 100CL', cat:'Ağır Alkoller', bottleCl:100, qty:0, extraCl:60, price:1200},
+    {name:'Archers Schnapps 70CL',  cat:'Ağır Alkoller', bottleCl:70,  qty:0, extraCl:10, price:1300},
+    {name:'Absolut Elyx',           cat:'Ağır Alkoller', bottleCl:70,  qty:3, extraCl:0,  price:1650},
+    {name:'Malfy Limon',            cat:'Ağır Alkoller', bottleCl:70,  qty:0, extraCl:35, price:1260},
+    {name:'Malfy Rose',             cat:'Ağır Alkoller', bottleCl:70,  qty:0, extraCl:12, price:1260},
+    {name:'Volcan Blanco',          cat:'Ağır Alkoller', bottleCl:70,  qty:1, extraCl:0,  price:1034.78},
+    {name:'Havana 7 Anos',          cat:'Ağır Alkoller', bottleCl:70,  qty:2, extraCl:60, price:1150},
+    {name:'Havana Selección',       cat:'Ağır Alkoller', bottleCl:70,  qty:0, extraCl:40, price:1465},
+    {name:'Jack Apple 1LT',         cat:'Ağır Alkoller', bottleCl:100, qty:1, extraCl:0,  price:1268},
+    {name:'Aberlour 12 Yıl',        cat:'Ağır Alkoller', bottleCl:70,  qty:1, extraCl:20, price:2400},
+    {name:'Chivas 18 Yıl 70CL',     cat:'Ağır Alkoller', bottleCl:70,  qty:3, extraCl:0,  price:3000},
+    {name:'Belvedere 70CL',         cat:'Ağır Alkoller', bottleCl:70,  qty:3, extraCl:0,  price:1650},
+    {name:'Grey Goose',             cat:'Ağır Alkoller', bottleCl:70,  qty:2, extraCl:0,  price:2100},
+    {name:'Belvedere Forest',       cat:'Ağır Alkoller', bottleCl:70,  qty:1, extraCl:0,  price:1745.65},
+    {name:'Olmeca 100CL',           cat:'Ağır Alkoller', bottleCl:100, qty:1, extraCl:20, price:1800},
+    {name:'Beluga Gold',            cat:'Ağır Alkoller', bottleCl:70,  qty:1, extraCl:0,  price:3350},
+    {name:'Altos Tekila 70CL',      cat:'Ağır Alkoller', bottleCl:70,  qty:0, extraCl:60, price:1185.46},
+    {name:'Ojo de Tigre Tekila 70CL', cat:'Ağır Alkoller', bottleCl:70, qty:0, extraCl:50, price:1310.75},
+    {name:'Avion Silver',           cat:'Ağır Alkoller', bottleCl:70,  qty:0, extraCl:65, price:1600},
+    {name:'Lillet Blanc',           cat:'Ağır Alkoller', bottleCl:75,  qty:1, extraCl:0,  price:493.46},
+    {name:'The Glenlivet 12 Yıl',   cat:'Ağır Alkoller', bottleCl:70,  qty:2, extraCl:0,  price:1117.98},
+    {name:'Deacon Viski 70CL',      cat:'Ağır Alkoller', bottleCl:70,  qty:1, extraCl:0,  price:848.13},
+    {name:'Ballantines 7 Yıl',      cat:'Ağır Alkoller', bottleCl:70,  qty:0, extraCl:60, price:878.26},
+    {name:'Martini Bianco 70CL',    cat:'Ağır Alkoller', bottleCl:70,  qty:0, extraCl:60, price:1200},
+    {name:'Ardbeg Ten',             cat:'Ağır Alkoller', bottleCl:70,  qty:0, extraCl:50, price:1459.66},
+    {name:'Lillet Rose',            cat:'Ağır Alkoller', bottleCl:75,  qty:0, extraCl:60, price:493.46},
+    {name:'Grappa',                 cat:'Ağır Alkoller', bottleCl:70,  qty:0, extraCl:60, price:1250},
+    {name:'Malibu 100CL',           cat:'Ağır Alkoller', bottleCl:100, qty:0, extraCl:95, price:985},
+    {name:"The Glenlivet Founder's Reserve", cat:'Ağır Alkoller', bottleCl:70, qty:0, extraCl:60, price:2450},
+    {name:'Bumbu Rumco',            cat:'Ağır Alkoller', bottleCl:70,  qty:0, extraCl:12, price:1028},
+    {name:'Lot No:40',              cat:'Ağır Alkoller', bottleCl:70,  qty:1, extraCl:0,  price:1580},
+    {name:'Jagermeister 100CL',     cat:'Ağır Alkoller', bottleCl:100, qty:0, extraCl:20, price:1600},
+    {name:'Gordon 100CL',           cat:'Ağır Alkoller', bottleCl:100, qty:4, extraCl:20, price:1152},
+    {name:"Hendrick's 70CL",        cat:'Ağır Alkoller', bottleCl:70,  qty:0, extraCl:60, price:3200},
+    {name:'Chivas Extra 70CL',      cat:'Ağır Alkoller', bottleCl:70,  qty:0, extraCl:60, price:1491.50},
+    {name:'Passao Likör',           cat:'Ağır Alkoller', bottleCl:70,  qty:0, extraCl:50, price:850},
+    {name:'Disaronno 1LT',          cat:'Ağır Alkoller', bottleCl:100, qty:0, extraCl:0,  price:0},
+    {name:'Volcan X.A 70CL',        cat:'Ağır Alkoller', bottleCl:70,  qty:1, extraCl:0,  price:9600},
+    {name:"Belvedere B10.Yıl",      cat:'Ağır Alkoller', bottleCl:70,  qty:1, extraCl:0,  price:10000},
+    {name:"J&B Rare Viski 100CL",   cat:'Ağır Alkoller', bottleCl:100, qty:12,extraCl:40, price:1150},
+    {name:"J&B Rare Viski 70CL",    cat:'Ağır Alkoller', bottleCl:70,  qty:1, extraCl:0,  price:1150},
+    {name:'Volare Vanilya',         cat:'Ağır Alkoller', bottleCl:70,  qty:1, extraCl:0,  price:550},
+    {name:'Garrone Extra Dry 100CL',cat:'Ağır Alkoller', bottleCl:100, qty:0, extraCl:95, price:960},
+    {name:'Zacapa Solera Grand Reserva', cat:'Ağır Alkoller', bottleCl:70, qty:2, extraCl:0, price:2500},
+    {name:'Smirnoff Red Votka 70CL',cat:'Ağır Alkoller', bottleCl:70,  qty:0, extraCl:0,  price:1140},
+    {name:'Smirnoff Red 100CL',     cat:'Ağır Alkoller', bottleCl:100, qty:0, extraCl:40, price:1600},
+    {name:'Don Julio 1942 70CL',    cat:'Ağır Alkoller', bottleCl:70,  qty:2, extraCl:0,  price:5640},
+    {name:'Don Julio Anejo 70CL',   cat:'Ağır Alkoller', bottleCl:70,  qty:2, extraCl:0,  price:3010},
+    {name:'Don Julio Reposado 70CL',cat:'Ağır Alkoller', bottleCl:70,  qty:2, extraCl:0,  price:2775},
+    {name:'Yeni Rakı 70CL', cat:'Ağır Alkoller', bottleCl:70, qty:6,  extraCl:0, price:1200},
+    {name:'Yeni Rakı 35CL', cat:'Ağır Alkoller', bottleCl:35, qty:10, extraCl:0, price:635}
+  ].map(x=>({id:nid(), unit:'adet', low:x.bottleCl*2, crit:x.bottleCl, ...x}));
+  alkStock.push(...YENI_ALKOL);
 
   /* ---------- alkolsüz içecekler (adet) — menüden satılan şişe/kutular kendi stoklarından,
      Tonik ise menüde tek başına satılmayıp yalnızca kokteyl/sangria içinde kullanılır ---------- */
@@ -135,7 +307,7 @@ function seedDB(){
     'Prosecco':                       [[sid('Prosecco'),18]],
     // imza kokteyller
     'Azumare Special':       [[sid("Gordon's Day Gin"),5],[sid('Garrone Triple Sec'),2]],
-    'Azumare Passion':       [[sid('Yeni Rakı Yeni Seri'),4],[sid('Çarkıfelek Püresi'),2]],
+    'Azumare Passion':       [[sid('Yeni Rakı Yeni Seri 70CL'),4],[sid('Çarkıfelek Püresi'),2]],
     'Azumare Chilli Passion':[[sid('Don Julio'),5],[sid('Garrone Triple Sec'),2],[sid('Çarkıfelek Püresi'),2]],
     'Chilli Negroni':        [[sid("Gordon's Day Gin"),2],[sid('Martini Rosso'),2],[sid('Campari'),2]],
     'NO1':                   [[sid('J&B 225'),5],[sid('Amaretto'),2],[sid('Karamel Şurubu'),2]],
@@ -185,7 +357,7 @@ function seedDB(){
     if(!recipe){
       if(cat==='Rakılar'){
         const m=name.match(/^(.+) (\d+)cl$/);
-        if(m) recipe=[[sid(m[1]),+m[2]]];
+        if(m) recipe=[[sid(rakiPool(m[1],+m[2])),+m[2]]];
       } else if(KADEH_SPIRIT_CATS.includes(cat)){
         recipe=[[sid(name),5]];
       } else if(BOTTLE_CATS.includes(cat)){
