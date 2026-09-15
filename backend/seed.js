@@ -327,7 +327,20 @@ function seedDB(){
     {id:nid(), name:'Püreler',  cat:'Kokteyl Malzemesi', qty:24, unit:'adet', bottleCl:100, extraCl:0, price:415, low:70, crit:25}
   ];
 
-  const stock=[...alkStock, ...icecekStock, ...kokteylMalzeme];
+  /* ---------- temizlik malzemeleri — menüyle/reçeteyle hiç ilişkisi yok, sadece envanter takibi ---------- */
+  const temizlikStock = [
+    {id:nid(), name:'Selpak Sensörlü Havlu Peçete', cat:'Temizlik Malzemeleri', qty:1,   unit:'adet', low:2, crit:1,   price:1000},
+    {id:nid(), name:'Selpak Garson Katlama 20 Adet', cat:'Temizlik Malzemeleri', qty:1,  unit:'adet', low:2, crit:1,   price:1500},
+    {id:nid(), name:'Eldiven',                       cat:'Temizlik Malzemeleri', qty:8,  unit:'adet', low:4, crit:2,   price:340},
+    {id:nid(), name:"Jumbo Çöp Poşeti 12'li",        cat:'Temizlik Malzemeleri', qty:1,  unit:'adet', low:2, crit:1,   price:1616},
+    {id:nid(), name:'Temizlik Mobu',                 cat:'Temizlik Malzemeleri', qty:3,  unit:'adet', low:2, crit:1,   price:170},
+    {id:nid(), name:'Diversey Typogel Çamaşır Suyu 5LT', cat:'Temizlik Malzemeleri', qty:0, unit:'adet', low:2, crit:1, price:0},
+    {id:nid(), name:'Cam Temizleme Bezi',            cat:'Temizlik Malzemeleri', qty:5,  unit:'adet', low:2, crit:1,   price:70},
+    {id:nid(), name:'Pipet 2.500 Adet',              cat:'Temizlik Malzemeleri', qty:0.5,unit:'adet', low:1, crit:0.5, price:2083.33},
+    {id:nid(), name:'Selpak Tuvalet Kağıdı',         cat:'Temizlik Malzemeleri', qty:1,  unit:'adet', low:2, crit:1,   price:835}
+  ];
+
+  const stock=[...alkStock, ...icecekStock, ...kokteylMalzeme, ...temizlikStock];
   const sid=n=>{ const s=stock.find(x=>x.name===n); if(!s) throw new Error('alkol stoğu bulunamadı: '+n); return s.id; };
 
 
@@ -476,6 +489,7 @@ function seedDBBlank(){
     tables25Seeded:true, usersRealSeeded:true, adminUsernameRenamed:true, testDataCleared:true,
     recipeFix1Applied:true, stockDrinksAdded:true, menuVariantsAdded:true, mahmutAdminAdded:true,
     alkolsuzKokteylMovedToSoft:true, sangriaNamesRenamed:true, mojitoSadeAdded:true,
-    stockSettingApplied:true, stockBottleTrackApplied:true, stockIcecekKokteylMalzemeApplied:true
+    stockSettingApplied:true, stockBottleTrackApplied:true, stockIcecekKokteylMalzemeApplied:true,
+    stockTemizlikAdded:true
   };
 }

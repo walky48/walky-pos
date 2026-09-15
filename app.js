@@ -165,6 +165,20 @@ if(!db.stockIcecekKokteylMalzemeApplied){
   });
   db.stockIcecekKokteylMalzemeApplied=true;
 }
+/* yeni "Temizlik Malzemeleri" kategorisi — menüyle/reçeteyle ilgisi yok, sadece envanter.
+   Sadece Azumare soyundan gelen kurulumlarda çalışır (bkz. yukarıdaki aynı mantık) — tek seferlik. */
+if(!db.stockTemizlikAdded && !db.menu.some(m=>m.name==="Gordon's Day Gin")){
+  db.stockTemizlikAdded=true;
+}
+if(!db.stockTemizlikAdded){
+  const freshTemizlik=seedDB().stock.filter(s=>s.cat==='Temizlik Malzemeleri');
+  freshTemizlik.forEach(fresh=>{
+    const existing=db.stock.find(s=>s.cat==='Temizlik Malzemeleri' && s.name===fresh.name);
+    if(existing){ existing.qty=fresh.qty; existing.price=fresh.price; }
+    else db.stock.push({...fresh, id:uid()});
+  });
+  db.stockTemizlikAdded=true;
+}
 // Dolar fiyatları artık Euro fiyatından ve güncel kurdan otomatik hesaplanıyor — mevcut menüye bir kerelik uygulanır
 if(!db.usdFromEurApplied){
   recalcMenuUsdPrices();
