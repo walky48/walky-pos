@@ -59,6 +59,13 @@ if(!db.stockNonAlkolRemoved){
    şişe sayımı + geliş fiyatlarıyla dolduruldu (bkz. backend/seed.js ALKOL_SAYIM) —
    tek seferlik. Eşleşen kalemler id/isim korunarak yerinde güncellenir (reçeteler
    bozulmaz), fotoğrafta karşılığı olmayan markalar yeni kalem olarak eklenir. */
+/* bu migration Azumare'nin kendi (menüden türetilmiş) alkol iskeletine göre yazıldı —
+   başka bir restoranda (ör. FreshPress) aynı isimler hiç yoktur, o yüzden önce bu
+   kurulumun gerçekten Azumare soyundan geldiği (menüsünde Azumare'ye özgü bir kalem
+   varlığıyla) doğrulanır; değilse dokunulmadan sadece işaretlenip geçilir. */
+if(!db.stockBottleTrackApplied && !db.menu.some(m=>m.name==="Gordon's Day Gin")){
+  db.stockBottleTrackApplied=true;
+}
 if(!db.stockBottleTrackApplied){
   const freshAlk=seedDB().stock.filter(s=>['Biralar','Şaraplar','Ağır Alkoller'].includes(s.cat));
   freshAlk.forEach(fresh=>{

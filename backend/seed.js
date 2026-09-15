@@ -444,6 +444,6 @@ function seedDBBlank(){
     tables25Seeded:true, usersRealSeeded:true, adminUsernameRenamed:true, testDataCleared:true,
     recipeFix1Applied:true, stockDrinksAdded:true, menuVariantsAdded:true, mahmutAdminAdded:true,
     alkolsuzKokteylMovedToSoft:true, sangriaNamesRenamed:true, mojitoSadeAdded:true,
-    stockSettingApplied:true
+    stockSettingApplied:true, stockBottleTrackApplied:true
   };
 }
