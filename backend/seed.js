@@ -287,13 +287,45 @@ function seedDB(){
   alkStock.push(...YENI_ALKOL);
 
   /* ---------- alkolsüz içecekler (adet) — menüden satılan şişe/kutular kendi stoklarından,
-     Tonik ise menüde tek başına satılmayıp yalnızca kokteyl/sangria içinde kullanılır ---------- */
-  const icecekStock = ['Cola','Fanta','Sprite','Redbull','S. Pelegrino 25cl','S. Pelegrino 70cl','Su 330ml','Su 750ml','Soda','Tonik']
-    .map(name=>({id:nid(), name, cat:'İçecek', qty:0, unit:'adet', low:24, crit:6}));
+     Tonik ise menüde tek başına satılmayıp yalnızca kokteyl/sangria içinde kullanılır.
+     Cola/Fanta/Sprite fiziksel sayımda tek kalem olarak tutulduğu için (aynı kasadan
+     karışık çıkıyorlar) TEK ortak stok kalemine bağlanır — bkz. RCP altı. Gerçek sayım
+     ve geliş fiyatlarıyla dolduruldu; fotoğrafta karşılığı olmayanlar (Soda, Tonik) 0'da. */
+  const icecekStock = [
+    {id:nid(), name:'Cola,Fanta,Sprite', cat:'İçecek', qty:252, unit:'adet', low:24, crit:6, price:55},
+    {id:nid(), name:'Redbull', cat:'İçecek', qty:36, unit:'adet', low:24, crit:6, price:63},
+    {id:nid(), name:'S. Pelegrino 25cl', cat:'İçecek', qty:318, unit:'adet', low:24, crit:6, price:9},
+    {id:nid(), name:'S. Pelegrino 70cl', cat:'İçecek', qty:22, unit:'adet', low:24, crit:6, price:135},
+    {id:nid(), name:'Su 330ml', cat:'İçecek', qty:251, unit:'adet', low:24, crit:6, price:19},
+    {id:nid(), name:'Su 750ml', cat:'İçecek', qty:143, unit:'adet', low:24, crit:6, price:40},
+    {id:nid(), name:'Soda', cat:'İçecek', qty:0, unit:'adet', low:24, crit:6, price:0},
+    {id:nid(), name:'Tonik', cat:'İçecek', qty:0, unit:'adet', low:24, crit:6, price:0},
+    // fotoğrafta olup menüde tek başına satılmayan (reçeteye bağlı olmayan) kalemler
+    {id:nid(), name:'Cappy Litrelik Meyvesuyu', cat:'İçecek', qty:39, unit:'adet', low:24, crit:6, price:118},
+    {id:nid(), name:'Fusetea', cat:'İçecek', qty:111, unit:'adet', low:24, crit:6, price:35},
+    {id:nid(), name:'Cappy Cam Meyvesuyu', cat:'İçecek', qty:53, unit:'adet', low:24, crit:6, price:42.5},
+    {id:nid(), name:'Litrelik Cola,Fanta,Sprite', cat:'İçecek', qty:1, unit:'adet', low:24, crit:6, price:66},
+    {id:nid(), name:'Schwepps Cam 250ml', cat:'İçecek', qty:58, unit:'adet', low:24, crit:6, price:46},
+    {id:nid(), name:'Türk Kahvesi 100gr', cat:'İçecek', qty:25, unit:'adet', low:24, crit:6, price:83},
+    {id:nid(), name:'Su 500ml PET', cat:'İçecek', qty:19, unit:'adet', low:24, crit:6, price:5.8},
+    {id:nid(), name:'Schwepps Litrelik', cat:'İçecek', qty:10, unit:'adet', low:24, crit:6, price:55},
+    {id:nid(), name:'The Whirl Çekirdek Kahve', cat:'İçecek', qty:15, unit:'adet', low:24, crit:6, price:1250},
+    {id:nid(), name:'İçim Barista Sütü 1LT', cat:'İçecek', qty:59, unit:'adet', low:24, crit:6, price:55},
+    {id:nid(), name:'Bardak Su', cat:'İçecek', qty:504, unit:'adet', low:24, crit:6, price:0},
+    {id:nid(), name:'Su PET 1LT', cat:'İçecek', qty:0, unit:'adet', low:24, crit:6, price:15},
+    {id:nid(), name:'Damacana Su 19LT', cat:'İçecek', qty:5, unit:'adet', low:24, crit:6, price:175},
+    {id:nid(), name:'Şalgam', cat:'İçecek', qty:6, unit:'adet', low:24, crit:6, price:0}
+  ];
 
-  /* ---------- kokteyl/kahve malzemeleri (cl) — menüde tek başına satılmaz, yalnızca reçetelerde kullanılır ---------- */
-  const kokteylMalzeme = ['Şeker Şurubu','Karamel Şurubu','Vanilya Şurubu','Çarkıfelek Püresi','Çilek Püresi','Mango Püresi','Elma Püresi']
-    .map(name=>({id:nid(), name, cat:'Kokteyl Malzemesi', qty:0, unit:'cl', low:70, crit:25}));
+  /* ---------- kokteyl/kahve malzemeleri — menüde tek başına satılmaz, yalnızca reçetelerde
+     kullanılır. Önceden her tat (çilek/mango/elma püresi, karamel/vanilya şurubu vb.) ayrı
+     stok kalemiydi; artık fiziksel sayımda olduğu gibi tek "Şuruplar" ve tek "Püreler" havuzu.
+     Her ikisi de şişeli takip (bkz. ui/js/stock.js) — 1 adet = 100cl (1 LT); kokteyl
+     reçeteleri (elmalı mojito, karamelli ice latte vb.) hep bu ortak havuzdan cl olarak düşer. */
+  const kokteylMalzeme = [
+    {id:nid(), name:'Şuruplar', cat:'Kokteyl Malzemesi', qty:56, unit:'adet', bottleCl:100, extraCl:0, price:330, low:70, crit:25},
+    {id:nid(), name:'Püreler',  cat:'Kokteyl Malzemesi', qty:24, unit:'adet', bottleCl:100, extraCl:0, price:415, low:70, crit:25}
+  ];
 
   const stock=[...alkStock, ...icecekStock, ...kokteylMalzeme];
   const sid=n=>{ const s=stock.find(x=>x.name===n); if(!s) throw new Error('alkol stoğu bulunamadı: '+n); return s.id; };
@@ -307,11 +339,11 @@ function seedDB(){
     'Prosecco':                       [[sid('Prosecco'),18]],
     // imza kokteyller
     'Azumare Special':       [[sid("Gordon's Day Gin"),5],[sid('Garrone Triple Sec'),2]],
-    'Azumare Passion':       [[sid('Yeni Rakı Yeni Seri 70CL'),4],[sid('Çarkıfelek Püresi'),2]],
-    'Azumare Chilli Passion':[[sid('Don Julio'),5],[sid('Garrone Triple Sec'),2],[sid('Çarkıfelek Püresi'),2]],
+    'Azumare Passion':       [[sid('Yeni Rakı Yeni Seri 70CL'),4],[sid('Püreler'),2]],
+    'Azumare Chilli Passion':[[sid('Don Julio'),5],[sid('Garrone Triple Sec'),2],[sid('Püreler'),2]],
     'Chilli Negroni':        [[sid("Gordon's Day Gin"),2],[sid('Martini Rosso'),2],[sid('Campari'),2]],
-    'NO1':                   [[sid('J&B 225'),5],[sid('Amaretto'),2],[sid('Karamel Şurubu'),2]],
-    'Aperol Margarita':      [[sid('Aperol'),2],[sid('Don Julio'),4],[sid('Şeker Şurubu'),1],[sid('Soda'),1]],
+    'NO1':                   [[sid('J&B 225'),5],[sid('Amaretto'),2],[sid('Şuruplar'),2]],
+    'Aperol Margarita':      [[sid('Aperol'),2],[sid('Don Julio'),4],[sid('Şuruplar'),1],[sid('Soda'),1]],
     'Azumare Refresh':       [[sid("Gordon's Day Gin"),5]],
     // classic / universal kokteyl
     'Lynchburg Lemonade':    [[sid('J&B 225'),5],[sid('Garrone Triple Sec'),2]],
@@ -326,9 +358,9 @@ function seedDB(){
     'Pornstar Martini':      [[sid('Smirnoff 750'),5],[sid('Prosecco'),5]],
     'Long Island Iced Tea':  [[sid('Smirnoff 750'),7.5],[sid("Gordon's Day Gin"),7.5],[sid('Captain Morgan White'),7.5],[sid('Don Julio'),7.5],[sid('Garrone Triple Sec'),7.5]],
     // alkolsüz kokteyller (Alkolsüz Mojito'nun meyve seçeneği VARIANTS'ta)
-    'Azumare Sunset': [[sid('Çilek Püresi'),2],[sid('Mango Püresi'),2]],
-    // kendi şişe/kutusundan 1 adet düşen sade içecekler
-    'Cola':[[sid('Cola'),1]], 'Fanta':[[sid('Fanta'),1]], 'Sprite':[[sid('Sprite'),1]], 'Redbull':[[sid('Redbull'),1]],
+    'Azumare Sunset': [[sid('Püreler'),4]],
+    // kendi şişe/kutusundan 1 adet düşen sade içecekler (Cola/Fanta/Sprite ortak havuzdan)
+    'Cola':[[sid('Cola,Fanta,Sprite'),1]], 'Fanta':[[sid('Cola,Fanta,Sprite'),1]], 'Sprite':[[sid('Cola,Fanta,Sprite'),1]], 'Redbull':[[sid('Redbull'),1]],
     'S. Pelegrino 25cl':[[sid('S. Pelegrino 25cl'),1]], 'S. Pelegrino 70cl':[[sid('S. Pelegrino 70cl'),1]],
     'Su 330ml':[[sid('Su 330ml'),1]], 'Su 750ml':[[sid('Su 750ml'),1]], 'Soda':[[sid('Soda'),1]],
     // sangria (1LT, 4 lezzet de aynı reçete)
@@ -338,7 +370,7 @@ function seedDB(){
     'Şeftalili Sangria': [[sid("Gordon's Day Gin"),10],[sid('Pinot Grigio'),18],[sid('Pinot Grigio Rose'),18],[sid('Tonik'),1]],
     // şişe kokteyl (1LT = 4 porsiyon, tek porsiyon reçetesinin 4 katı — Sunset hariç, o ayrı verildi)
     'Azumare Refresh (Şişe 1LT)':     [[sid("Gordon's Day Gin"),20]],
-    'Sunset (Şişe 1LT)':              [[sid('Smirnoff 750'),12],[sid('Campari'),6],[sid('Çilek Püresi'),2],[sid('Çarkıfelek Püresi'),2]],
+    'Sunset (Şişe 1LT)':              [[sid('Smirnoff 750'),12],[sid('Campari'),6],[sid('Püreler'),4]],
     'Long Island Ice Tea (Şişe 1LT)': [[sid('Smirnoff 750'),28.5],[sid("Gordon's Day Gin"),28.5],[sid('Captain Morgan White'),28.5],[sid('Don Julio'),28.5],[sid('Garrone Triple Sec'),28.5]],
     'Lyncburg Lemonade (Şişe 1LT)':   [[sid('J&B 225'),20],[sid('Garrone Triple Sec'),8]]
   };
@@ -347,9 +379,9 @@ function seedDB(){
      Garson üründe tıkladığında hangi seçenek (meyve/aroma) alındığını sorar;
      seçilen seçeneğin "extra" reçetesi, ürünün temel reçetesine EKLENEREK düşülür. */
   const VARIANTS={
-    'Mojito':           [{label:'Sade', extra:[]}, {label:'Çilekli', extra:[[sid('Çilek Püresi'),2]]}, {label:'Elmalı', extra:[[sid('Elma Püresi'),2]]}],
-    'Alkolsüz Mojito':  [{label:'Sade', extra:[]}, {label:'Çilekli', extra:[[sid('Çilek Püresi'),2]]}, {label:'Elmalı', extra:[[sid('Elma Püresi'),2]]}],
-    'Ice Latte':        [{label:'Sade', extra:[]}, {label:'Karamelli', extra:[[sid('Karamel Şurubu'),2]]}, {label:'Vanilyalı', extra:[[sid('Vanilya Şurubu'),2]]}]
+    'Mojito':           [{label:'Sade', extra:[]}, {label:'Çilekli', extra:[[sid('Püreler'),2]]}, {label:'Elmalı', extra:[[sid('Püreler'),2]]}],
+    'Alkolsüz Mojito':  [{label:'Sade', extra:[]}, {label:'Çilekli', extra:[[sid('Püreler'),2]]}, {label:'Elmalı', extra:[[sid('Püreler'),2]]}],
+    'Ice Latte':        [{label:'Sade', extra:[]}, {label:'Karamelli', extra:[[sid('Şuruplar'),2]]}, {label:'Vanilyalı', extra:[[sid('Şuruplar'),2]]}]
   };
 
   const menu=MENU_ROWS.map(([name,cat,tl],i)=>{
@@ -444,6 +476,6 @@ function seedDBBlank(){
     tables25Seeded:true, usersRealSeeded:true, adminUsernameRenamed:true, testDataCleared:true,
     recipeFix1Applied:true, stockDrinksAdded:true, menuVariantsAdded:true, mahmutAdminAdded:true,
     alkolsuzKokteylMovedToSoft:true, sangriaNamesRenamed:true, mojitoSadeAdded:true,
-    stockSettingApplied:true, stockBottleTrackApplied:true
+    stockSettingApplied:true, stockBottleTrackApplied:true, stockIcecekKokteylMalzemeApplied:true
   };
 }

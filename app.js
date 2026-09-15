@@ -106,6 +106,65 @@ if(!db.stockBottleTrackApplied){
   });
   db.stockBottleTrackApplied=true;
 }
+/* soft içecekler gerçek sayımla dolduruldu (Cola/Fanta/Sprite artık ortak tek havuz);
+   kokteyl/kahve malzemeleri de tat başına ayrı kalemler yerine tek "Şuruplar"/"Püreler"
+   şişeli havuzuna toplandı (1 adet = 100cl). Sadece Azumare soyundan gelen kurulumlarda
+   çalışır (bkz. stockBottleTrackApplied'daki aynı mantık) — tek seferlik. */
+if(!db.stockIcecekKokteylMalzemeApplied && !db.menu.some(m=>m.name==="Gordon's Day Gin")){
+  db.stockIcecekKokteylMalzemeApplied=true;
+}
+if(!db.stockIcecekKokteylMalzemeApplied){
+  const mergeRecipe=recipe=>{
+    const out=[];
+    (recipe||[]).forEach(r=>{
+      const ex=out.find(x=>x.s===r.s);
+      if(ex) ex.q=+(ex.q+r.q).toFixed(3); else out.push({s:r.s, q:r.q});
+    });
+    return out;
+  };
+  // --- Cola/Fanta/Sprite: 3 ayrı kalem -> 1 ortak kalem ---
+  const cfs=['Cola','Fanta','Sprite'].map(n=>db.stock.find(s=>s.cat==='İçecek' && s.name===n)).filter(Boolean);
+  const cfsIdMap={};
+  if(cfs.length){
+    const survivor=cfs[0];
+    cfs.forEach(s=>{ cfsIdMap[s.id]=survivor.id; });
+    survivor.name='Cola,Fanta,Sprite'; survivor.qty=252; survivor.price=55;
+    db.stock=db.stock.filter(s=>!(cfs.slice(1).some(x=>x.id===s.id)));
+  }
+  // --- diğer İçecek kalemleri: isimle eşleşenler yerinde güncellenir, yeni olanlar eklenir ---
+  const freshIcecek=seedDB().stock.filter(s=>s.cat==='İçecek' && s.name!=='Cola,Fanta,Sprite');
+  freshIcecek.forEach(fresh=>{
+    const existing=db.stock.find(s=>s.cat==='İçecek' && s.name===fresh.name);
+    if(existing){ existing.qty=fresh.qty; existing.price=fresh.price; }
+    else db.stock.push({...fresh, id:uid()});
+  });
+  if(cfs.length){ const survivor=db.stock.find(s=>s.id===cfs[0].id); if(survivor){ survivor.qty=252; survivor.price=55; } }
+  // --- kokteyl/kahve malzemeleri: 7 tat -> "Şuruplar"/"Püreler" iki ortak şişeli havuz ---
+  const surupNames=['Şeker Şurubu','Karamel Şurubu','Vanilya Şurubu'];
+  const pureNames=['Çarkıfelek Püresi','Çilek Püresi','Mango Püresi','Elma Püresi'];
+  const oldMalzeme=db.stock.filter(s=>s.cat==='Kokteyl Malzemesi' && (surupNames.includes(s.name)||pureNames.includes(s.name)));
+  const freshMalzeme=seedDB().stock.filter(s=>s.cat==='Kokteyl Malzemesi');
+  const surupFresh=freshMalzeme.find(s=>s.name==='Şuruplar'), pureFresh=freshMalzeme.find(s=>s.name==='Püreler');
+  let surupNew=db.stock.find(s=>s.cat==='Kokteyl Malzemesi' && s.name==='Şuruplar');
+  let pureNew=db.stock.find(s=>s.cat==='Kokteyl Malzemesi' && s.name==='Püreler');
+  if(!surupNew && surupFresh){ surupNew={...surupFresh, id:uid()}; db.stock.push(surupNew); }
+  if(!pureNew && pureFresh){ pureNew={...pureFresh, id:uid()}; db.stock.push(pureNew); }
+  if(surupNew && surupFresh){ surupNew.qty=surupFresh.qty; surupNew.extraCl=surupFresh.extraCl; surupNew.price=surupFresh.price; surupNew.bottleCl=surupFresh.bottleCl; surupNew.unit='adet'; }
+  if(pureNew && pureFresh){ pureNew.qty=pureFresh.qty; pureNew.extraCl=pureFresh.extraCl; pureNew.price=pureFresh.price; pureNew.bottleCl=pureFresh.bottleCl; pureNew.unit='adet'; }
+  const malzemeIdMap={};
+  oldMalzeme.forEach(old=>{
+    const target=surupNames.includes(old.name)?surupNew:pureNew;
+    if(target) malzemeIdMap[old.id]=target.id;
+  });
+  db.stock=db.stock.filter(s=>!oldMalzeme.some(o=>o.id===s.id));
+  // --- menüdeki tüm reçeteleri (Cola/Fanta/Sprite + şurup/püre) yeni id'lere yeniden bağla ---
+  const idMap=Object.assign({}, cfsIdMap, malzemeIdMap);
+  db.menu.forEach(m=>{
+    m.recipe=mergeRecipe((m.recipe||[]).map(r=>idMap[r.s]?{s:idMap[r.s], q:r.q}:r));
+    (m.variants||[]).forEach(v=>{ v.extra=mergeRecipe((v.extra||[]).map(r=>idMap[r.s]?{s:idMap[r.s], q:r.q}:r)); });
+  });
+  db.stockIcecekKokteylMalzemeApplied=true;
+}
 // Dolar fiyatları artık Euro fiyatından ve güncel kurdan otomatik hesaplanıyor — mevcut menüye bir kerelik uygulanır
 if(!db.usdFromEurApplied){
   recalcMenuUsdPrices();
