@@ -84,6 +84,7 @@ function viewStock(){
   return `<div class="page-head">
       <div><h1>Stok Durumu</h1></div>
       <div class="head-tools">
+        <button class="btn sm" onclick="printStockReport()">🖨️ Stok Çıktısı Al</button>
         ${canEdit?`<button class="btn sm" onclick="openNewStockCatModal()">+ Yeni Kategori</button>
         <button class="btn accent sm" onclick="openNewStockModal()">+ Yeni Stok Kalemi</button>`:''}
       </div></div>
@@ -255,4 +256,57 @@ function applyStockEditBottle(sid){
   const delta=+(stockTotalCl(s)-oldTotal).toFixed(3);
   db.stockLog.push({ts:Date.now(), u:user.name, name:s.name, delta, reason:'Düzeltme (cl)'});
   saveDB(); closeModal(); render(); toast('Stok güncellendi','ok');
+}
+/* muhasebenin ay başı sayımla karşılaştırabilmesi için, istenildiği anda A4
+   normal yazıcıdan (termal fiş yazıcısından bağımsız, bkz. ui/js/print.js
+   #printArea 72mm kısıtı) tam stok dökümü alınabilmesi — ayrı bir pencerede
+   statik HTML olarak üretilir, tarayıcının kendi yazdırma diyaloğunu açar. */
+function stockReportHTML(){
+  const cats=stockCatList();
+  let grandTotal=0;
+  const sections=cats.map(cat=>{
+    const items=db.stock.filter(s=>s.cat===cat);
+    if(!items.length) return '';
+    let catTotal=0;
+    const rows=items.map(s=>{
+      const lineTotal=stockLineValue(s);
+      catTotal+=lineTotal;
+      const miktar = s.bottleCl
+        ? `${fmtQ(s.qty)} adet + ${fmtQ(s.extraCl||0)} cl (${fmtQ(stockTotalCl(s))} cl toplam)`
+        : `${fmtQ(s.qty)} ${esc(s.unit)}`;
+      return `<tr><td>${esc(s.name)}</td><td>${miktar}</td><td class="r">${fmt(s.price||0)}</td><td class="r">${fmt(lineTotal)}</td></tr>`;
+    }).join('');
+    grandTotal+=catTotal;
+    return `<h3>${esc(cat)}</h3>
+      <table><thead><tr><th>Ürün</th><th>Miktar</th><th class="r">Fiyat</th><th class="r">Toplam</th></tr></thead>
+      <tbody>${rows}</tbody></table>
+      <div class="cat-tot">Kategori Toplamı: <b>${fmt(catTotal)}</b></div>`;
+  }).join('');
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Stok Durumu Raporu</title>
+  <style>
+    @page{size:A4;margin:14mm}
+    body{font-family:Arial,Helvetica,sans-serif;color:#111;font-size:12px}
+    h1{font-size:19px;margin:0 0 2px}
+    h3{font-size:13px;margin:16px 0 4px;border-bottom:1px solid #333;padding-bottom:2px}
+    .sub{color:#555;font-size:11px;margin-bottom:14px}
+    table{width:100%;border-collapse:collapse;margin-bottom:2px}
+    th,td{border:1px solid #ccc;padding:4px 6px;text-align:left;font-size:11.5px}
+    th{background:#f0f0f0}
+    .r{text-align:right}
+    .cat-tot{text-align:right;font-size:12px;margin:2px 0 4px}
+    .grand{margin-top:18px;padding-top:8px;border-top:2px solid #111;font-size:15px;text-align:right;font-weight:bold}
+  </style></head>
+  <body>
+    <h1>${esc(db.settings.businessName||'Restoranım')} — Stok Durumu Raporu</h1>
+    <div class="sub">Çıktı: ${trDate(iso())} ${trTime(Date.now())} · Alan: ${esc(user.name)}</div>
+    ${sections}
+    <div class="grand">Toplam Stok Değeri: ${fmt(grandTotal)}</div>
+  </body></html>`;
+}
+function printStockReport(){
+  const w=window.open('', '_blank');
+  if(!w){toast('Yeni sekme açılamadı, açılır pencere engelleniyor olabilir','err');return}
+  w.document.open(); w.document.write(stockReportHTML()); w.document.close();
+  w.focus();
+  setTimeout(()=>{ try{ w.print() }catch(e){} }, 300);
 }

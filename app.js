@@ -179,6 +179,18 @@ if(!db.stockTemizlikAdded){
   });
   db.stockTemizlikAdded=true;
 }
+/* "Şuruplar" kalemi ilk girişte yanlışlıkla Püreler ile aynı şişe boyutunda (100cl)
+   kaydedilmişti — gerçekte Şuruplar 75cl'lik şişe. Sadece şişe boyutu düzeltilir,
+   sayılan adet/açık şişe cl'si (fiziksel sayım) dokunulmadan kalır. Sadece Azumare
+   soyundan gelen kurulumlarda çalışır (bkz. yukarıdaki aynı mantık) — tek seferlik. */
+if(!db.stockSuruplarClFix && !db.menu.some(m=>m.name==="Gordon's Day Gin")){
+  db.stockSuruplarClFix=true;
+}
+if(!db.stockSuruplarClFix){
+  const s=db.stock.find(x=>x.cat==='Kokteyl Malzemesi' && x.name==='Şuruplar');
+  if(s) s.bottleCl=75;
+  db.stockSuruplarClFix=true;
+}
 // Dolar fiyatları artık Euro fiyatından ve güncel kurdan otomatik hesaplanıyor — mevcut menüye bir kerelik uygulanır
 if(!db.usdFromEurApplied){
   recalcMenuUsdPrices();

@@ -320,10 +320,11 @@ function seedDB(){
   /* ---------- kokteyl/kahve malzemeleri — menüde tek başına satılmaz, yalnızca reçetelerde
      kullanılır. Önceden her tat (çilek/mango/elma püresi, karamel/vanilya şurubu vb.) ayrı
      stok kalemiydi; artık fiziksel sayımda olduğu gibi tek "Şuruplar" ve tek "Püreler" havuzu.
-     Her ikisi de şişeli takip (bkz. ui/js/stock.js) — 1 adet = 100cl (1 LT); kokteyl
-     reçeteleri (elmalı mojito, karamelli ice latte vb.) hep bu ortak havuzdan cl olarak düşer. */
+     İkisi de şişeli takip (bkz. ui/js/stock.js), ama şişe boyutları farklı: Püreler 1 adet
+     = 100cl (1 LT), Şuruplar 1 adet = 75cl. Kokteyl reçeteleri (elmalı mojito, karamelli
+     ice latte vb.) hep bu ortak havuzdan cl olarak düşer. */
   const kokteylMalzeme = [
-    {id:nid(), name:'Şuruplar', cat:'Kokteyl Malzemesi', qty:56, unit:'adet', bottleCl:100, extraCl:0, price:330, low:70, crit:25},
+    {id:nid(), name:'Şuruplar', cat:'Kokteyl Malzemesi', qty:56, unit:'adet', bottleCl:75, extraCl:0, price:330, low:70, crit:25},
     {id:nid(), name:'Püreler',  cat:'Kokteyl Malzemesi', qty:24, unit:'adet', bottleCl:100, extraCl:0, price:415, low:70, crit:25}
   ];
 
@@ -490,6 +491,6 @@ function seedDBBlank(){
     recipeFix1Applied:true, stockDrinksAdded:true, menuVariantsAdded:true, mahmutAdminAdded:true,
     alkolsuzKokteylMovedToSoft:true, sangriaNamesRenamed:true, mojitoSadeAdded:true,
     stockSettingApplied:true, stockBottleTrackApplied:true, stockIcecekKokteylMalzemeApplied:true,
-    stockTemizlikAdded:true
+    stockTemizlikAdded:true, stockSuruplarClFix:true
   };
 }
