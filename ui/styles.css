@@ -17,7 +17,7 @@ h1{font-size:22px} h2{font-size:19px} h3{font-size:17px;margin-bottom:12px}
 .muted{color:var(--muted)} .small{font-size:12px} .tiny{font-size:11px}
 .accent{color:var(--accent)} .green{color:var(--green)} .red{color:var(--red)} .amber{color:var(--amber)} .blue{color:var(--blue)} .purple{color:var(--purple)}
 .right{text-align:right}
-.mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}.mt24{margin-top:24px}.mb12{margin-bottom:12px}
+.mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}.mt24{margin-top:24px}.mb12{margin-bottom:12px}.mb16{margin-bottom:16px}
 
 /* ---------- inputs & buttons ---------- */
 .inp{width:100%;background:var(--input-bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;outline:none;transition:border .15s;color:var(--text)}

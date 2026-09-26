@@ -47,6 +47,14 @@ function applyRenameStockCat(i){
   saveDB(); closeModal(); render(); toast('Kategori güncellendi ✓','ok');
 }
 function viewStock(){
+  const tabs=[['durum','📦 Stok Durumu'],['genel','📊 Genel Stok'],['giris','🚚 Mal Girişi']];
+  const tabBar=`<div class="seg mb16">${tabs.map(([k,l])=>
+    `<button class="seg-b ${stockTab===k?'on':''}" onclick="setStockTab('${k}')">${l}</button>`).join('')}</div>`;
+  const body = stockTab==='genel' ? stockGenelHTML() : stockTab==='giris' ? stockMalGirisiHTML() : stockDurumHTML();
+  return tabBar+body;
+}
+function setStockTab(t){ stockTab=t; render(); }
+function stockDurumHTML(){
   const canEdit = user.role==='admin';
   const cats=stockCatList();
   let grandTotal=0;
@@ -92,6 +100,155 @@ function viewStock(){
     ${canEdit?stockCatChipsHTML():''}
     ${sections}
     ${log?`<div class="sect"><div class="st">Son Stok Hareketleri</div>${log}</div>`:''}`;
+}
+/* ---------- Genel Stok: tarih aralığına göre tüketim raporu ---------- */
+/* Ayrı bir tüketim logu tutmuyoruz — bkz. backend/logic.js consumptionInRange:
+   seçilen aralıktaki GERÇEK satışlar (db.sales) üzerinden geriye dönük hesaplanır. */
+function stockGenelHTML(){
+  const q=(stockGenelQuery||'').toLowerCase();
+  const agg=consumptionInRange(stockGenelFrom, stockGenelTo);
+  let grandTotal=0;
+  const sections=stockCatList().map(cat=>{
+    const items=db.stock.filter(s=>s.cat===cat && (!q || s.name.toLowerCase().includes(q)));
+    if(!items.length) return '';
+    let catTotal=0;
+    const rows=items.map(s=>{
+      const consumedQty=agg[s.id]||0;
+      const val=consumedValue(s, consumedQty);
+      catTotal+=val;
+      const miktar = s.bottleCl ? `${fmtQ(consumedQty)} cl` : `${fmtQ(consumedQty)} ${esc(s.unit)}`;
+      return `<tr>
+        <td>${esc(s.name)}</td>
+        <td data-lbl="Tüketilen Miktar">${miktar}</td>
+        <td class="num right" data-lbl="Tüketilen Tutar">${fmt(val)}</td></tr>`;
+    }).join('');
+    grandTotal+=catTotal;
+    return `<div class="sect"><div class="st">${esc(cat)}</div>
+      <table class="dt"><thead><tr><th>Ürün</th><th>Tüketilen Miktar</th><th class="right">Tüketilen Tutar</th></tr></thead>
+      <tbody>${rows}</tbody></table>
+      <div class="mini-row"><span><b>Kategori Toplamı</b></span><span class="v accent"><b>${fmt(catTotal)}</b></span></div>
+    </div>`;
+  }).join('');
+  return `<div class="page-head"><div><h1>Genel Stok</h1><div class="sub">Seçili tarih aralığında satışlar üzerinden hesaplanan tüketim</div></div></div>
+    <div class="panel mb16">
+      <div class="range-bar">
+        <div class="fld"><span>Başlangıç</span><input type="date" id="sgF" class="inp dte" value="${stockGenelFrom}"></div>
+        <div class="fld"><span>Bitiş</span><input type="date" id="sgT" class="inp dte" value="${stockGenelTo}"></div>
+        <input id="sgQ" class="inp" style="flex:1;min-width:160px" placeholder="Ürün ara…" value="${esc(stockGenelQuery)}" onkeydown="if(event.key==='Enter')applyStockGenelFilter()">
+        <button class="btn accent" onclick="applyStockGenelFilter()">Göster</button>
+        <button class="btn" onclick="exportStockGenelCSV()">CSV İndir</button>
+      </div>
+    </div>
+    <div class="mini-row"><span><b>Toplam Tüketilen Tutar</b> <span class="muted small">(${trDate(stockGenelFrom)} – ${trDate(stockGenelTo)})</span></span><span class="v accent"><b>${fmt(grandTotal)}</b></span></div>
+    ${sections || '<div class="muted small mt12">Bu aralıkta/aramada sonuç bulunamadı.</div>'}`;
+}
+function applyStockGenelFilter(){
+  let f=$('#sgF').value||iso(), t=$('#sgT').value||iso();
+  if(f>t){const x=f;f=t;t=x;}
+  stockGenelFrom=f; stockGenelTo=t; stockGenelQuery=$('#sgQ').value.trim();
+  render();
+}
+function exportStockGenelCSV(){
+  const q=(stockGenelQuery||'').toLowerCase();
+  const agg=consumptionInRange(stockGenelFrom, stockGenelTo);
+  const rows=[];
+  stockCatList().forEach(cat=>{
+    db.stock.filter(s=>s.cat===cat && (!q || s.name.toLowerCase().includes(q))).forEach(s=>{
+      const consumedQty=agg[s.id]||0;
+      rows.push([cat, s.name, consumedQty.toFixed(3).replace('.',','), consumedValue(s,consumedQty).toFixed(2).replace('.',',')].join(';'));
+    });
+  });
+  if(!rows.length){toast('Bu aralıkta/aramada dışa aktarılacak kalem yok','err');return}
+  const head='Kategori;Urun;TuketilenMiktar;TuketilenTutar';
+  const blob=new Blob(['﻿'+head+'\n'+rows.join('\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='walky_genel_stok_'+stockGenelFrom+'_'+stockGenelTo+'.csv'; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+}
+/* ---------- Mal Girişi: manuel tedarikçi/geliş kaydı ---------- */
+/* Kaydedince ilgili stok kalemine otomatik eklenir ve geliş fiyatı güncellenir
+   (bkz. saveMalGirisi) — Genel Stok/Stok Durumu'ndaki "Toplam" hesapları bu
+   güncel fiyatı kullanır. Ayrıca db.goodsReceipts'e ayrı bir kayıt düşer ki
+   muhasebe hangi malın hangi firmadan, hangi tarihte, ne kadara geldiğini
+   görebilsin — bu tablo Stok Durumu'ndaki miktardan bağımsız bir defterdir. */
+function stockMalGirisiHTML(){
+  const canEdit = user.role==='admin';
+  if(!db.stock.length){
+    return `<div class="page-head"><div><h1>Mal Girişi</h1></div></div>
+      <div class="muted small">Önce Stok Durumu ekranından malzeme ekleyin.</div>`;
+  }
+  const cats=stockCatList().filter(cat=>db.stock.some(s=>s.cat===cat));
+  const stockOpts=cats.map(cat=>{
+    const items=db.stock.filter(s=>s.cat===cat).slice().sort((a,b)=>a.name.localeCompare(b.name,'tr'));
+    return `<optgroup label="${esc(cat)}">${items.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('')}</optgroup>`;
+  }).join('');
+  const firstS=db.stock.filter(s=>s.cat===cats[0]).slice().sort((a,b)=>a.name.localeCompare(b.name,'tr'))[0];
+  const hintFor=s=> s&&s.bottleCl ? `Şişeli takip: miktar kapalı şişe/adet sayısıdır (şişe boyutu ${fmtQ(s.bottleCl)} cl).` : (s?`Birim: ${esc(s.unit)}`:'');
+  const firmaOpts=[...new Set((db.goodsReceipts||[]).map(g=>g.supplier))].map(f=>`<option value="${esc(f)}">`).join('');
+  const list=(db.goodsReceipts||[]).slice().reverse();
+  const rows=list.map(g=>`<tr>
+      <td>${trDate(g.date)}</td>
+      <td data-lbl="Firma">${esc(g.supplier)}</td>
+      <td data-lbl="Ürün">${esc(g.stockName)}</td>
+      <td class="num right" data-lbl="Miktar">${fmtQ(g.qty)}</td>
+      <td class="num right" data-lbl="Birim Fiyat">${fmt(g.unitPrice)}</td>
+      <td class="num right" data-lbl="Toplam">${fmt(g.qty*g.unitPrice)}</td>
+      <td class="muted" data-lbl="Giren">${esc(g.by)}</td>
+      ${canEdit?`<td class="right tdact"><button class="btn sm red" onclick="askDelGoodsReceipt('${g.id}')">Sil</button></td>`:''}
+    </tr>`).join('');
+  return `<div class="page-head"><div><h1>Mal Girişi</h1><div class="sub">Her mal geldiğinde firma/tarih/miktar/geliş fiyatı buradan kaydedilir</div></div></div>
+    <div class="panel mb16">
+      <div class="st" style="margin-bottom:12px">YENİ MAL GİRİŞİ</div>
+      <div class="range-bar">
+        <div class="fld"><span>Tarih</span><input type="date" id="giDate" class="inp dte" value="${iso()}"></div>
+        <div class="fld" style="flex:1;min-width:160px"><span>Firma</span><input id="giFirma" class="inp" list="giFirmaList" placeholder="Tedarikçi adı" autocomplete="off"></div>
+        <div class="fld" style="flex:1;min-width:180px"><span>Ürün</span><select id="giStock" class="inp" onchange="updateGiHint()">${stockOpts}</select></div>
+      </div>
+      <div class="range-bar mt8">
+        <div class="fld"><span>Miktar</span><input id="giQty" class="inp" style="width:110px" inputmode="decimal"></div>
+        <div class="fld"><span>Birim Fiyatı (₺)</span><input id="giPrice" class="inp" style="width:130px" inputmode="decimal"></div>
+        <button class="btn accent" onclick="saveMalGirisi()">Kaydet</button>
+      </div>
+      <div id="giHint" class="muted tiny mt8">${hintFor(firstS)}</div>
+      <datalist id="giFirmaList">${firmaOpts}</datalist>
+    </div>
+    <div class="sect"><div class="st">MAL GİRİŞİ GEÇMİŞİ</div>
+    ${rows?`<table class="dt"><thead><tr><th>Tarih</th><th>Firma</th><th>Ürün</th><th class="right">Miktar</th><th class="right">Birim Fiyat</th><th class="right">Toplam</th><th>Giren</th>${canEdit?'<th></th>':''}</tr></thead><tbody>${rows}</tbody></table>`
+        :'<div class="muted small">Henüz mal girişi kaydı yok.</div>'}
+    </div>`;
+}
+function updateGiHint(){
+  const s=db.stock.find(x=>x.id===$('#giStock').value);
+  const hint=$('#giHint'); if(!hint) return;
+  hint.textContent = s&&s.bottleCl ? `Şişeli takip: miktar kapalı şişe/adet sayısıdır (şişe boyutu ${fmtQ(s.bottleCl)} cl).` : (s?`Birim: ${s.unit}`:'');
+}
+function saveMalGirisi(){
+  const sid=$('#giStock').value;
+  const s=db.stock.find(x=>x.id===sid);
+  if(!s){toast('Ürün seçin','err');return}
+  const date=$('#giDate').value||iso();
+  const supplier=$('#giFirma').value.trim();
+  const qty=num($('#giQty').value), unitPrice=num($('#giPrice').value);
+  if(!supplier){toast('Firma adı girin','err');return}
+  if(qty<=0){toast('Geçerli bir miktar girin','err');return}
+  if(unitPrice<0){toast('Geçerli bir birim fiyat girin','err');return}
+  s.qty = s.bottleCl ? +(s.qty+qty).toFixed(0) : +(s.qty+qty).toFixed(3);
+  s.price=unitPrice;
+  db.stockLog.push({ts:Date.now(), u:user.name, name:s.name, delta:s.bottleCl?qty*s.bottleCl:qty, reason:'Mal Girişi ('+supplier+')'});
+  db.goodsReceipts=db.goodsReceipts||[];
+  db.goodsReceipts.push({id:uid(), date, supplier, stockId:s.id, stockName:s.name, qty, unitPrice, by:user.name, ts:Date.now()});
+  saveDB(); render(); toast('Mal girişi kaydedildi ✓','ok');
+}
+function askDelGoodsReceipt(id){
+  const g=(db.goodsReceipts||[]).find(x=>x.id===id); if(!g) return;
+  showModal(`<div class="m-head"><h3>Mal Girişi Kaydını Sil</h3><button class="icon-b" onclick="closeModal()">✕</button></div>
+    <p><b>${esc(g.stockName)}</b> — ${fmtQ(g.qty)} adet, ${esc(g.supplier)} (${trDate(g.date)}) kaydı silinecek. <b>Not:</b> bu, o sırada stoğa eklenen miktarı geri almaz — gerekirse stoğu Stok Durumu'ndan ayrıca düzeltin.</p>
+    <div class="m-actions"><button class="btn ghost" onclick="closeModal()">Vazgeç</button>
+    <button class="btn red" onclick="delGoodsReceipt('${id}')">Evet, Sil</button></div>`);
+}
+function delGoodsReceipt(id){
+  db.goodsReceipts=(db.goodsReceipts||[]).filter(g=>g.id!==id);
+  saveDB(); closeModal(); render(); toast('Mal girişi kaydı silindi','ok');
 }
 function openNewStockCatModal(){
   showModal(`<div class="m-head"><h3>Yeni Kategori</h3><button class="icon-b" onclick="closeModal()">✕</button></div>

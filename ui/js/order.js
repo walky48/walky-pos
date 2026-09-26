@@ -371,7 +371,10 @@ function completePayment(){
   const sale={
     id:uid(), bd:db.day.date, checkNo:t.checkNo, table:displayName(t), origTable:t.name, waiter:t.openedBy,
     currency:t.currency, rate:rateOf(t.currency), openedAt:t.openedAt, closedAt:Date.now(),
-    items:t.items.map(i=>({name:i.name, cat:i.cat, qty:i.qty, unit:i.unit})),
+    /* mid/variant, Genel Stok tüketim raporunun (bkz. backend/logic.js
+       resolveSaleItemRecipe) satış anındaki reçeteyi doğru çözebilmesi için
+       tutulur — isimden tahmin etmek yerine doğrudan menü kalemine bağlanır. */
+    items:t.items.map(i=>({name:i.name, cat:i.cat, qty:i.qty, unit:i.unit, mid:i.mid, variant:i.variant})),
     sub:tot.sub, disc:tot.disc, serv:tot.serv, total:tot.total, totalTL:tot.totalTL,
     discount:t.discount?{...t.discount}:null,
     method:payState.method, payCur:payState.method==='nakit'?payState.payCur:null,

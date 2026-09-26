@@ -61,6 +61,56 @@ function stockUnit(sid){const s=db.stock.find(x=>x.id===sid);return s?s.unit:''}
    (bir kokteyle "0,07 şişe" değil "5 cl" yazılır). bkz. ui/js/menu.js reçete satırları */
 function recipeUnit(sid){ const s=db.stock.find(x=>x.id===sid); if(!s) return ''; return s.bottleCl ? 'cl' : s.unit; }
 
+/* --- Genel Stok: tüketim raporu --- */
+/* Ayrı bir "tüketim logu" tutmuyoruz — sipariş ekranındaki her +1/-1 düzeltmeyi
+   loglamak (bkz. ui/js/order.js applyRecipe çağrıları) çok gürültülü ve gereksiz
+   olurdu, çünkü siparişten silinen bir kalem zaten net sıfıra döner. Bunun yerine
+   GERÇEKTEN satılmış (db.sales'e düşmüş) kalemler üzerinden, o kalemin reçetesi
+   uygulanarak geriye dönük hesaplanır — tarih aralığı filtresi zaten db.sales'in
+   'bd' alanıyla computeStats()'taki gibi çalışır. Reçete SONRADAN değiştiyse eski
+   satışlar güncel reçeteyle yaklaşık hesaplanır; bu, basit tutmak için bilinçli
+   bir sadeleştirme (Fark/varyans analizi kapsam dışı bırakıldı). */
+function resolveSaleItemRecipe(item){
+  if(item.recipe) return item.recipe;
+  if(item.mid){
+    const m=db.menu.find(x=>x.id===item.mid);
+    if(!m) return [];
+    if(item.variant){
+      const v=(m.variants||[]).find(x=>x.label===item.variant);
+      if(v) return [...(m.recipe||[]), ...(v.extra||[])];
+    }
+    return m.recipe||[];
+  }
+  // mid/variant saklanmadan önceki eski satış kayıtları — isimden çözümlemeye çalış
+  // (varyant kalemleri "Ürün — Varyant" olarak kaydedilir, bkz. ui/js/order.js addLine)
+  const sep=' — ', idx=item.name.indexOf(sep);
+  if(idx>=0){
+    const base=item.name.slice(0,idx), label=item.name.slice(idx+sep.length);
+    const m=db.menu.find(x=>x.name===base);
+    if(!m) return [];
+    const v=(m.variants||[]).find(x=>x.label===label);
+    return v ? [...(m.recipe||[]), ...(v.extra||[])] : (m.recipe||[]);
+  }
+  const m=db.menu.find(x=>x.name===item.name);
+  return m?(m.recipe||[]):[];
+}
+function consumptionInRange(f,t){
+  const agg={}; // stok id -> tüketilen miktar (recipeUnit cinsinden, ör. cl/adet/kg)
+  db.sales.filter(s=>s.bd>=f && s.bd<=t).forEach(sale=>{
+    (sale.items||[]).forEach(item=>{
+      resolveSaleItemRecipe(item).forEach(r=>{
+        agg[r.s]=+((agg[r.s]||0)+r.q*item.qty).toFixed(3);
+      });
+    });
+  });
+  return agg;
+}
+function consumedValue(s, consumedQty){
+  if(!consumedQty) return 0;
+  if(s.bottleCl) return (consumedQty/s.bottleCl)*(s.price||0);
+  return consumedQty*(s.price||0);
+}
+
 /* --- bir çekin mutfak (yemek) kalemlerinin, çeke uygulanan indirim düşülmüş
    TL karşılığı. Yüzde indirim tüm kalemlere orantılı düşer; sabit TL indirim
    ise (garsonun tarif ettiği kural gereği) çekteki kalem SAYISINA eşit
