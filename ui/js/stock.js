@@ -3,6 +3,21 @@
 function stockCatList(){
   return [...new Set([...db.stockCats, ...db.stock.map(s=>s.cat)])];
 }
+/* Stok Durumu ve Genel Stok'taki kategori başlıklarının en sağında kullanılan
+   daralt/genişlet butonu — çok sayıda kategori arasında aranan kategoriyi
+   manuel bulmayı kolaylaştırır. Kategori adına göre (iki sekme arasında da
+   ortak) tutulur, bkz. backend/state.js stockCollapsedCats. */
+function stockCatHeaderHTML(cat){
+  const collapsed=stockCollapsedCats.has(cat);
+  return `<div class="st" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:9px">
+    <span>${esc(cat)}</span>
+    <span class="icon-b" style="cursor:pointer;font-size:12px" title="${collapsed?'Genişlet':'Daralt'}" onclick="toggleStockCat('${esc(cat)}')">${collapsed?'▸':'▾'}</span>
+  </div>`;
+}
+function toggleStockCat(cat){
+  if(stockCollapsedCats.has(cat)) stockCollapsedCats.delete(cat); else stockCollapsedCats.add(cat);
+  render();
+}
 function stockCatChipsHTML(){
   const cats=stockCatList();
   if(!cats.length) return '';
@@ -80,10 +95,11 @@ function stockDurumHTML(){
         </td></tr>`;
     }).join('');
     grandTotal+=catTotal;
-    return `<div class="sect"><div class="st">${esc(cat)}</div>
-      <table class="dt"><thead><tr><th>Ürün</th><th>Miktar</th><th class="right">Fiyat</th><th class="right">Toplam</th><th></th></tr></thead>
+    const collapsed=stockCollapsedCats.has(cat);
+    return `<div class="sect">${stockCatHeaderHTML(cat)}
+      ${collapsed?'':`<table class="dt"><thead><tr><th>Ürün</th><th>Miktar</th><th class="right">Fiyat</th><th class="right">Toplam</th><th></th></tr></thead>
       <tbody>${rows}</tbody></table>
-      <div class="mini-row"><span><b>Kategori Toplamı</b></span><span class="v accent"><b>${fmt(catTotal)}</b></span></div>
+      <div class="mini-row"><span><b>Kategori Toplamı</b></span><span class="v accent"><b>${fmt(catTotal)}</b></span></div>`}
     </div>`;
   }).join('');
   const log=db.stockLog.slice(-12).reverse().map(l=>
@@ -123,10 +139,11 @@ function stockGenelHTML(){
         <td class="num right" data-lbl="Tüketilen Tutar">${fmt(val)}</td></tr>`;
     }).join('');
     grandTotal+=catTotal;
-    return `<div class="sect"><div class="st">${esc(cat)}</div>
-      <table class="dt"><thead><tr><th>Ürün</th><th>Tüketilen Miktar</th><th class="right">Tüketilen Tutar</th></tr></thead>
+    const collapsed=stockCollapsedCats.has(cat);
+    return `<div class="sect">${stockCatHeaderHTML(cat)}
+      ${collapsed?'':`<table class="dt"><thead><tr><th>Ürün</th><th>Tüketilen Miktar</th><th class="right">Tüketilen Tutar</th></tr></thead>
       <tbody>${rows}</tbody></table>
-      <div class="mini-row"><span><b>Kategori Toplamı</b></span><span class="v accent"><b>${fmt(catTotal)}</b></span></div>
+      <div class="mini-row"><span><b>Kategori Toplamı</b></span><span class="v accent"><b>${fmt(catTotal)}</b></span></div>`}
     </div>`;
   }).join('');
   return `<div class="page-head"><div><h1>Genel Stok</h1><div class="sub">Seçili tarih aralığında satışlar üzerinden hesaplanan tüketim</div></div></div>

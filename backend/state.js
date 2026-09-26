@@ -16,6 +16,7 @@ let sidebarOpen = false;
 let peekMode = false; // admin: kasa açılmadan sadece görüntüleme (istatistik vb.)
 let stockTab = 'durum'; // Stok sayfası sekmesi: durum | genel | giris
 let stockGenelFrom = monthStartISO(), stockGenelTo = iso(), stockGenelQuery = '';
+let stockCollapsedCats = new Set(); // Stok Durumu/Genel Stok'ta daraltılmış kategori adları — aranan kategoriyi manuel bulmayı kolaylaştırır
 
 function getTable(id){return db.tables.find(t=>t.id===id)}
 /* yönetici (patron / kasadaki admin hesabı) uzaktan bağlandığında, o RESTORAN
