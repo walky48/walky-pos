@@ -267,16 +267,24 @@ function moveTableTo(destId){
 }
 
 /* --- menüde olmayan, serbest fiyatlı ürün ekleme --- */
+/* Kategori seçimi yerine sade Yemek/İçecek seçimi: "Yemek" seçilirse gün sonu
+   raporundaki toplam yemek tutarına (bkz. backend/logic.js saleKitchenTotalTL
+   → KITCHEN_CATS) dahil olsun diye KITCHEN_CATS içindeki bir kategoriye
+   ("Ana Yemekler") yazılır; "İçecek" seçilirse KITCHEN_CATS'te olmayan bir
+   kategoriye ('İçecek') yazılıp yemek toplamına hiç girmez. */
+let fiIsFood = true;
 function openFreeItemModal(){
   const t=getTable(activeTableId);
-  const catOpts=menuCatList().map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('')
-    + `<option value="Diğer">Diğer</option>`;
+  fiIsFood = true;
   showModal(`<div class="m-head"><h3>Serbest Ürün Ekle</h3><button class="icon-b" onclick="closeModal()">✕</button></div>
     <p class="muted small">Menüde olmayan bir sipariş için isim ve fiyat girin.</p>
     <label class="fl">Ürün Adı</label>
     <input id="fiName" class="inp" autocomplete="off">
-    <label class="fl">Kategori</label>
-    <select id="fiCat" class="inp">${catOpts}</select>
+    <label class="fl">Tür</label>
+    <div class="seg">
+      <button type="button" class="seg-b on" id="fiTypeYemek" onclick="setFiType(true)">🍽️ Yemek</button>
+      <button type="button" class="seg-b" id="fiTypeIcecek" onclick="setFiType(false)">🥤 İçecek</button>
+    </div>
     <label class="fl">Fiyat (${CUR_LABEL[t.currency]})</label>
     <input id="fiPrice" class="inp" inputmode="decimal">
     <div class="m-actions">
@@ -285,11 +293,17 @@ function openFreeItemModal(){
     </div>`);
   $('#fiName').focus();
 }
+function setFiType(isFood){
+  fiIsFood=isFood;
+  const y=$('#fiTypeYemek'), i=$('#fiTypeIcecek');
+  if(y) y.classList.toggle('on', isFood);
+  if(i) i.classList.toggle('on', !isFood);
+}
 function addFreeItem(){
   const t=getTable(activeTableId);
   const name=$('#fiName').value.trim();
   const price=num($('#fiPrice').value);
-  const cat=$('#fiCat').value||'Diğer';
+  const cat=fiIsFood?'Ana Yemekler':'İçecek';
   if(!name){toast('Ürün adı girin','err');return}
   if(price<=0){toast('Geçerli bir fiyat girin','err');return}
   t.items.push({lid:uid(), mid:null, name, cat, qty:1, unit:price, sent:0, variant:null, recipe:[]});
