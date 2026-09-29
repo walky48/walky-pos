@@ -282,8 +282,8 @@ function openFreeItemModal(){
     <input id="fiName" class="inp" autocomplete="off">
     <label class="fl">Tür</label>
     <div class="seg">
-      <button type="button" class="seg-b on" id="fiTypeYemek" onclick="setFiType(true)">🍽️ Yemek</button>
-      <button type="button" class="seg-b" id="fiTypeIcecek" onclick="setFiType(false)">🥤 İçecek</button>
+      <button type="button" class="seg-b on" id="fiTypeYemek" onclick="setFiType(true)">Yemek</button>
+      <button type="button" class="seg-b" id="fiTypeIcecek" onclick="setFiType(false)">İçecek</button>
     </div>
     <label class="fl">Fiyat (${CUR_LABEL[t.currency]})</label>
     <input id="fiPrice" class="inp" inputmode="decimal">
