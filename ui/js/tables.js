@@ -9,7 +9,7 @@ function viewTables(){
       <div class="top"><span class="nm">${esc(displayName(t))}${t.status==='open'?` <span class="muted tiny">#${fmtCheckNo(t.checkNo)}</span>`:''}</span>
         ${t.status==='open'?`<span class="badge cur">${CUR_LABEL[t.currency]}</span>`:`<span class="badge gray">BOŞ</span>`}</div>
       ${t.status==='open'?`<div class="meta">
-          <span>⏱ ${elapsedMin(t.openedAt)} dk · ${t.items.reduce((a,i)=>a+i.qty,0)} ürün · ${esc(t.openedBy||'')}</span>
+          <span>${elapsedMin(t.openedAt)} dk · ${t.items.reduce((a,i)=>a+i.qty,0)} ürün · ${esc(t.openedBy||'')}</span>
           <span class="tot">${fmt(tot.total,t.currency)}${t.currency!=='TL'?` <span class="muted tiny">(${fmt(tot.totalTL)})</span>`:''}</span>
         </div>`:''}
     </button>`;}).join('');
@@ -45,7 +45,7 @@ function createNewTable(){
   if(db.tables.some(t=>t.name.toLowerCase()===name.toLowerCase())){toast('Bu isimde bir masa zaten var','err');return}
   db.tables.push({id:uid(), name, customName:null, status:'empty',
     currency:null, openedAt:null, openedBy:null, items:[], discount:null, service:null, complimentary:null, couvert:null, checkNo:null});
-  saveDB(); closeModal(); render(); toast(name+' masası oluşturuldu ✓','ok');
+  saveDB(); closeModal(); render(); toast(name+' masası oluşturuldu','ok');
 }
 
 /* --- masa açma: önce para birimi --- */

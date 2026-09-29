@@ -28,7 +28,7 @@ function openDay(){
   const expected=db.day.lastNextFloat||0;
   const match=Math.abs(f-expected)<0.005;
   if(!match){
-    showModal(`<div class="m-head"><h3>⚠️ Kasa Fazlası Uyuşmuyor</h3><button class="icon-b" onclick="closeModal()">✕</button></div>
+    showModal(`<div class="m-head"><h3>Kasa Fazlası Uyuşmuyor</h3><button class="icon-b" onclick="closeModal()">✕</button></div>
       <div class="mini-row"><span>Dün gece bırakılan</span><span class="v">${fmt(expected)}</span></div>
       <div class="mini-row"><span>Şimdi girilen</span><span class="v">${fmt(f)}</span></div>
       <p class="mt12">Kasa fazlası dün gece bırakılan ile aynı değil, yine de kasayı açmak istiyor musunuz?</p>

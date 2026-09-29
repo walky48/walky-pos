@@ -7,29 +7,29 @@ function navItems(){
        uzaktan sadece görüntüleme yapabilir — Masa Planı + İstatistikler,
        hiçbir düzenleme ekranına (Menü, Kullanıcılar, Stok, Gün Sonu...)
        uzaktan erişim yok. bkz. backend/state.js remoteViewOnly(). */
-    if(db.day.open) items.push(['tables','🪑','Masa Planı']);
-    items.push(['stats','📊','İstatistikler']);
+    if(db.day.open) items.push(['tables','Masa Planı']);
+    items.push(['stats','İstatistikler']);
     return items;
   }
-  if((r==='garson'||r==='admin') && db.day.open) items.push(['tables','🪑','Masa Planı']);
-  if(db.settings.stockEnabled && (r==='depo'||r==='admin'||r==='muhasebe')) items.push(['stock','📦','Stok']);
-  if(r==='garson'||r==='depo'||r==='admin') items.push(['expenses','🧾','Giderler']);
-  if(r==='muhasebe'||r==='admin') items.push(['stats','📊','İstatistikler'],['cari','📒','Cari Hesaplar']);
-  else if(r==='garson') items.push(['stats','📊','İstatistikler']);
-  if(r==='admin') items.push(['menu','🍽️','Menü'],['users','⚙️','Ayarlar']);
+  if((r==='garson'||r==='admin') && db.day.open) items.push(['tables','Masa Planı']);
+  if(db.settings.stockEnabled && (r==='depo'||r==='admin'||r==='muhasebe')) items.push(['stock','Stok']);
+  if(r==='garson'||r==='depo'||r==='admin') items.push(['expenses','Giderler']);
+  if(r==='muhasebe'||r==='admin') items.push(['stats','İstatistikler'],['cari','Cari Hesaplar']);
+  else if(r==='garson') items.push(['stats','İstatistikler']);
+  if(r==='admin') items.push(['menu','Menü'],['users','Ayarlar']);
   return items;
 }
 function navTo(v){view=v; sidebarOpen=false; render()}
 function toggleSidebar(open){ sidebarOpen=open; render() }
 function layoutHTML(){
-  const items=navItems().map(([v,ic,lb])=>
-    `<button class="nav-i ${view===v?'on':''}" onclick="navTo('${v}')"><span class="ic">${ic}</span>${lb}</button>`).join('');
+  const items=navItems().map(([v,lb])=>
+    `<button class="nav-i ${view===v?'on':''}" onclick="navTo('${v}')">${lb}</button>`).join('');
   const gunsonu=((user.role==='garson'||user.role==='admin') && db.day.open && !remoteViewOnly())
-    ? `<button class="nav-i" onclick="sidebarOpen=false;openGunSonu()"><span class="ic">🌙</span>Gün Sonu</button>` : '';
+    ? `<button class="nav-i" onclick="sidebarOpen=false;openGunSonu()">Gün Sonu</button>` : '';
   const peekBar=(!db.day.open && user.role==='admin')
     ? (remoteMode
-        ? `<div class="peek-bar">🔒 Kasa kapalı — sadece görüntüleme. Sipariş/masa işlemleri kasadan (restorandaki cihazdan) yapılmalı.</div>`
-        : `<div class="peek-bar">🔒 Kasa kapalı — sadece görüntüleme modundasınız, sipariş/masa işlemi yapılamaz.
+        ? `<div class="peek-bar">Kasa kapalı — sadece görüntüleme. Sipariş/masa işlemleri kasadan (restorandaki cihazdan) yapılmalı.</div>`
+        : `<div class="peek-bar">Kasa kapalı — sadece görüntüleme modundasınız, sipariş/masa işlemi yapılamaz.
             <button class="btn sm accent" onclick="peekMode=false;render()">Kasayı Aç</button></div>`)
     : '';
   const roleLbl = remoteMode
@@ -46,7 +46,7 @@ function layoutHTML(){
   else if(view==='users') content=viewUsers();
   return `<div class="layout">
     <div class="mtopbar">
-      <button class="icon-b" style="font-size:19px" onclick="toggleSidebar(true)">☰</button>
+      <button class="icon-b" onclick="toggleSidebar(true)">Menü</button>
       <span class="mtopbar-nm">${PLATE}<span class="nm">WALKY</span></span>
       <span style="flex:1"></span>${liveTag}
     </div>
@@ -58,7 +58,7 @@ function layoutHTML(){
       <div class="sb-foot">
         <div class="avatar">${esc(user.name[0].toUpperCase())}</div>
         <div class="u"><div class="n">${esc(user.name)}</div><div class="r">${roleLbl}</div></div>
-        <button class="icon-b" title="Çıkış" onclick="${remoteMode?'remoteLogout()':'logout()'}">⏻</button>
+        <button class="icon-b" onclick="${remoteMode?'remoteLogout()':'logout()'}">Çıkış</button>
       </div>
     </aside>
     <main class="main">${peekBar}${content}</main>

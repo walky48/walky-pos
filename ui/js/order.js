@@ -6,15 +6,15 @@ function orderHTML(){
   return `<div class="ord">
     <div class="ord-head">
       <span class="tname">${esc(displayName(t))}
-        <button class="icon-b" title="Masayı yeniden adlandır" onclick="openRename()">✏️</button>
-        <button class="icon-b" title="Masayı başka bir masaya taşı" onclick="openMoveTable()">🔀</button></span>
+        <button class="icon-b" onclick="openRename()">Adı Değiştir</button>
+        <button class="icon-b" onclick="openMoveTable()">Taşı</button></span>
       <span class="badge gray">Çek #${fmtCheckNo(t.checkNo)}</span>
       <span class="sep"></span>
-      <span class="mi">👤 ${esc(t.openedBy||'')}</span>
-      <span class="mi">⏱ ${elapsedMin(t.openedAt)} dk</span>
+      <span class="mi">${esc(t.openedBy||'')}</span>
+      <span class="mi">${elapsedMin(t.openedAt)} dk</span>
       <span class="badge cur">${SYM[t.currency]} ${CUR_LABEL[t.currency]}</span>
       <span class="mi muted tiny">$=${fmt(db.rates.USD)} · €=${fmt(db.rates.EUR)}</span>
-      <span class="mi muted tiny" style="cursor:pointer" onclick="openCouvertModal()" title="Kuver sayısını değiştir">👥 ${t.couvert?(t.couvert.k+t.couvert.e+t.couvert.c):0}</span>
+      <span class="mi muted tiny" style="cursor:pointer" onclick="openCouvertModal()" title="Kuver sayısını değiştir">Kuver ${t.couvert?(t.couvert.k+t.couvert.e+t.couvert.c):0}</span>
       <span style="flex:1"></span>
       <button class="btn sm" onclick="openFreeItemModal()">+ Serbest Ürün</button>
       <button class="btn red sm" onclick="cancelTableAsk()">Masayı İptal Et</button>
@@ -69,7 +69,6 @@ function prodGridHTML(){
   }
   if(!list.length) return `<div class="muted" style="grid-column:1/-1;padding:24px 4px">Ürün bulunamadı.</div>`;
   return list.map(m=>`<button class="prod" onclick="addItem('${m.id}')">
-    <span class="prod-ic">🍽️</span>
     <span class="prod-nm">${esc(m.name)}${m.variants?' <b class="prod-opt" title="Seçenekli ürün">●</b>':''}</span>
     <span class="prod-pr">${fmt(m.price[t.currency],t.currency)}</span>
     ${t.currency!=='TL'?`<span class="prod-tl">${fmt(m.price[t.currency]*rateOf(t.currency))}</span>`:''}
@@ -87,7 +86,7 @@ function orderPanelHTML(){
       <button class="x" title="Kaldır" onclick="removeLine('${lk}')">✕</button>
     </div>`;}).join('')
     : `<div class="empty-o">Henüz ürün eklenmedi.<br>Soldaki menüden ürün seçin.</div>`;
-  const dLabel=t.complimentary ? `🎁 İkram — ${esc(t.complimentary.name)}` : (t.discount ? (t.discount.type==='pct'?`İndirim (%${fmtQ(t.discount.value)})`:'İndirim') : null);
+  const dLabel=t.complimentary ? `İkram — ${esc(t.complimentary.name)}` : (t.discount ? (t.discount.type==='pct'?`İndirim (%${fmtQ(t.discount.value)})`:'İndirim') : null);
   const sLabel=t.service ? (t.service.type==='pct'?`Servis Ücreti (%${fmtQ(t.service.value)})`:'Servis Ücreti') : null;
   return `<div class="rt"><h3>Sipariş</h3><span class="badge gray">${t.items.reduce((a,i)=>a+i.qty,0)} kalem</span></div>
     <div class="olines">${lines}</div>
@@ -102,16 +101,13 @@ function orderPanelHTML(){
         <button class="btn" onclick="openAdjModal('service')">Servis Ücreti</button>
         <button class="btn" onclick="sendOrder()">Sipariş Gönder</button>
         <button class="btn" onclick="printReceipt()">Hesap Yazdır</button>
-        <button class="btn amber" style="grid-column:1/-1" onclick="openIkramModal()" ${t.items.length?'':'disabled'}>🎁 İkram</button>
+        <button class="btn amber" style="grid-column:1/-1" onclick="openIkramModal()" ${t.items.length?'':'disabled'}>İkram</button>
         <button class="btn green" style="grid-column:1/-1" onclick="startPayment()" ${t.items.length?'':'disabled'}>Hesap Al</button>
       </div>
     </div>`;
 }
 
 /* --- sipariş kalemleri --- */
-const VARIANT_ICONS={çilekli:'🍓', elmalı:'🍏', karamelli:'🍮', vanilyalı:'🍦', sade:'⚪'};
-function variantIcon(label){ return VARIANT_ICONS[String(label).toLowerCase()] || '🍽️'; }
-
 function addItem(mid){
   const m=db.menu.find(x=>x.id===mid); if(!m) return;
   if(m.variants && m.variants.length){ openVariantPicker(mid); return; }
@@ -120,7 +116,7 @@ function addItem(mid){
 function openVariantPicker(mid){
   const m=db.menu.find(x=>x.id===mid); if(!m) return;
   const cards=m.variants.map((v,idx)=>`<button class="cur-card" onclick="addItemVariant('${mid}',${idx})">
-      <span class="cur-sym">${variantIcon(v.label)}</span>${esc(v.label)}</button>`).join('');
+      ${esc(v.label)}</button>`).join('');
   showModal(`<div class="m-head"><h3>${esc(m.name)} <span class="muted small" style="font-weight:500">&nbsp;seçenek seçin</span></h3>
     <button class="icon-b" onclick="closeModal()">✕</button></div>
     <div class="cur-grid">${cards}</div>`,true);
@@ -199,7 +195,7 @@ function clearAdj(kind){
 function openIkramModal(){
   const t=getTable(activeTableId);
   if(!t.items.length){toast('Masada ürün yok','err');return}
-  showModal(`<div class="m-head"><h3>🎁 İkram</h3><button class="icon-b" onclick="closeModal()">✕</button></div>
+  showModal(`<div class="m-head"><h3>İkram</h3><button class="icon-b" onclick="closeModal()">✕</button></div>
     <p class="muted small">Masadaki tüm tutara %100 indirim uygulanır. Kime ve hangi sebeple ikram edildiği; kim tarafından verildiği ve içerdiği ürünler muhasebe kayıtlarında görünür.</p>
     <label class="fl">Kime / Hangi Sebeple</label>
     <input id="ikramVal" class="inp" value="${t.complimentary?esc(t.complimentary.name):''}">
@@ -263,7 +259,7 @@ function moveTableTo(destId){
   resetTable(src);
   activeTableId=destId;
   saveDB(); closeModal(); render();
-  toast('Masa '+dst.name+' konumuna taşındı ✓','ok');
+  toast('Masa '+dst.name+' konumuna taşındı','ok');
 }
 
 /* --- menüde olmayan, serbest fiyatlı ürün ekleme --- */
@@ -307,7 +303,7 @@ function addFreeItem(){
   if(!name){toast('Ürün adı girin','err');return}
   if(price<=0){toast('Geçerli bir fiyat girin','err');return}
   t.items.push({lid:uid(), mid:null, name, cat, qty:1, unit:price, sent:0, variant:null, recipe:[]});
-  saveDB(true); closeModal(); renderOrderPanel(); toast(name+' eklendi ✓','ok');
+  saveDB(true); closeModal(); renderOrderPanel(); toast(name+' eklendi','ok');
 }
 
 /* --- masa iptali --- */
@@ -358,16 +354,16 @@ function openPaymentModal(){
     ${items}
     <div class="mt12">
       <div class="trow"><span>Ara Toplam</span><b>${fmt(tot.sub,c)}</b></div>
-      ${t.discount?`<div class="trow"><span>${t.complimentary?'🎁 İkram — '+esc(t.complimentary.name):'İndirim'+(t.discount.type==='pct'?' (%'+fmtQ(t.discount.value)+')':'')}</span><b class="green">−${fmt(tot.disc,c)}</b></div>`:''}
+      ${t.discount?`<div class="trow"><span>${t.complimentary?'İkram — '+esc(t.complimentary.name):'İndirim'+(t.discount.type==='pct'?' (%'+fmtQ(t.discount.value)+')':'')}</span><b class="green">−${fmt(tot.disc,c)}</b></div>`:''}
       ${t.service?`<div class="trow"><span>Servis Ücreti${t.service.type==='pct'?' (%'+fmtQ(t.service.value)+')':''}</span><b class="amber">+${fmt(tot.serv,c)}</b></div>`:''}
       <div class="trow big"><span>Toplam</span><span class="v">${fmt(tot.total,c)}</span></div>
       ${c!=='TL'?`<div class="trow"><span>TL Karşılığı (Kur: 1${SYM[c]} = ${fmt(rateOf(c))})</span><b class="accent">${fmt(tot.totalTL)}</b></div>`:''}
     </div>
     <label class="fl" style="letter-spacing:1px;font-size:11.5px;color:var(--muted)">ÖDEME YÖNTEMİ</label>
     <div class="pay-grid">
-      <button class="pay-card ${mSel('nakit')}" onclick="payState.method='nakit';openPaymentModal()"><span class="pi">💵</span>Nakit</button>
-      <button class="pay-card ${mSel('kart')}"  onclick="payState.method='kart';openPaymentModal()"><span class="pi">💳</span>Kredi Kartı</button>
-      <button class="pay-card ${mSel('cari')}"  onclick="payState.method='cari';openPaymentModal()"><span class="pi">🧾</span>Cari At</button>
+      <button class="pay-card ${mSel('nakit')}" onclick="payState.method='nakit';openPaymentModal()">Nakit</button>
+      <button class="pay-card ${mSel('kart')}"  onclick="payState.method='kart';openPaymentModal()">Kredi Kartı</button>
+      <button class="pay-card ${mSel('cari')}"  onclick="payState.method='cari';openPaymentModal()">Cari At</button>
     </div>
     ${extra}
     <label class="fl" style="display:flex;align-items:center;gap:8px;cursor:pointer">
@@ -404,5 +400,5 @@ function completePayment(){
   }
   if(payState.print) printReceipt(sale);
   resetTable(t); payState=null; saveDB(); closeModal();
-  view='tables'; render(); toast('Ödeme alındı, masa kapatıldı ✓','ok');
+  view='tables'; render(); toast('Ödeme alındı, masa kapatıldı','ok');
 }

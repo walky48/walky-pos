@@ -1,20 +1,20 @@
 'use strict';
 
-function statCard(ic,val,lbl,cls,sub){
-  return `<div class="stat"><span class="si">${ic}</span><div>
+function statCard(val,lbl,cls,sub){
+  return `<div class="stat"><div>
     <div class="sv ${cls||''}">${val}</div><div class="sl">${lbl}</div>${sub?`<div class="ss">${sub}</div>`:''}</div></div>`;
 }
 function miniRows(st){
-  return `<div class="mini-row"><span>💰 Toplam Ciro</span><span class="v accent">${fmt(st.ciro)}</span></div>
-    <div class="mini-row"><span>💵 Nakit (TL)</span><span class="v green">${fmt(st.nakitTL)}</span></div>
-    <div class="mini-row"><span>💱 Nakit (Döviz)</span><span class="v green">${fmt(st.nakitDvTL)}${(st.dvUSD||st.dvEUR)?` <span class="muted tiny">${st.dvUSD?fmt(st.dvUSD,'USD'):''} ${st.dvEUR?fmt(st.dvEUR,'EUR'):''}</span>`:''}</span></div>
-    <div class="mini-row"><span>💳 Kredi Kartı</span><span class="v blue">${fmt(st.kart)}</span></div>
-    <div class="mini-row"><span>🧾 Cari (Veresiye)</span><span class="v purple">${fmt(st.cari)}</span></div>
-    <div class="mini-row"><span>🪑 Masa Sayısı</span><span class="v">${st.count}</span></div>
-    <div class="mini-row"><span>👥 Misafir Sayısı</span><span class="v">${st.guestK+st.guestE+st.guestC} <span class="muted tiny">(K:${st.guestK} · E:${st.guestE} · Ç:${st.guestC})</span></span></div>`;
+  return `<div class="mini-row"><span>Toplam Ciro</span><span class="v accent">${fmt(st.ciro)}</span></div>
+    <div class="mini-row"><span>Nakit (TL)</span><span class="v green">${fmt(st.nakitTL)}</span></div>
+    <div class="mini-row"><span>Nakit (Döviz)</span><span class="v green">${fmt(st.nakitDvTL)}${(st.dvUSD||st.dvEUR)?` <span class="muted tiny">${st.dvUSD?fmt(st.dvUSD,'USD'):''} ${st.dvEUR?fmt(st.dvEUR,'EUR'):''}</span>`:''}</span></div>
+    <div class="mini-row"><span>Kredi Kartı</span><span class="v blue">${fmt(st.kart)}</span></div>
+    <div class="mini-row"><span>Cari (Veresiye)</span><span class="v purple">${fmt(st.cari)}</span></div>
+    <div class="mini-row"><span>Masa Sayısı</span><span class="v">${st.count}</span></div>
+    <div class="mini-row"><span>Misafir Sayısı</span><span class="v">${st.guestK+st.guestE+st.guestC} <span class="muted tiny">(K:${st.guestK} · E:${st.guestE} · Ç:${st.guestC})</span></span></div>`;
 }
 function guestStatCard(st){
-  return statCard('👥', st.guestK+st.guestE+st.guestC, 'Misafir Sayısı', '', `K:${st.guestK} · E:${st.guestE} · Ç:${st.guestC}`);
+  return statCard(st.guestK+st.guestE+st.guestC, 'Misafir Sayısı', '', `K:${st.guestK} · E:${st.guestE} · Ç:${st.guestC}`);
 }
 function ordersRowsHTML(sales){
   return sales.slice().reverse().map(s=>`<tr>
@@ -40,7 +40,7 @@ function viewStats(){
   const fcList=floatHistoryExpanded?(db.floatChecks||[]):(db.floatChecks||[]).slice(-3);
   const fcRows=fcList.slice().reverse().map(c=>`<tr>
       <td>${trDate(c.date)}</td><td data-lbl="Beklenen">${fmt(c.expected)}</td><td data-lbl="Girilen">${fmt(c.actual)}</td>
-      <td data-lbl="Durum">${c.match?'<span class="green">✓ Uyumlu</span>':'<span class="red">⚠ Uyuşmuyor</span>'}</td>
+      <td data-lbl="Durum">${c.match?'<span class="green">Uyumlu</span>':'<span class="red">Uyuşmuyor</span>'}</td>
       <td class="muted" data-lbl="Açan">${esc(c.by)}</td><td class="muted" data-lbl="Saat">${trDT(c.at)}</td></tr>`).join('');
   const ikramRows=stR.sales.filter(s=>s.complimentary).slice().reverse().map(s=>`<tr>
       <td>${trDate(s.bd)}</td><td data-lbl="Masa">${esc(s.table)}</td>
@@ -53,11 +53,11 @@ function viewStats(){
     </div>
     <div class="sect"><div class="st">Bugün (${trDate(today)})</div>
       <div class="stat-row">
-        ${statCard('💰',fmt(st.ciro),'Toplam Ciro','accent')}
-        ${statCard('💵',fmt(st.nakitTL+st.nakitDvTL),'Nakit','green', st.nakitDvTL?`TL ${fmt(st.nakitTL)} · Döviz ${fmt(st.nakitDvTL)}`:'')}
-        ${statCard('💳',fmt(st.kart),'Kredi Kartı','blue')}
-        ${statCard('🧾',fmt(st.cari),'Cari','purple', (st.tahN+st.tahK)?`Tahsilat: ${fmt(st.tahN+st.tahK)}`:'')}
-        ${statCard('🪑',st.count,'Masa Sayısı','')}
+        ${statCard(fmt(st.ciro),'Toplam Ciro','accent')}
+        ${statCard(fmt(st.nakitTL+st.nakitDvTL),'Nakit','green', st.nakitDvTL?`TL ${fmt(st.nakitTL)} · Döviz ${fmt(st.nakitDvTL)}`:'')}
+        ${statCard(fmt(st.kart),'Kredi Kartı','blue')}
+        ${statCard(fmt(st.cari),'Cari','purple', (st.tahN+st.tahK)?`Tahsilat: ${fmt(st.tahN+st.tahK)}`:'')}
+        ${statCard(st.count,'Masa Sayısı','')}
         ${guestStatCard(st)}
       </div></div>
     <div class="two-col">
@@ -73,11 +73,11 @@ function viewStats(){
         <button class="btn" onclick="exportCSV('${listF}','${listT}')">CSV İndir</button>
       </div>
       ${statsCustom?`<div class="stat-row mt16">
-        ${statCard('💰',fmt(stR.ciro),'Toplam Ciro','accent')}
-        ${statCard('💵',fmt(stR.nakitTL+stR.nakitDvTL),'Nakit','green',`TL ${fmt(stR.nakitTL)} · Döviz ${fmt(stR.nakitDvTL)}`)}
-        ${statCard('💳',fmt(stR.kart),'Kredi Kartı','blue')}
-        ${statCard('🧾',fmt(stR.cari),'Cari','purple')}
-        ${statCard('🪑',stR.count,'Masa Sayısı','')}
+        ${statCard(fmt(stR.ciro),'Toplam Ciro','accent')}
+        ${statCard(fmt(stR.nakitTL+stR.nakitDvTL),'Nakit','green',`TL ${fmt(stR.nakitTL)} · Döviz ${fmt(stR.nakitDvTL)}`)}
+        ${statCard(fmt(stR.kart),'Kredi Kartı','blue')}
+        ${statCard(fmt(stR.cari),'Cari','purple')}
+        ${statCard(stR.count,'Masa Sayısı','')}
       </div>`:''}
     </div>
     <div class="two-col mt16">
@@ -124,7 +124,7 @@ function orderDetail(id){
     ${items}
     <div class="mt12">
       <div class="trow"><span>Ara Toplam</span><b>${fmt(s.sub,c)}</b></div>
-      ${s.disc>0?`<div class="trow"><span>${s.complimentary?'🎁 İkram — '+esc(s.complimentary.name)+' <span class="muted tiny">(veren: '+esc(s.complimentary.by)+')</span>':'İndirim'}</span><b class="green">−${fmt(s.disc,c)}</b></div>`:''}
+      ${s.disc>0?`<div class="trow"><span>${s.complimentary?'İkram — '+esc(s.complimentary.name)+' <span class="muted tiny">(veren: '+esc(s.complimentary.by)+')</span>':'İndirim'}</span><b class="green">−${fmt(s.disc,c)}</b></div>`:''}
       ${s.serv>0?`<div class="trow"><span>Servis Ücreti</span><b class="amber">+${fmt(s.serv,c)}</b></div>`:''}
       <div class="trow big"><span>Toplam</span><span class="v">${fmt(s.total,c)}</span></div>
       ${c!=='TL'?`<div class="trow"><span>TL Karşılığı (Kur ${fmt(s.rate)})</span><b class="accent">${fmt(s.totalTL)}</b></div>`:''}

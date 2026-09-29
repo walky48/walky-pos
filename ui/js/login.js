@@ -21,7 +21,7 @@ function loginHTML(){
   const viewerEnabled = typeof REMOTE_VIEWER_ENABLED!=='undefined' && REMOTE_VIEWER_ENABLED;
   const remote = !viewerEnabled ? `
     <div class="kasa-note" style="margin-top:14px">${esc(REMOTE_DISABLED_MSG)}</div>
-    <p class="muted small mt12">Lütfen "🖥️ Kasa Girişi" sekmesinden, restorandaki kasa cihazından giriş yapın.</p>` : `
+    <p class="muted small mt12">Lütfen "Kasa Girişi" sekmesinden, restorandaki kasa cihazından giriş yapın.</p>` : `
     <label class="fl">Sunucu Adresi</label>
     <input id="rmUrl" class="inp" value="${esc((remoteSession&&remoteSession.url)||location.origin)}" autocomplete="off">
     <label class="fl">Restoran Kodu</label>
@@ -38,8 +38,8 @@ function loginHTML(){
   return `<div class="login-wrap"><div class="card login-card">
     <div class="brand"><div class="logo">${PLATE}</div><div class="nm">WALKY</div><div class="sub">Restoran Yönetim Sistemi</div></div>
     <div class="seg login-tabs">
-      <button class="seg-b ${loginTab==='local'?'on':''}" onclick="setLoginTab('local')">🖥️ Kasa Girişi</button>
-      <button class="seg-b ${loginTab==='remote'?'on':''}" onclick="setLoginTab('remote')">📡 Uzaktan Erişim</button>
+      <button class="seg-b ${loginTab==='local'?'on':''}" onclick="setLoginTab('local')">Kasa Girişi</button>
+      <button class="seg-b ${loginTab==='remote'?'on':''}" onclick="setLoginTab('remote')">Uzaktan Erişim</button>
     </div>
     ${loginTab==='local'?local:remote}
   </div></div>`;

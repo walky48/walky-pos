@@ -37,28 +37,28 @@ function saveBusinessName(){
   if(!v){toast('İşletme adı boş olamaz','err');return}
   db.settings.businessName=v;
   saveDB(); render();
-  toast('İşletme adı kaydedildi ✓','ok');
+  toast('İşletme adı kaydedildi','ok');
 }
 function toggleStockEnabled(v){
   db.settings.stockEnabled=v;
   saveDB(); render();
-  toast(v?'Stok takibi açıldı ✓':'Stok takibi kapatıldı','ok');
+  toast(v?'Stok takibi açıldı':'Stok takibi kapatıldı','ok');
 }
 function toggleRemoteOrdering(v){
   db.settings.remoteOrderingEnabled=v;
   saveDB(); render();
-  toast(v?'Uzaktan sipariş girişi açıldı ✓':'Uzaktan sipariş girişi kapatıldı','ok');
+  toast(v?'Uzaktan sipariş girişi açıldı':'Uzaktan sipariş girişi kapatıldı','ok');
 }
 function toggleRemoteAdminFullAccess(v){
   db.settings.remoteAdminFullAccess=v;
   saveDB(); render();
-  toast(v?'Yönetici tam erişimi açıldı ✓':'Yönetici tam erişimi kapatıldı, salt-okunura döndü','ok');
+  toast(v?'Yönetici tam erişimi açıldı':'Yönetici tam erişimi kapatıldı, salt-okunura döndü','ok');
 }
 function printerPanelHTML(){
   const native = typeof nativePrinterAvailable==='function' && nativePrinterAvailable();
   if(native){
     return `<div class="panel mt16"><div class="st" style="margin-bottom:12px">YAZICI (USB, SESSİZ YAZDIRMA)</div>
-      <div class="mini-row"><span>Durum</span><span class="v green">🟢 Native uygulama — otomatik</span></div>
+      <div class="mini-row"><span>Durum</span><span class="v green">Native uygulama — otomatik</span></div>
       <p class="muted tiny mt8">Bu cihazda uygulamanın kendi USB yazıcı desteği aktif. "Hesap Yazdır" doğrudan bağlı yazıcıya basar; ilk yazdırmada Android bir kerelik "bu cihaza erişime izin ver" penceresi gösterebilir, izin verdikten sonra bir daha sormaz.</p>
     </div>`;
   }
@@ -70,15 +70,15 @@ function printerPanelHTML(){
   const connected = typeof printerConnected==='function' && printerConnected();
   const saved = typeof printerSavedInfo==='function' && printerSavedInfo();
   return `<div class="panel mt16"><div class="st" style="margin-bottom:12px">YAZICI (USB, SESSİZ YAZDIRMA)</div>
-    <div class="mini-row"><span>Durum</span><span class="v ${connected?'green':(saved?'amber':'')}">${connected?'🟢 Bağlı':(saved?'🟡 Eşleşti, bağlantı bekleniyor':'⚪ Bağlı değil')}</span></div>
+    <div class="mini-row"><span>Durum</span><span class="v ${connected?'green':(saved?'amber':'')}">${connected?'Bağlı':(saved?'Eşleşti, bağlantı bekleniyor':'Bağlı değil')}</span></div>
     <p class="muted tiny mt8">USB adisyon yazıcınızı bir kere seçin — sonrasında "Hesap Yazdır" hiçbir pencere açmadan doğrudan bu yazıcıya basar. Bağlantı kurulamazsa otomatik olarak normal yazdırma penceresine döner.</p>
-    <div class="m-actions" style="justify-content:flex-start"><button class="btn accent" onclick="pairPrinter()">🖨️ Yazıcı Seç / Değiştir</button></div>
+    <div class="m-actions" style="justify-content:flex-start"><button class="btn accent" onclick="pairPrinter()">Yazıcı Seç / Değiştir</button></div>
   </div>`;
 }
 function syncPanelHTML(){
   if(remoteMode) return '';
   const st = syncCfg
-    ? `<div class="mini-row"><span>Durum</span><span class="v ${syncPending()?'amber':'green'}">${syncPending()?'🟡 Bekleyen değişiklik var':'🟢 Senkron'}</span></div>
+    ? `<div class="mini-row"><span>Durum</span><span class="v ${syncPending()?'amber':'green'}">${syncPending()?'Bekleyen değişiklik var':'Senkron'}</span></div>
        <div class="mini-row"><span>Sunucu</span><span class="v small">${esc(syncCfg.url)}</span></div>
        <div class="mini-row"><span>Restoran (kiracı)</span><span class="v">${esc(syncCfg.tenant)}</span></div>`
     : '';
@@ -116,7 +116,7 @@ function addUser(){
   if(db.users.some(u=>u.username===un)){toast('Bu kullanıcı adı zaten var','err');return}
   const role=document.querySelector('#nuSeg .on').dataset.t;
   db.users.push({id:uid(), username:un, pass:pw, name, role});
-  saveDB(); closeModal(); render(); toast('Kullanıcı oluşturuldu ✓','ok');
+  saveDB(); closeModal(); render(); toast('Kullanıcı oluşturuldu','ok');
 }
 function delUser(id){
   db.users=db.users.filter(u=>u.id!==id);

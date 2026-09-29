@@ -45,7 +45,7 @@ function saveRates(){
   if(u<=0||e<=0){toast('Geçerli kur girin','err');return}
   db.rates.USD=u; db.rates.EUR=e; db.rates.updatedAt=Date.now();
   recalcMenuUsdPrices();
-  saveDB(); render(); toast('Kurlar güncellendi, Dolar fiyatları yeniden hesaplandı ✓','ok');
+  saveDB(); render(); toast('Kurlar güncellendi, Dolar fiyatları yeniden hesaplandı','ok');
 }
 
 function menuCatChipsHTML(){
@@ -78,7 +78,7 @@ function createMenuCat(){
   if(!name){toast('Kategori adı girin','err');return}
   if(menuCatList().some(c=>c.toLowerCase()===name.toLowerCase())){toast('Bu kategori zaten var','err');return}
   db.menuCatList.push(name);
-  saveDB(); closeModal(); render(); toast(name+' kategorisi eklendi ✓','ok');
+  saveDB(); closeModal(); render(); toast(name+' kategorisi eklendi','ok');
 }
 let rcpTmp=[];
 function prodModal(mid){
@@ -86,7 +86,7 @@ function prodModal(mid){
   rcpTmp=m&&m.recipe?m.recipe.map(r=>({s:r.s,q:r.q,u:recipeUnit(r.s)})):[];
   const cats=menuCatList();
   const catOpts=cats.map(c=>`<option value="${esc(c)}" ${m&&m.cat===c?'selected':''}>${esc(c)}</option>`).join('')
-    +`<option value="__new">➕ Yeni kategori…</option>`;
+    +`<option value="__new">Yeni kategori…</option>`;
   showModal(`<div class="m-head"><h3>${m?'Ürünü Düzenle':'Yeni Ürün'}</h3><button class="icon-b" onclick="closeModal()">✕</button></div>
     <label class="fl">Ürün Adı</label>
     <input id="pName" class="inp" value="${m?esc(m.name):''}">
@@ -153,7 +153,7 @@ function saveProduct(mid){
     db.menu.push({id:uid(), name, cat, price:{TL:tl,USD:usd,EUR:eur}, recipe});
   }
   saveDB(); closeModal(); render();
-  toast(mid?'Ürün güncellendi ✓':name+' menüye eklendi ✓','ok');
+  toast(mid?'Ürün güncellendi':name+' menüye eklendi','ok');
 }
 function askDelProduct(mid){
   const m=db.menu.find(x=>x.id===mid); if(!m) return;

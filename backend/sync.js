@@ -19,11 +19,11 @@ function saveSyncCfg(){
 }
 function syncPending(){ return !!((remoteMode ? remoteSession : syncCfg) && db && (db.rev||0) > syncLastOkRev); }
 
-/* durum rozeti (kasa): 🟢 senkron · 🟡 bekleyen değişiklik */
+/* durum rozeti (kasa): senkron · bekleyen değişiklik */
 function syncBadgeHTML(){
   if(remoteMode || !syncCfg) return '';
   const pend = syncPending();
-  return `<span class="sync-badge ${pend?'pend':'ok'}" title="${pend?'Bekleyen değişiklik var — bağlantı gelince otomatik gönderilecek':'Sunucuyla senkron'}">${pend?'🟡':'🟢'}</span>`;
+  return `<span class="sync-badge ${pend?'pend amber':'ok green'}" title="${pend?'Bekleyen değişiklik var — bağlantı gelince otomatik gönderilecek':'Sunucuyla senkron'}">${pend?'Bekliyor':'Senkron'}</span>`;
 }
 function updateSyncBadge(){
   document.querySelectorAll('.sync-badge-slot').forEach(el=>{ el.innerHTML = syncBadgeHTML(); });
@@ -131,7 +131,7 @@ async function syncPair(){
   syncCfg = {url, tenant, key};
   if(cur.state){
     adoptState(cur);
-    toast('Sunucudaki mevcut veriler bu cihaza yüklendi ✓','ok');
+    toast('Sunucudaki mevcut veriler bu cihaza yüklendi','ok');
   }else{
     syncLastOkRev = 0; /* sunucuda hiç veri yok — bu cihazınki ilk veri olarak gönderilir */
     saveSyncCfg();
@@ -337,7 +337,7 @@ async function remotePrintRequest(kind, lines, html){
       body: JSON.stringify({kind, lines, html})
     }).then(x=>x.json());
     if(!r.ok){ toast(r.error||'Yazdırma isteği gönderilemedi','err'); return; }
-    if(r.delivered) toast(label+' kasadaki yazıcıya gönderildi ✓','ok');
+    if(r.delivered) toast(label+' kasadaki yazıcıya gönderildi','ok');
     else toast('Kasa şu an bağlı değil — '+label.toLowerCase()+' yazdırılamadı, lütfen kasadan kontrol edin','err');
   }catch(e){ toast('İnternet yok — yazdırma isteği gönderilemedi','err'); }
 }

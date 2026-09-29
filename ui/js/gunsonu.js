@@ -5,15 +5,15 @@ function openGunSonu(){
   const st=computeStats(db.day.date, db.day.date);
   const drawer=db.day.openingFloat + st.nakitTL + st.tahN;
   showModal(`<div class="m-head"><h3>Gün Sonu — ${trDate(db.day.date)}</h3><button class="icon-b" onclick="closeModal()">✕</button></div>
-    <div class="mini-row"><span>💰 Toplam Ciro</span><span class="v accent">${fmt(st.ciro)}</span></div>
-    <div class="mini-row"><span>🍽️ Yemek Satışları</span><span class="v">${fmt(st.yemekTL)}</span></div>
-    <div class="mini-row"><span>💵 Nakit (TL)</span><span class="v">${fmt(st.nakitTL)}</span></div>
-    <div class="mini-row"><span>💱 Nakit (Döviz, ₺ karşılığı)</span><span class="v">${fmt(st.nakitDvTL)}${(st.dvUSD||st.dvEUR)?` <span class="muted tiny">${st.dvUSD?fmt(st.dvUSD,'USD'):''} ${st.dvEUR?fmt(st.dvEUR,'EUR'):''}</span>`:''}</span></div>
-    <div class="mini-row"><span>💳 Kredi Kartı</span><span class="v">${fmt(st.kart)}</span></div>
-    <div class="mini-row"><span>🧾 Cari (Veresiye)</span><span class="v">${fmt(st.cari)}</span></div>
-    ${(st.tahN+st.tahK)?`<div class="mini-row"><span>📥 Cari Tahsilat</span><span class="v green">${fmt(st.tahN+st.tahK)}</span></div>`:''}
-    <div class="mini-row"><span>🪑 Masa Sayısı</span><span class="v">${st.count}</span></div>
-    <div class="mini-row"><span>🔓 Açılış Kasa Fazlası</span><span class="v">${fmt(db.day.openingFloat)}</span></div>
+    <div class="mini-row"><span>Toplam Ciro</span><span class="v accent">${fmt(st.ciro)}</span></div>
+    <div class="mini-row"><span>Yemek Satışları</span><span class="v">${fmt(st.yemekTL)}</span></div>
+    <div class="mini-row"><span>Nakit (TL)</span><span class="v">${fmt(st.nakitTL)}</span></div>
+    <div class="mini-row"><span>Nakit (Döviz, ₺ karşılığı)</span><span class="v">${fmt(st.nakitDvTL)}${(st.dvUSD||st.dvEUR)?` <span class="muted tiny">${st.dvUSD?fmt(st.dvUSD,'USD'):''} ${st.dvEUR?fmt(st.dvEUR,'EUR'):''}</span>`:''}</span></div>
+    <div class="mini-row"><span>Kredi Kartı</span><span class="v">${fmt(st.kart)}</span></div>
+    <div class="mini-row"><span>Cari (Veresiye)</span><span class="v">${fmt(st.cari)}</span></div>
+    ${(st.tahN+st.tahK)?`<div class="mini-row"><span>Cari Tahsilat</span><span class="v green">${fmt(st.tahN+st.tahK)}</span></div>`:''}
+    <div class="mini-row"><span>Masa Sayısı</span><span class="v">${st.count}</span></div>
+    <div class="mini-row"><span>Açılış Kasa Fazlası</span><span class="v">${fmt(db.day.openingFloat)}</span></div>
     <div class="mini-row" style="border-color:var(--accent)"><span><b>Beklenen Kasa (TL Nakit)</b></span><span class="v accent">${fmt(drawer)}</span></div>
     <label class="fl">Ertesi güne bırakılan kasa fazlası (₺)</label>
     <input id="nfVal" class="inp" inputmode="decimal">
@@ -34,5 +34,5 @@ function closeDay(){
   if(ix>=0) db.dayHistory[ix]=entry; else db.dayHistory.push(entry);
   db.day={open:false, date:null, openingFloat:0, lastNextFloat:nf};
   saveDB(); closeModal(); render();
-  toast('Gün sonu alındı, kasa kapatıldı ✓','ok');
+  toast('Gün sonu alındı, kasa kapatıldı','ok');
 }

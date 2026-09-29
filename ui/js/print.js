@@ -118,5 +118,5 @@ function sendOrder(){
   if(remoteMode && typeof remotePushNow==='function') remotePushNow();
   else if(typeof syncPushNow==='function') syncPushNow();
   view='tables'; render();
-  toast('Sipariş sisteme gönderildi ✓','ok');
+  toast('Sipariş sisteme gönderildi','ok');
 }

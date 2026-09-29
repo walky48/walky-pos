@@ -21,7 +21,7 @@ KASA CİHAZI (restoran)                SUNUCU (senin domainin)        UZAK CİHA
 - **Kasa önceliği**: internet kesilirse SADECE kasa çalışmaya devam eder
   (uzak cihazlar bağlantı ister). Kesinti sırasında kasada yapılan işlemler,
   bağlantı gelince sunucuya yazılır ve kasa her zaman kazanır — kesinti
-  anında restoranın gerçek durumu kasadadır. Rozet: 🟢 senkron · 🟡 bekliyor.
+  anında restoranın gerçek durumu kasadadır. Rozet: "Senkron" / "Bekliyor" yazısı.
 - **Uzak giriş** (`https://alanadin.com` → **Uzaktan Erişim** sekmesi):
   - Personel: restoran kodu + kasadaki kullanıcı adı/şifre (örn. `demo` + `garson`)
   - Sahip hesapları: e-posta + şifre (sunucuda tanımlanır, aşağıya bakın);

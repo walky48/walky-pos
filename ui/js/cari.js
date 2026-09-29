@@ -35,8 +35,8 @@ function openTahsilat(id){
     <input id="thVal" class="inp" inputmode="decimal" value="${b.bal.toFixed(2)}">
     <label class="fl">Ödeme Şekli</label>
     <div class="seg" id="thSeg">
-      <button class="seg-b on" data-t="nakit" onclick="segSel(this)">💵 Nakit</button>
-      <button class="seg-b" data-t="kart" onclick="segSel(this)">💳 Kredi Kartı</button>
+      <button class="seg-b on" data-t="nakit" onclick="segSel(this)">Nakit</button>
+      <button class="seg-b" data-t="kart" onclick="segSel(this)">Kredi Kartı</button>
     </div>
     <div class="m-actions"><button class="btn ghost" onclick="closeModal()">Vazgeç</button>
     <button class="btn green" onclick="applyTahsilat('${id}')">Tahsilatı Kaydet</button></div>`);
@@ -48,5 +48,5 @@ function applyTahsilat(id){
   if(v>b.bal+0.001){toast('Tutar bakiyeden büyük olamaz','err');return}
   const method=document.querySelector('#thSeg .on').dataset.t;
   c.entries.push({d:db.day.open?db.day.date:iso(), ts:Date.now(), type:'tahsilat', amtTL:v, method});
-  saveDB(); closeModal(); render(); toast('Tahsilat kaydedildi ✓','ok');
+  saveDB(); closeModal(); render(); toast('Tahsilat kaydedildi','ok');
 }

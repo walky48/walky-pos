@@ -58,7 +58,7 @@ async function pairPrinter(){
   try{
     await openPrinterDevice(device);
     localStorage.setItem(PRN_KEY, JSON.stringify({vendorId:device.vendorId, productId:device.productId}));
-    toast('Yazıcı bağlandı: '+(device.productName||'USB Yazıcı')+' ✓','ok');
+    toast('Yazıcı bağlandı: '+(device.productName||'USB Yazıcı'),'ok');
   }catch(e){
     /* işletim sistemi (ör. Android'in kendi USB yazıcı desteği) arayüzü zaten
        tutuyor olabilir — gerçek hatayı göster ki uzaktan teşhis edilebilsin */

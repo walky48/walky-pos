@@ -26,7 +26,7 @@ function stockCatChipsHTML(){
     <div style="display:flex;gap:8px;flex-wrap:wrap">
     ${cats.map((c,i)=>{
       const empty=!used.has(c);
-      return `<span class="chip">${esc(c)} <span style="cursor:pointer;font-weight:800" onclick="openRenameStockCat(${i})" title="Yeniden adlandır">✏️</span>${empty?` <span style="cursor:pointer;font-weight:800" onclick="delStockCat(${i})" title="Boş kategoriyi sil">✕</span>`:''}</span>`;
+      return `<span class="chip">${esc(c)} <span style="cursor:pointer;font-weight:800" onclick="openRenameStockCat(${i})" title="Yeniden adlandır">Değiştir</span>${empty?` <span style="cursor:pointer;font-weight:800" onclick="delStockCat(${i})" title="Boş kategoriyi sil">✕</span>`:''}</span>`;
     }).join('')}
     </div></div>`;
 }
@@ -59,10 +59,10 @@ function applyRenameStockCat(i){
       else db.stockCats[ci]=newName;
     }
   }
-  saveDB(); closeModal(); render(); toast('Kategori güncellendi ✓','ok');
+  saveDB(); closeModal(); render(); toast('Kategori güncellendi','ok');
 }
 function viewStock(){
-  const tabs=[['durum','📦 Stok Durumu'],['genel','📊 Genel Stok'],['giris','🚚 Mal Girişi']];
+  const tabs=[['durum','Stok Durumu'],['genel','Genel Stok'],['giris','Mal Girişi']];
   const tabBar=`<div class="seg mb16">${tabs.map(([k,l])=>
     `<button class="seg-b ${stockTab===k?'on':''}" onclick="setStockTab('${k}')">${l}</button>`).join('')}</div>`;
   const body = stockTab==='genel' ? stockGenelHTML() : stockTab==='giris' ? stockMalGirisiHTML() : stockDurumHTML();
@@ -108,7 +108,7 @@ function stockDurumHTML(){
   return `<div class="page-head">
       <div><h1>Stok Durumu</h1></div>
       <div class="head-tools">
-        <button class="btn sm" onclick="printStockReport()">🖨️ Stok Çıktısı Al</button>
+        <button class="btn sm" onclick="printStockReport()">Stok Çıktısı Al</button>
         ${canEdit?`<button class="btn sm" onclick="openNewStockCatModal()">+ Yeni Kategori</button>
         <button class="btn accent sm" onclick="openNewStockModal()">+ Yeni Stok Kalemi</button>`:''}
       </div></div>
@@ -254,7 +254,7 @@ function saveMalGirisi(){
   db.stockLog.push({ts:Date.now(), u:user.name, name:s.name, delta:s.bottleCl?qty*s.bottleCl:qty, reason:'Mal Girişi ('+supplier+')'});
   db.goodsReceipts=db.goodsReceipts||[];
   db.goodsReceipts.push({id:uid(), date, supplier, stockId:s.id, stockName:s.name, qty, unitPrice, by:user.name, ts:Date.now()});
-  saveDB(); render(); toast('Mal girişi kaydedildi ✓','ok');
+  saveDB(); render(); toast('Mal girişi kaydedildi','ok');
 }
 function askDelGoodsReceipt(id){
   const g=(db.goodsReceipts||[]).find(x=>x.id===id); if(!g) return;
@@ -280,12 +280,12 @@ function createStockCat(){
   if(!name){toast('Kategori adı girin','err');return}
   if(stockCatList().some(c=>c.toLowerCase()===name.toLowerCase())){toast('Bu kategori zaten var','err');return}
   db.stockCats.push(name);
-  saveDB(); closeModal(); render(); toast(name+' kategorisi eklendi ✓','ok');
+  saveDB(); closeModal(); render(); toast(name+' kategorisi eklendi','ok');
 }
 function openNewStockModal(){
   const cats=stockCatList();
   const catOpts=cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('')
-    +`<option value="__new">➕ Yeni kategori…</option>`;
+    +`<option value="__new">Yeni kategori…</option>`;
   const unitOpts=STOCK_UNITS.map(u=>`<option value="${u}">${u}</option>`).join('');
   showModal(`<div class="m-head"><h3>Yeni Stok Kalemi</h3><button class="icon-b" onclick="closeModal()">✕</button></div>
     <label class="fl">Malzeme Adı</label>
@@ -335,7 +335,7 @@ function createStockItem(){
   const item={id:uid(), name, cat, qty:0, unit, low, crit, price};
   if(isBottle){ item.bottleCl=bottleCl; item.extraCl=0; }
   db.stock.push(item);
-  saveDB(); closeModal(); render(); toast(name+' stok listesine eklendi ✓','ok');
+  saveDB(); closeModal(); render(); toast(name+' stok listesine eklendi','ok');
 }
 function askDelStock(sid){
   const s=db.stock.find(x=>x.id===sid); if(!s) return;

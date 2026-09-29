@@ -89,5 +89,5 @@ function addExpense(){
   if(qty<=0){toast('Geçerli bir miktar girin','err');return}
   if(price<=0){toast('Geçerli bir fiyat girin','err');return}
   db.expenses.push({id:uid(), name, qty, unit, price, by:user.name, ts:Date.now()});
-  saveDB(); closeModal(); render(); toast(name+' eklendi ✓','ok');
+  saveDB(); closeModal(); render(); toast(name+' eklendi','ok');
 }
