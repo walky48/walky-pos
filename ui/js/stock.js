@@ -71,10 +71,27 @@ function viewStock(){
 function setStockTab(t){ stockTab=t; render(); }
 function stockDurumHTML(){
   const canEdit = user.role==='admin';
+  return `<div class="page-head">
+      <div><h1>Stok Durumu</h1></div>
+      <div class="head-tools">
+        <button class="btn sm" onclick="printStockReport()">Stok Çıktısı Al</button>
+        ${canEdit?`<button class="btn sm" onclick="openNewStockCatModal()">+ Yeni Kategori</button>
+        <button class="btn accent sm" onclick="openNewStockModal()">+ Yeni Stok Kalemi</button>`:''}
+      </div></div>
+    <input id="sdQ" class="inp mb16" style="max-width:320px" placeholder="Ürün ara…" value="${esc(stockDurumQuery)}" oninput="stockDurumQuery=this.value;renderStockDurumBody()">
+    ${canEdit?stockCatChipsHTML():''}
+    <div id="stockDurumBody">${stockDurumBodyHTML()}</div>`;
+}
+function renderStockDurumBody(){
+  const el=$('#stockDurumBody'); if(el) el.innerHTML=stockDurumBodyHTML();
+}
+function stockDurumBodyHTML(){
+  const canEdit = user.role==='admin';
+  const q=(stockDurumQuery||'').toLowerCase();
   const cats=stockCatList();
   let grandTotal=0;
   const sections=cats.map(cat=>{
-    const items=db.stock.filter(s=>s.cat===cat);
+    const items=db.stock.filter(s=>s.cat===cat && (!q || s.name.toLowerCase().includes(q)));
     if(!items.length) return '';
     let catTotal=0;
     const rows=items.map(s=>{
@@ -105,16 +122,8 @@ function stockDurumHTML(){
   const log=db.stockLog.slice(-12).reverse().map(l=>
     `<div class="mini-row"><span class="muted small">${trDT(l.ts)} · ${esc(l.u)} · ${esc(l.reason)}</span>
      <span>${esc(l.name)} <b class="${l.delta>=0?'green':'red'}">${l.delta>=0?'+':''}${fmtQ(l.delta)}</b></span></div>`).join('');
-  return `<div class="page-head">
-      <div><h1>Stok Durumu</h1></div>
-      <div class="head-tools">
-        <button class="btn sm" onclick="printStockReport()">Stok Çıktısı Al</button>
-        ${canEdit?`<button class="btn sm" onclick="openNewStockCatModal()">+ Yeni Kategori</button>
-        <button class="btn accent sm" onclick="openNewStockModal()">+ Yeni Stok Kalemi</button>`:''}
-      </div></div>
-    <div class="mini-row"><span><b>Toplam Stok Değeri</b></span><span class="v accent"><b>${fmt(grandTotal)}</b></span></div>
-    ${canEdit?stockCatChipsHTML():''}
-    ${sections}
+  return `<div class="mini-row"><span><b>Toplam Stok Değeri</b></span><span class="v accent"><b>${fmt(grandTotal)}</b></span></div>
+    ${sections || (q?'<div class="muted small mt12">Aramanızla eşleşen ürün bulunamadı.</div>':'')}
     ${log?`<div class="sect"><div class="st">Son Stok Hareketleri</div>${log}</div>`:''}`;
 }
 /* ---------- Genel Stok: tarih aralığına göre tüketim raporu ---------- */

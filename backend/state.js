@@ -15,6 +15,7 @@ let gidFrom = weekStartISO(), gidTo = iso(), gidCustom = false;
 let sidebarOpen = false;
 let peekMode = false; // admin: kasa açılmadan sadece görüntüleme (istatistik vb.)
 let stockTab = 'durum'; // Stok sayfası sekmesi: durum | genel | giris
+let stockDurumQuery = '';
 let stockGenelFrom = monthStartISO(), stockGenelTo = iso(), stockGenelQuery = '';
 let stockCollapsedCats = new Set(); // Stok Durumu/Genel Stok'ta daraltılmış kategori adları — aranan kategoriyi manuel bulmayı kolaylaştırır
 
