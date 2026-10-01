@@ -213,10 +213,13 @@ function stockMalGirisiHTML(){
   const hintFor=s=> s&&s.bottleCl ? `Şişeli takip: miktar kapalı şişe/adet sayısıdır (şişe boyutu ${fmtQ(s.bottleCl)} cl).` : (s?`Birim: ${esc(s.unit)}`:'');
   const firmaOpts=[...new Set((db.goodsReceipts||[]).map(g=>g.supplier))].map(f=>`<option value="${esc(f)}">`).join('');
   const list=(db.goodsReceipts||[]).slice().reverse();
+  /* kalem sonradan yeniden adlandırıldıysa (bkz. openStockEdit) güncel adı
+     göster; kalem silindiyse kayıt anındaki ad kalır */
+  const grName=g=>{const s=db.stock.find(x=>x.id===g.stockId);return s?s.name:g.stockName};
   const rows=list.map(g=>`<tr>
       <td>${trDate(g.date)}</td>
       <td data-lbl="Firma">${esc(g.supplier)}</td>
-      <td data-lbl="Ürün">${esc(g.stockName)}</td>
+      <td data-lbl="Ürün">${esc(grName(g))}</td>
       <td class="num right" data-lbl="Miktar">${fmtQ(g.qty)}</td>
       <td class="num right" data-lbl="Birim Fiyat">${fmt(g.unitPrice)}</td>
       <td class="num right" data-lbl="Toplam">${fmt(g.qty*g.unitPrice)}</td>
@@ -403,6 +406,8 @@ function openStockEdit(sid){
   if(s.bottleCl){
     showModal(`<div class="m-head"><h3>Stok Düzenle — ${esc(s.name)}</h3><button class="icon-b" onclick="closeModal()">✕</button></div>
       <p class="muted tiny">Şişe boyutu: ${fmtQ(s.bottleCl)} cl. Şu an: ${fmtQ(stockTotalCl(s))} cl toplam.</p>
+      <label class="fl">Ürün Adı</label>
+      <input id="stName" class="inp" value="${esc(s.name)}">
       <label class="fl">Tam Şişe (adet)</label>
       <input id="stAdet" class="inp" inputmode="decimal" value="${s.qty}">
       <label class="fl">Açık Şişede Kalan (cl)</label>
@@ -414,6 +419,8 @@ function openStockEdit(sid){
     return;
   }
   showModal(`<div class="m-head"><h3>Stok Düzenle — ${esc(s.name)}</h3><button class="icon-b" onclick="closeModal()">✕</button></div>
+    <label class="fl">Ürün Adı</label>
+    <input id="stName" class="inp" value="${esc(s.name)}">
     <label class="fl">Yeni Stok Miktarı (${esc(s.unit)})</label>
     <input id="stVal" class="inp" inputmode="decimal" value="${s.qty}">
     <label class="fl">Birim Fiyatı (₺)</label>
@@ -421,24 +428,39 @@ function openStockEdit(sid){
     <div class="m-actions"><button class="btn ghost" onclick="closeModal()">Vazgeç</button>
     <button class="btn accent" onclick="applyStockEdit('${sid}')">Kaydet</button></div>`);
 }
+/* düzenleme modalındaki ad alanı: boş ya da başka kalemle aynı adı reddeder.
+   Reçeteler ve mal girişleri kalemi id ile tuttuğu için yeniden adlandırma
+   başka bir yeri bozmaz; ad değiştiyse stok hareketine eski ad not düşülür
+   ki eski adla kaydedilmiş geçmiş hareketler izlenebilsin. */
+function stockEditName(s){
+  const name=$('#stName').value.trim();
+  if(!name){toast('Ürün adı boş olamaz','err');return null}
+  if(db.stock.some(x=>x.id!==s.id && x.name.toLowerCase()===name.toLowerCase())){toast('Bu isimde bir stok kalemi zaten var','err');return null}
+  return name;
+}
+function stockRenameNote(oldName, s){return oldName!==s.name?' · eski ad: '+oldName:''}
 function applyStockEdit(sid){
   const s=db.stock.find(x=>x.id===sid); const v=num($('#stVal').value), price=num($('#stPrice').value);
+  const name=stockEditName(s); if(name===null) return;
   if(price<0){toast('Geçerli bir fiyat girin','err');return}
   const delta=+(v-s.qty).toFixed(3);
+  const oldName=s.name;
+  s.name=name;
   s.qty=v;
   s.price=price;
-  db.stockLog.push({ts:Date.now(), u:user.name, name:s.name, delta, reason:'Düzeltme'});
+  db.stockLog.push({ts:Date.now(), u:user.name, name:s.name, delta, reason:'Düzeltme'+stockRenameNote(oldName,s)});
   saveDB(); closeModal(); render(); toast('Stok güncellendi','ok');
 }
 function applyStockEditBottle(sid){
   const s=db.stock.find(x=>x.id===sid);
   const adet=num($('#stAdet').value), cl=num($('#stCl').value), price=num($('#stPrice').value);
+  const name=stockEditName(s); if(name===null) return;
   if(adet<0||cl<0){toast('Geçerli miktarlar girin','err');return}
   if(price<0){toast('Geçerli bir fiyat girin','err');return}
-  const oldTotal=stockTotalCl(s);
-  s.qty=adet; s.extraCl=cl; s.price=price;
+  const oldTotal=stockTotalCl(s), oldName=s.name;
+  s.name=name; s.qty=adet; s.extraCl=cl; s.price=price;
   const delta=+(stockTotalCl(s)-oldTotal).toFixed(3);
-  db.stockLog.push({ts:Date.now(), u:user.name, name:s.name, delta, reason:'Düzeltme (cl)'});
+  db.stockLog.push({ts:Date.now(), u:user.name, name:s.name, delta, reason:'Düzeltme (cl)'+stockRenameNote(oldName,s)});
   saveDB(); closeModal(); render(); toast('Stok güncellendi','ok');
 }
 /* muhasebenin ay başı sayımla karşılaştırabilmesi için, istenildiği anda A4
