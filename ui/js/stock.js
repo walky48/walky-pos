@@ -75,6 +75,7 @@ function stockDurumHTML(){
       <div><h1>Stok Durumu</h1></div>
       <div class="head-tools">
         <button class="btn sm" onclick="printStockReport()">Stok Çıktısı Al</button>
+        <button class="btn sm" onclick="exportStockExcel()">Excel İndir</button>
         ${canEdit?`<button class="btn sm" onclick="openNewStockCatModal()">+ Yeni Kategori</button>
         <button class="btn accent sm" onclick="openNewStockModal()">+ Yeni Stok Kalemi</button>`:''}
       </div></div>
@@ -492,4 +493,133 @@ function printStockReport(){
   w.document.open(); w.document.write(stockReportHTML()); w.document.close();
   w.focus();
   setTimeout(()=>{ try{ w.print() }catch(e){} }, 300);
+}
+/* ---------- Excel (.xlsx) dışa aktarma ---------- */
+/* Kasa internetsiz de çalıştığı için CDN'den kütüphane yüklemiyoruz: .xlsx
+   aslında birkaç XML dosyasından oluşan bir ZIP arşivi, onu burada
+   sıkıştırmasız (STORE) olarak elle üretiyoruz. Miktar/fiyat/tutarlar metin
+   değil gerçek sayı hücresi olarak yazılır ki muhasebe Excel'de formül ve
+   karşılaştırma yapabilsin. */
+const CRC32_TABLE=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
+function crc32(b){let c=0xFFFFFFFF;for(let i=0;i<b.length;i++)c=CRC32_TABLE[(c^b[i])&0xFF]^(c>>>8);return (c^0xFFFFFFFF)>>>0}
+function zipStore(files){
+  const enc=new TextEncoder(), parts=[], central=[];
+  let off=0;
+  files.forEach(f=>{
+    const name=enc.encode(f.name), data=enc.encode(f.text), crc=crc32(data), sz=data.length;
+    const lh=new DataView(new ArrayBuffer(30));
+    lh.setUint32(0,0x04034b50,true); lh.setUint16(4,20,true); lh.setUint16(6,0x0800,true);
+    lh.setUint16(12,0x21,true); /* 01.01.1980 */
+    lh.setUint32(14,crc,true); lh.setUint32(18,sz,true); lh.setUint32(22,sz,true); lh.setUint16(26,name.length,true);
+    parts.push(new Uint8Array(lh.buffer), name, data);
+    const ch=new DataView(new ArrayBuffer(46));
+    ch.setUint32(0,0x02014b50,true); ch.setUint16(4,20,true); ch.setUint16(6,20,true); ch.setUint16(8,0x0800,true);
+    ch.setUint16(14,0x21,true);
+    ch.setUint32(16,crc,true); ch.setUint32(20,sz,true); ch.setUint32(24,sz,true); ch.setUint16(28,name.length,true);
+    ch.setUint32(42,off,true);
+    central.push(new Uint8Array(ch.buffer), name);
+    off+=30+name.length+sz;
+  });
+  const cdSize=central.reduce((a,p)=>a+p.length,0);
+  const end=new DataView(new ArrayBuffer(22));
+  end.setUint32(0,0x06054b50,true); end.setUint16(8,files.length,true); end.setUint16(10,files.length,true);
+  end.setUint32(12,cdSize,true); end.setUint32(16,off,true);
+  return new Blob([...parts,...central,new Uint8Array(end.buffer)],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+}
+function xmlEsc(s){return String(s??'').replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function xlsxCol(i){let s='';i++;while(i){const m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26)}return s}
+/* sheets: [{name, widths:[...], freeze:başlık satırı no, rows:[[hücre,...],...]}]
+   hücre: null | metin | sayı | {v, s, f} — s: 't' büyük başlık, 'h' tablo başlığı,
+   'b' kalın, 'm' para, 'mb' kalın para; f: formül (v önbellek değeri olarak yazılır) */
+const XLSX_STYLE={t:5,h:2,b:1,m:3,mb:4};
+function xlsxBlob(sheets){
+  const NS='http://schemas.openxmlformats.org/spreadsheetml/2006/main';
+  const RNS='http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+  const HEAD='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
+  const cellXML=(c,ref)=>{
+    if(c==null || c==='') return '';
+    const o=(typeof c==='object')?c:{v:c};
+    const s=o.s?` s="${XLSX_STYLE[o.s]}"`:'';
+    if(o.f) return `<c r="${ref}"${s}><f>${xmlEsc(o.f)}</f>${typeof o.v==='number'&&isFinite(o.v)?`<v>${o.v}</v>`:''}</c>`;
+    if(typeof o.v==='number') return isFinite(o.v)?`<c r="${ref}"${s}><v>${o.v}</v></c>`:'';
+    return `<c r="${ref}"${s} t="inlineStr"><is><t xml:space="preserve">${xmlEsc(o.v)}</t></is></c>`;
+  };
+  const sheetXML=sh=>{
+    const pane=sh.freeze?`<pane ySplit="${sh.freeze}" topLeftCell="A${sh.freeze+1}" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft"/>`:'';
+    const cols=(sh.widths||[]).map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('');
+    const rows=sh.rows.map((r,ri)=>`<row r="${ri+1}">${(r||[]).map((c,ci)=>cellXML(c,xlsxCol(ci)+(ri+1))).join('')}</row>`).join('');
+    return `${HEAD}<worksheet xmlns="${NS}"><sheetViews><sheetView workbookViewId="0">${pane}</sheetView></sheetViews>${cols?`<cols>${cols}</cols>`:''}<sheetData>${rows}</sheetData></worksheet>`;
+  };
+  const styles=`${HEAD}<styleSheet xmlns="${NS}">
+<fonts count="3"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="14"/><name val="Calibri"/></font></fonts>
+<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE7E6E6"/><bgColor indexed="64"/></patternFill></fill></fills>
+<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
+<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+<cellXfs count="6"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/><xf numFmtId="4" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="4" fontId="1" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1"/><xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs>
+<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
+</styleSheet>`;
+  const files=[
+    {name:'[Content_Types].xml', text:`${HEAD}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>${sheets.map((_,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`},
+    {name:'_rels/.rels', text:`${HEAD}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${RNS}/officeDocument" Target="xl/workbook.xml"/></Relationships>`},
+    {name:'xl/workbook.xml', text:`${HEAD}<workbook xmlns="${NS}" xmlns:r="${RNS}"><sheets>${sheets.map((sh,i)=>`<sheet name="${xmlEsc(String(sh.name).replace(/[\[\]:*?\/\\]/g,' ').slice(0,31))}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join('')}</sheets></workbook>`},
+    {name:'xl/_rels/workbook.xml.rels', text:`${HEAD}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${sheets.map((_,i)=>`<Relationship Id="rId${i+1}" Type="${RNS}/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join('')}<Relationship Id="rId${sheets.length+1}" Type="${RNS}/styles" Target="styles.xml"/></Relationships>`},
+    {name:'xl/styles.xml', text:styles},
+    ...sheets.map((sh,i)=>({name:`xl/worksheets/sheet${i+1}.xml`, text:sheetXML(sh)}))
+  ];
+  return zipStore(files);
+}
+/* Stok Çıktısı Al ile aynı içerik (arama filtresinden bağımsız, tüm stok):
+   1. sayfa kalem kalem düz liste (Excel'de sıralama/filtre/DÜŞEYARA ile ay
+   başı karşılaştırması kolay olsun diye ara toplam satırı araya girmez),
+   2. sayfa kategori toplamları. */
+function stockReportSheets(){
+  /* tutarlar yuvarlanmadan yazılır (Excel 2 ondalık gösterir) ki genel toplam
+     ekrandaki/çıktıdaki Toplam Stok Değeri ile kuruşu kuruşuna tutsun */
+  const r6=n=>Math.round((n||0)*1e6)/1e6, r3=n=>Math.round((n||0)*1000)/1000;
+  const head=['Kategori','Ürün','Miktar','Birim','Açık Şişe (cl)','Toplam (cl)','Birim Fiyat (₺)','Toplam Değer (₺)'];
+  const detail=[], summary=[];
+  let grand=0;
+  stockCatList().forEach(cat=>{
+    const items=db.stock.filter(s=>s.cat===cat);
+    if(!items.length) return;
+    let catTotal=0;
+    items.forEach(s=>{
+      const val=stockLineValue(s);
+      catTotal+=val;
+      detail.push([cat, s.name, r3(s.qty), s.bottleCl?'adet':(s.unit||''),
+        s.bottleCl?r3(s.extraCl||0):null, s.bottleCl?r3(stockTotalCl(s)):null,
+        {v:r6(s.price), s:'m'}, {v:r6(val), s:'m'}]);
+    });
+    grand+=catTotal;
+    summary.push([cat, items.length, {v:r6(catTotal), s:'m'}]);
+  });
+  grand=r6(grand);
+  const title={v:`${db.settings.businessName||'Restoranım'} — Stok Durumu Raporu`, s:'t'};
+  const sub=`Çıktı: ${trDate(iso())} ${trTime(Date.now())} · Alan: ${user.name}`;
+  const firstRow=5, lastRow=firstRow+detail.length-1;
+  return [
+    {name:'Stok Durumu', widths:[22,32,10,8,14,12,16,18], freeze:4, rows:[
+      [title],[sub],[],
+      head.map(h=>({v:h, s:'h'})),
+      ...detail,
+      [],
+      [null,null,null,null,null,null,{v:'Toplam Stok Değeri', s:'b'},
+        detail.length?{f:`SUM(H${firstRow}:H${lastRow})`, v:grand, s:'mb'}:{v:0, s:'mb'}]
+    ]},
+    {name:'Kategori Toplamları', widths:[26,14,18], freeze:4, rows:[
+      [title],[sub],[],
+      ['Kategori','Kalem Sayısı','Toplam Değer (₺)'].map(h=>({v:h, s:'h'})),
+      ...summary,
+      [],
+      [{v:'Toplam Stok Değeri', s:'b'}, null,
+        summary.length?{f:`SUM(C5:C${4+summary.length})`, v:grand, s:'mb'}:{v:0, s:'mb'}]
+    ]}
+  ];
+}
+function exportStockExcel(){
+  if(!db.stock.length){toast('Dışa aktarılacak stok kalemi yok','err');return}
+  const blob=xlsxBlob(stockReportSheets());
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='walky_stok_durumu_'+iso()+'.xlsx'; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),2000);
 }
