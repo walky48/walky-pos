@@ -74,9 +74,9 @@ function stockDurumHTML(){
   return `<div class="page-head">
       <div><h1>Stok Durumu</h1></div>
       <div class="head-tools">
-        <button class="btn sm" onclick="printStockReport()">Stok Çıktısı Al</button>
         <button class="btn sm" onclick="exportStockExcel()">Excel İndir</button>
-        ${canEdit?`<button class="btn sm" onclick="openNewStockCatModal()">+ Yeni Kategori</button>
+        ${canEdit?`<button class="btn sm red" onclick="askResetStock()">Stoğu Sıfırla</button>
+        <button class="btn sm" onclick="openNewStockCatModal()">+ Yeni Kategori</button>
         <button class="btn accent sm" onclick="openNewStockModal()">+ Yeni Stok Kalemi</button>`:''}
       </div></div>
     <input id="sdQ" class="inp mb16" style="max-width:320px" placeholder="Ürün ara…" value="${esc(stockDurumQuery)}" oninput="stockDurumQuery=this.value;renderStockDurumBody()">
@@ -122,7 +122,7 @@ function stockDurumBodyHTML(){
   }).join('');
   const log=db.stockLog.slice(-12).reverse().map(l=>
     `<div class="mini-row"><span class="muted small">${trDT(l.ts)} · ${esc(l.u)} · ${esc(l.reason)}</span>
-     <span>${esc(l.name)} <b class="${l.delta>=0?'green':'red'}">${l.delta>=0?'+':''}${fmtQ(l.delta)}</b></span></div>`).join('');
+     <span>${esc(l.name)}${l.delta==null?'':` <b class="${l.delta>=0?'green':'red'}">${l.delta>=0?'+':''}${fmtQ(l.delta)}</b>`}</span></div>`).join('');
   return `<div class="mini-row"><span><b>Toplam Stok Değeri</b></span><span class="v accent"><b>${fmt(grandTotal)}</b></span></div>
     ${sections || (q?'<div class="muted small mt12">Aramanızla eşleşen ürün bulunamadı.</div>':'')}
     ${log?`<div class="sect"><div class="st">Son Stok Hareketleri</div>${log}</div>`:''}`;
@@ -163,7 +163,7 @@ function stockGenelHTML(){
         <div class="fld"><span>Bitiş</span><input type="date" id="sgT" class="inp dte" value="${stockGenelTo}"></div>
         <input id="sgQ" class="inp" style="flex:1;min-width:160px" placeholder="Ürün ara…" value="${esc(stockGenelQuery)}" onkeydown="if(event.key==='Enter')applyStockGenelFilter()">
         <button class="btn accent" onclick="applyStockGenelFilter()">Göster</button>
-        <button class="btn" onclick="exportStockGenelCSV()">CSV İndir</button>
+        <button class="btn" onclick="exportStockGenelExcel()">Excel İndir</button>
       </div>
     </div>
     <div class="mini-row"><span><b>Toplam Tüketilen Tutar</b> <span class="muted small">(${trDate(stockGenelFrom)} – ${trDate(stockGenelTo)})</span></span><span class="v accent"><b>${fmt(grandTotal)}</b></span></div>
@@ -174,23 +174,6 @@ function applyStockGenelFilter(){
   if(f>t){const x=f;f=t;t=x;}
   stockGenelFrom=f; stockGenelTo=t; stockGenelQuery=$('#sgQ').value.trim();
   render();
-}
-function exportStockGenelCSV(){
-  const q=(stockGenelQuery||'').toLowerCase();
-  const agg=consumptionInRange(stockGenelFrom, stockGenelTo);
-  const rows=[];
-  stockCatList().forEach(cat=>{
-    db.stock.filter(s=>s.cat===cat && (!q || s.name.toLowerCase().includes(q))).forEach(s=>{
-      const consumedQty=agg[s.id]||0;
-      rows.push([cat, s.name, consumedQty.toFixed(3).replace('.',','), consumedValue(s,consumedQty).toFixed(2).replace('.',',')].join(';'));
-    });
-  });
-  if(!rows.length){toast('Bu aralıkta/aramada dışa aktarılacak kalem yok','err');return}
-  const head='Kategori;Urun;TuketilenMiktar;TuketilenTutar';
-  const blob=new Blob(['﻿'+head+'\n'+rows.join('\n')],{type:'text/csv;charset=utf-8'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
-  a.download='walky_genel_stok_'+stockGenelFrom+'_'+stockGenelTo+'.csv'; a.click();
-  setTimeout(()=>URL.revokeObjectURL(a.href),2000);
 }
 /* ---------- Mal Girişi: manuel tedarikçi/geliş kaydı ---------- */
 /* Kaydedince ilgili stok kalemine otomatik eklenir ve geliş fiyatı güncellenir
@@ -226,7 +209,8 @@ function stockMalGirisiHTML(){
       <td class="muted" data-lbl="Giren">${esc(g.by)}</td>
       ${canEdit?`<td class="right tdact"><button class="btn sm red" onclick="askDelGoodsReceipt('${g.id}')">Sil</button></td>`:''}
     </tr>`).join('');
-  return `<div class="page-head"><div><h1>Mal Girişi</h1><div class="sub">Her mal geldiğinde firma/tarih/miktar/geliş fiyatı buradan kaydedilir</div></div></div>
+  return `<div class="page-head"><div><h1>Mal Girişi</h1><div class="sub">Her mal geldiğinde firma/tarih/miktar/geliş fiyatı buradan kaydedilir</div></div>
+      ${list.length?`<div class="head-tools"><button class="btn sm" onclick="exportMalGirisiExcel()">Excel İndir</button></div>`:''}</div>
     <div class="panel mb16">
       <div class="st" style="margin-bottom:12px">YENİ MAL GİRİŞİ</div>
       <div class="range-bar">
@@ -463,58 +447,34 @@ function applyStockEditBottle(sid){
   db.stockLog.push({ts:Date.now(), u:user.name, name:s.name, delta, reason:'Düzeltme (cl)'+stockRenameNote(oldName,s)});
   saveDB(); closeModal(); render(); toast('Stok güncellendi','ok');
 }
-/* muhasebenin ay başı sayımla karşılaştırabilmesi için, istenildiği anda A4
-   normal yazıcıdan (termal fiş yazıcısından bağımsız, bkz. ui/js/print.js
-   #printArea 72mm kısıtı) tam stok dökümü alınabilmesi — ayrı bir pencerede
-   statik HTML olarak üretilir, tarayıcının kendi yazdırma diyaloğunu açar. */
-function stockReportHTML(){
-  const cats=stockCatList();
-  let grandTotal=0;
-  const sections=cats.map(cat=>{
-    const items=db.stock.filter(s=>s.cat===cat);
-    if(!items.length) return '';
-    let catTotal=0;
-    const rows=items.map(s=>{
-      const lineTotal=stockLineValue(s);
-      catTotal+=lineTotal;
-      const miktar = s.bottleCl
-        ? `${fmtQ(s.qty)} adet + ${fmtQ(s.extraCl||0)} cl (${fmtQ(stockTotalCl(s))} cl toplam)`
-        : `${fmtQ(s.qty)} ${esc(s.unit)}`;
-      return `<tr><td>${esc(s.name)}</td><td>${miktar}</td><td class="r">${fmt(s.price||0)}</td><td class="r">${fmt(lineTotal)}</td></tr>`;
-    }).join('');
-    grandTotal+=catTotal;
-    return `<h3>${esc(cat)}</h3>
-      <table><thead><tr><th>Ürün</th><th>Miktar</th><th class="r">Fiyat</th><th class="r">Toplam</th></tr></thead>
-      <tbody>${rows}</tbody></table>
-      <div class="cat-tot">Kategori Toplamı: <b>${fmt(catTotal)}</b></div>`;
-  }).join('');
-  return `<!doctype html><html><head><meta charset="utf-8"><title>Stok Durumu Raporu</title>
-  <style>
-    @page{size:A4;margin:14mm}
-    body{font-family:Arial,Helvetica,sans-serif;color:#111;font-size:12px}
-    h1{font-size:19px;margin:0 0 2px}
-    h3{font-size:13px;margin:16px 0 4px;border-bottom:1px solid #333;padding-bottom:2px}
-    .sub{color:#555;font-size:11px;margin-bottom:14px}
-    table{width:100%;border-collapse:collapse;margin-bottom:2px}
-    th,td{border:1px solid #ccc;padding:4px 6px;text-align:left;font-size:11.5px}
-    th{background:#f0f0f0}
-    .r{text-align:right}
-    .cat-tot{text-align:right;font-size:12px;margin:2px 0 4px}
-    .grand{margin-top:18px;padding-top:8px;border-top:2px solid #111;font-size:15px;text-align:right;font-weight:bold}
-  </style></head>
-  <body>
-    <h1>${esc(db.settings.businessName||'Restoranım')} — Stok Durumu Raporu</h1>
-    <div class="sub">Çıktı: ${trDate(iso())} ${trTime(Date.now())} · Alan: ${esc(user.name)}</div>
-    ${sections}
-    <div class="grand">Toplam Stok Değeri: ${fmt(grandTotal)}</div>
-  </body></html>`;
+/* ---------- Stoğu Sıfırla ---------- */
+/* ay başı sayımına temiz başlamak için: tüm kalemlerin miktarını (adet ve
+   açık şişe cl'si) sıfırlar; geliş fiyatlarına, kategorilere ve kalemlerin
+   kendisine dokunmaz — ardından sayım "+ Sayım" ile girilir. Geri
+   alınamadığı için onay penceresinde önce mevcut durumun Excel'i önerilir.
+   Stok hareketlerine kalem başına ayrı satır yerine tek bir özet satır
+   düşülür ki Son Stok Hareketleri listesi sıfırlama satırlarıyla dolmasın. */
+function askResetStock(){
+  if(user.role!=='admin') return;
+  const n=db.stock.filter(s=>(s.qty||0)!==0 || (s.extraCl||0)!==0).length;
+  if(!n){toast('Tüm stok miktarları zaten sıfır','err');return}
+  showModal(`<div class="m-head"><h3>Stoğu Sıfırla</h3><button class="icon-b" onclick="closeModal()">✕</button></div>
+    <p>Tüm stok kalemlerinin miktarı (adet ve açık şişe cl'leri) sıfırlanacak — <b>${n}</b> kalem etkilenecek. Geliş fiyatları, kategoriler ve kalemlerin kendisi değişmez.</p>
+    <p class="muted small mt8">Bu işlem geri alınamaz. Sıfırlamadan önce mevcut durumun Excel çıktısını almanız önerilir.</p>
+    <div class="m-actions"><button class="btn ghost" onclick="closeModal()">Vazgeç</button>
+    <button class="btn" onclick="exportStockExcel()">Önce Excel İndir</button>
+    <button class="btn red" onclick="resetAllStock()">Sıfırla</button></div>`);
 }
-function printStockReport(){
-  const w=window.open('', '_blank');
-  if(!w){toast('Yeni sekme açılamadı, açılır pencere engelleniyor olabilir','err');return}
-  w.document.open(); w.document.write(stockReportHTML()); w.document.close();
-  w.focus();
-  setTimeout(()=>{ try{ w.print() }catch(e){} }, 300);
+function resetAllStock(){
+  if(user.role!=='admin') return;
+  let n=0;
+  db.stock.forEach(s=>{
+    if((s.qty||0)!==0 || (s.extraCl||0)!==0) n++;
+    s.qty=0;
+    if(s.extraCl) s.extraCl=0;
+  });
+  db.stockLog.push({ts:Date.now(), u:user.name, name:'Tüm stok', delta:null, reason:`Stok sıfırlandı (${n} kalem)`});
+  saveDB(); closeModal(); render(); toast('Stok sıfırlandı','ok');
 }
 /* ---------- Excel (.xlsx) dışa aktarma ---------- */
 /* Kasa internetsiz de çalıştığı için CDN'den kütüphane yüklemiyoruz: .xlsx
@@ -552,8 +512,9 @@ function xmlEsc(s){return String(s??'').replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,
 function xlsxCol(i){let s='';i++;while(i){const m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26)}return s}
 /* sheets: [{name, widths:[...], freeze:başlık satırı no, rows:[[hücre,...],...]}]
    hücre: null | metin | sayı | {v, s, f} — s: 't' büyük başlık, 'h' tablo başlığı,
-   'b' kalın, 'm' para, 'mb' kalın para; f: formül (v önbellek değeri olarak yazılır) */
-const XLSX_STYLE={t:5,h:2,b:1,m:3,mb:4};
+   'b' kalın, 'm' para, 'mb' kalın para, 'd' tarih (v: Excel gün sayısı, bkz.
+   xlsxDate); f: formül (v önbellek değeri olarak yazılır) */
+const XLSX_STYLE={t:5,h:2,b:1,m:3,mb:4,d:6};
 function xlsxBlob(sheets){
   const NS='http://schemas.openxmlformats.org/spreadsheetml/2006/main';
   const RNS='http://schemas.openxmlformats.org/officeDocument/2006/relationships';
@@ -577,7 +538,7 @@ function xlsxBlob(sheets){
 <fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE7E6E6"/><bgColor indexed="64"/></patternFill></fill></fills>
 <borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
 <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-<cellXfs count="6"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/><xf numFmtId="4" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="4" fontId="1" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1"/><xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs>
+<cellXfs count="7"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/><xf numFmtId="4" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="4" fontId="1" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1"/><xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="14" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs>
 <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
 </styleSheet>`;
   const files=[
@@ -590,15 +551,35 @@ function xlsxBlob(sheets){
   ];
   return zipStore(files);
 }
-/* Stok Çıktısı Al ile aynı içerik (arama filtresinden bağımsız, tüm stok):
-   1. sayfa kalem kalem düz liste (Excel'de sıralama/filtre/DÜŞEYARA ile ay
-   başı karşılaştırması kolay olsun diye ara toplam satırı araya girmez),
-   2. sayfa kategori toplamları. */
+/* başlık + alt başlık + tablo (başlığı 4. satırda, veri 5. satırdan) ve
+   sumCol verilirse altta SUM formüllü toplam satırı olan rapor sayfası */
+function xlsxReportSheet({name, title, sub, head, widths, rows, sumCol, sumLabelCol, sumLabel, sum}){
+  const out=[[{v:title, s:'t'}], [sub], [], head.map(h=>({v:h, s:'h'})), ...rows];
+  if(sumCol!=null){
+    const L=xlsxCol(sumCol), tot=new Array(sumCol+1).fill(null);
+    tot[sumLabelCol!=null?sumLabelCol:sumCol-1]={v:sumLabel, s:'b'};
+    tot[sumCol]=rows.length?{f:`SUM(${L}5:${L}${4+rows.length})`, v:sum, s:'mb'}:{v:0, s:'mb'};
+    out.push([], tot);
+  }
+  return {name, widths, freeze:4, rows:out};
+}
+function xlsxTitle(report){return `${db.settings.businessName||'Restoranım'} — ${report}`}
+function xlsxSub(extra){return (extra?extra+' · ':'')+`Çıktı: ${trDate(iso())} ${trTime(Date.now())} · Alan: ${user.name}`}
+/* 'YYYY-MM-DD' → Excel tarih seri numarası (1900 sistemi) */
+function xlsxDate(d){const [y,m,g]=String(d||'').split('-').map(Number);return Date.UTC(y,m-1,g)/86400000+25569}
+/* tutarlar yuvarlanmadan yazılır (Excel 2 ondalık gösterir) ki toplamlar
+   ekrandakiyle kuruşu kuruşuna tutsun; sadece kayan nokta kırıntısı atılır */
+function xlsxNum(n,d){const k=Math.pow(10,d==null?6:d);return Math.round((n||0)*k)/k}
+function downloadXlsx(sheets, filename){
+  const a=document.createElement('a'); a.href=URL.createObjectURL(xlsxBlob(sheets));
+  a.download=filename; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+}
+/* Stok Durumu (arama filtresinden bağımsız, tüm stok): 1. sayfa kalem kalem
+   düz liste (Excel'de sıralama/filtre/DÜŞEYARA ile ay başı karşılaştırması
+   kolay olsun diye ara toplam satırı araya girmez), 2. sayfa kategori
+   toplamları. */
 function stockReportSheets(){
-  /* tutarlar yuvarlanmadan yazılır (Excel 2 ondalık gösterir) ki genel toplam
-     ekrandaki/çıktıdaki Toplam Stok Değeri ile kuruşu kuruşuna tutsun */
-  const r6=n=>Math.round((n||0)*1e6)/1e6, r3=n=>Math.round((n||0)*1000)/1000;
-  const head=['Kategori','Ürün','Miktar','Birim','Açık Şişe (cl)','Toplam (cl)','Birim Fiyat (₺)','Toplam Değer (₺)'];
   const detail=[], summary=[];
   let grand=0;
   stockCatList().forEach(cat=>{
@@ -608,40 +589,93 @@ function stockReportSheets(){
     items.forEach(s=>{
       const val=stockLineValue(s);
       catTotal+=val;
-      detail.push([cat, s.name, r3(s.qty), s.bottleCl?'adet':(s.unit||''),
-        s.bottleCl?r3(s.extraCl||0):null, s.bottleCl?r3(stockTotalCl(s)):null,
-        {v:r6(s.price), s:'m'}, {v:r6(val), s:'m'}]);
+      detail.push([cat, s.name, xlsxNum(s.qty,3), s.bottleCl?'adet':(s.unit||''),
+        s.bottleCl?xlsxNum(s.extraCl,3):null, s.bottleCl?xlsxNum(stockTotalCl(s),3):null,
+        {v:xlsxNum(s.price), s:'m'}, {v:xlsxNum(val), s:'m'}]);
     });
     grand+=catTotal;
-    summary.push([cat, items.length, {v:r6(catTotal), s:'m'}]);
+    summary.push([cat, items.length, {v:xlsxNum(catTotal), s:'m'}]);
   });
-  grand=r6(grand);
-  const title={v:`${db.settings.businessName||'Restoranım'} — Stok Durumu Raporu`, s:'t'};
-  const sub=`Çıktı: ${trDate(iso())} ${trTime(Date.now())} · Alan: ${user.name}`;
-  const firstRow=5, lastRow=firstRow+detail.length-1;
+  const title=xlsxTitle('Stok Durumu Raporu'), sub=xlsxSub();
   return [
-    {name:'Stok Durumu', widths:[22,32,10,8,14,12,16,18], freeze:4, rows:[
-      [title],[sub],[],
-      head.map(h=>({v:h, s:'h'})),
-      ...detail,
-      [],
-      [null,null,null,null,null,null,{v:'Toplam Stok Değeri', s:'b'},
-        detail.length?{f:`SUM(H${firstRow}:H${lastRow})`, v:grand, s:'mb'}:{v:0, s:'mb'}]
-    ]},
-    {name:'Kategori Toplamları', widths:[26,14,18], freeze:4, rows:[
-      [title],[sub],[],
-      ['Kategori','Kalem Sayısı','Toplam Değer (₺)'].map(h=>({v:h, s:'h'})),
-      ...summary,
-      [],
-      [{v:'Toplam Stok Değeri', s:'b'}, null,
-        summary.length?{f:`SUM(C5:C${4+summary.length})`, v:grand, s:'mb'}:{v:0, s:'mb'}]
-    ]}
+    xlsxReportSheet({name:'Stok Durumu', title, sub, widths:[22,32,10,8,14,12,16,18],
+      head:['Kategori','Ürün','Miktar','Birim','Açık Şişe (cl)','Toplam (cl)','Birim Fiyat (₺)','Toplam Değer (₺)'],
+      rows:detail, sumCol:7, sumLabel:'Toplam Stok Değeri', sum:xlsxNum(grand)}),
+    xlsxReportSheet({name:'Kategori Toplamları', title, sub, widths:[26,14,18],
+      head:['Kategori','Kalem Sayısı','Toplam Değer (₺)'],
+      rows:summary, sumCol:2, sumLabelCol:0, sumLabel:'Toplam Stok Değeri', sum:xlsxNum(grand)})
   ];
 }
 function exportStockExcel(){
   if(!db.stock.length){toast('Dışa aktarılacak stok kalemi yok','err');return}
-  const blob=xlsxBlob(stockReportSheets());
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
-  a.download='walky_stok_durumu_'+iso()+'.xlsx'; a.click();
-  setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+  downloadXlsx(stockReportSheets(), 'walky_stok_durumu_'+iso()+'.xlsx');
+}
+/* Genel Stok: ekranda uygulanmış tarih aralığı ve arama ile aynı içerik
+   (bkz. stockGenelHTML) — 1. sayfa kalem kalem tüketim, 2. sayfa kategori
+   toplamları. Eşleşen kalem yoksa null. */
+function stockGenelSheets(){
+  const q=(stockGenelQuery||'').toLowerCase();
+  const agg=consumptionInRange(stockGenelFrom, stockGenelTo);
+  const detail=[], summary=[];
+  let grand=0;
+  stockCatList().forEach(cat=>{
+    const items=db.stock.filter(s=>s.cat===cat && (!q || s.name.toLowerCase().includes(q)));
+    if(!items.length) return;
+    let catTotal=0;
+    items.forEach(s=>{
+      const qty=agg[s.id]||0, val=consumedValue(s, qty);
+      catTotal+=val;
+      detail.push([cat, s.name, xlsxNum(qty,3), s.bottleCl?'cl':(s.unit||''), {v:xlsxNum(val), s:'m'}]);
+    });
+    grand+=catTotal;
+    summary.push([cat, {v:xlsxNum(catTotal), s:'m'}]);
+  });
+  if(!detail.length) return null;
+  const title=xlsxTitle('Genel Stok (Tüketim) Raporu');
+  const sub=xlsxSub(`Tarih aralığı: ${trDate(stockGenelFrom)} – ${trDate(stockGenelTo)}${q?` · Arama: "${stockGenelQuery}"`:''}`);
+  return [
+    xlsxReportSheet({name:'Genel Stok', title, sub, widths:[22,32,16,8,20],
+      head:['Kategori','Ürün','Tüketilen Miktar','Birim','Tüketilen Tutar (₺)'],
+      rows:detail, sumCol:4, sumLabel:'Toplam Tüketilen Tutar', sum:xlsxNum(grand)}),
+    xlsxReportSheet({name:'Kategori Toplamları', title, sub, widths:[26,20],
+      head:['Kategori','Tüketilen Tutar (₺)'],
+      rows:summary, sumCol:1, sumLabel:'Toplam Tüketilen Tutar', sum:xlsxNum(grand)})
+  ];
+}
+function exportStockGenelExcel(){
+  const sheets=stockGenelSheets();
+  if(!sheets){toast('Bu aralıkta/aramada dışa aktarılacak kalem yok','err');return}
+  downloadXlsx(sheets, 'walky_genel_stok_'+stockGenelFrom+'_'+stockGenelTo+'.xlsx');
+}
+/* Mal Girişi geçmişinin tamamı, eskiden yeniye (muhasebe defteri sırası);
+   tarih gerçek Excel tarihi olarak yazılır ki sıralama/filtre çalışsın.
+   2. sayfa firma bazında toplamlar. Kalem sonradan yeniden adlandırıldıysa
+   güncel adı, silindiyse kayıttaki adı kullanılır (bkz. stockMalGirisiHTML). */
+function malGirisiSheets(){
+  const list=(db.goodsReceipts||[]).slice().sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:(a.ts||0)-(b.ts||0));
+  const bySup={};
+  let grand=0;
+  const rows=list.map(g=>{
+    const s=db.stock.find(x=>x.id===g.stockId);
+    const tot=(g.qty||0)*(g.unitPrice||0);
+    grand+=tot;
+    const f=bySup[g.supplier]||(bySup[g.supplier]={n:0,t:0}); f.n++; f.t+=tot;
+    return [{v:xlsxDate(g.date), s:'d'}, g.supplier, s?s.cat:'', s?s.name:g.stockName, xlsxNum(g.qty,3),
+      s?(s.bottleCl?'adet':(s.unit||'')):'', {v:xlsxNum(g.unitPrice), s:'m'}, {v:xlsxNum(tot), s:'m'}, g.by||''];
+  });
+  const sup=Object.keys(bySup).sort((a,b)=>a.localeCompare(b,'tr')).map(k=>[k, bySup[k].n, {v:xlsxNum(bySup[k].t), s:'m'}]);
+  const title=xlsxTitle('Mal Girişi Raporu');
+  const sub=xlsxSub(`Tarih aralığı: ${trDate(list[0].date)} – ${trDate(list[list.length-1].date)}`);
+  return [
+    xlsxReportSheet({name:'Mal Girişi', title, sub, widths:[12,24,20,30,10,8,16,16,16],
+      head:['Tarih','Firma','Kategori','Ürün','Miktar','Birim','Birim Fiyat (₺)','Toplam (₺)','Giren'],
+      rows, sumCol:7, sumLabel:'Genel Toplam', sum:xlsxNum(grand)}),
+    xlsxReportSheet({name:'Firma Toplamları', title, sub, widths:[28,14,18],
+      head:['Firma','Kayıt Sayısı','Toplam (₺)'],
+      rows:sup, sumCol:2, sumLabelCol:0, sumLabel:'Genel Toplam', sum:xlsxNum(grand)})
+  ];
+}
+function exportMalGirisiExcel(){
+  if(!(db.goodsReceipts||[]).length){toast('Dışa aktarılacak mal girişi kaydı yok','err');return}
+  downloadXlsx(malGirisiSheets(), 'walky_mal_girisi_'+iso()+'.xlsx');
 }
