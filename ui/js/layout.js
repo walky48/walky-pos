@@ -12,7 +12,7 @@ function navItems(){
     return items;
   }
   if((r==='garson'||r==='admin') && db.day.open) items.push(['tables','Masa Planı']);
-  if(db.settings.stockEnabled && (r==='depo'||r==='admin'||r==='muhasebe')) items.push(['stock','Stok']);
+  if(db.settings.stockEnabled && (r==='depo'||r==='admin'||r==='muhasebe')) items.push(['stock','Stok'+stockDraftNavSuffix()]);
   if(r==='garson'||r==='depo'||r==='admin') items.push(['expenses','Giderler']);
   if(r==='muhasebe'||r==='admin') items.push(['stats','İstatistikler'],['cari','Cari Hesaplar']);
   else if(r==='garson') items.push(['stats','İstatistikler']);

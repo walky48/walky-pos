@@ -203,6 +203,9 @@ label.fl{display:block;font-size:13px;color:var(--muted);margin:14px 0 6px}
 .peek-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:rgba(180,83,9,.08);border:1px solid rgba(180,83,9,.3);
   border-radius:9px;padding:10px 14px;font-size:12.5px;color:var(--accent);line-height:1.5;margin-bottom:18px}
 .peek-bar .btn{margin-left:auto}
+.stock-save-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:18px;padding:12px 14px;background:var(--panel);border:1px solid var(--border);border-radius:10px}
+.stock-save-bar .grow{flex:1}
+.stock-save-bar.pending{position:sticky;bottom:0;z-index:5;border-color:var(--accent);box-shadow:0 -6px 18px rgba(0,0,0,.08)}
 
 /* ---------- canlı izleme & senkron ---------- */
 .login-tabs{display:flex;width:100%;margin-bottom:6px}

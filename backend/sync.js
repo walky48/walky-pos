@@ -51,6 +51,7 @@ function adoptState(payload){
   }
   updateSyncBadge();
   if(!$('#modalWrap').classList.contains('show')) render();
+  checkBatchWatches();
 }
 
 /* ---------- KASA: push + SSE ---------- */
@@ -360,4 +361,92 @@ function remoteLogout(){
   loadSyncCfg(); /* bu cihaz aynı zamanda eşleştirilmiş kasaysa sayaçlarını geri yükle */
   if(syncCfg) kasaSubscribe();
   render();
+}
+
+/* ---------- güvenli toplu kayıt (Stoğu Kaydet, Mal Girişi) ----------
+   Normal kayıt tüm durumu gönderir: kasa ile uzak cihaz aynı anda yazarsa
+   biri diğerinin değişikliğini ezebiliyor (01.10.2026 sayımında, kasada
+   sipariş girilirken telefondan yapılan bazı stok düzeltmeleri bu yüzden
+   kayboldu). Toplu kayıt bunu iki yolla engeller:
+   1) uzak cihazda gönderimden hemen önce sunucudaki EN GÜNCEL durum alınır
+      ve değişiklikler (applyFn) onun üzerine uygulanır; çakışma (409)
+      olursa güncel durum yeniden alınıp yeniden uygulanır — başka cihazın
+      değişikliğinin üzerine asla körlemesine yazılmaz.
+   2) kayıttan sonra 2 dakika boyunca benimsenen her durum kontrol edilir:
+      kaydın stok hareketlerine düştüğü toplu kayıt kimliği (l.b) yoksa,
+      başka bir cihaz eski bir durumla kaydı ezmiş demektir — değişiklikler
+      aynı şekilde yeniden uygulanıp gönderilir.
+   applyFn(state, batchId) durumu yerinde değiştirir ve stok hareketlerine
+   b:batchId yazar. Kasada (uzak değilken) yerel db'ye uygulanıp normal
+   senkronla gönderilir — kasa zaten her zaman kazanır. */
+const BATCH_WATCH_MS = 120000;
+let batchWatches = []; // [{applyFn, batchId, until, tries}]
+let batchBusy = false;
+function batchInState(st, batchId){ return ((st && st.stockLog) || []).some(l=>l.b===batchId); }
+function startBatchWatch(applyFn, batchId, tries){
+  if(!batchInState(db, batchId)) return; /* hiç stok hareketi yazmadıysa izlenecek bir şey yok */
+  batchWatches.push({applyFn, batchId, until:Date.now()+BATCH_WATCH_MS, tries});
+}
+async function commitBatch(applyFn, batchId, tries){
+  tries = tries||0;
+  if(!remoteMode){
+    applyFn(db, batchId);
+    saveDB();
+    startBatchWatch(applyFn, batchId, tries);
+    return true;
+  }
+  if(batchBusy) return false;
+  if(syncPending()){
+    remotePushNow();
+    toast('Önceki işleminiz hâlâ gönderiliyor — birkaç saniye sonra tekrar deneyin','err');
+    return false;
+  }
+  batchBusy = true; syncBusy = true; /* normal gönderim araya girmesin */
+  const auth = {'Authorization':'Bearer '+remoteSession.token};
+  try{
+    for(let i=0;i<6;i++){
+      const j = await fetch(remoteSession.url + '/api/state', {headers:auth}).then(x=>x.json());
+      if(!j || !j.ok || !j.state) throw new Error('state');
+      const st = j.state;
+      if(!st.stockLog) st.stockLog=[];
+      applyFn(st, batchId);
+      st.rev = (st.rev||0) + 1;
+      const r = await fetch(remoteSession.url + '/api/push', {method:'POST',
+        headers:Object.assign({'Content-Type':'application/json'}, auth),
+        body: JSON.stringify({baseRev:j.rev, state:st})});
+      if(r.status === 409){ await new Promise(res=>setTimeout(res, 200 + Math.random()*400)); continue; }
+      if(r.status === 401){ syncBusy=false; batchBusy=false; toast('Oturum süresi doldu — yeniden giriş yapın','err'); remoteLogout(); return false; }
+      if(!r.ok){ const e = await r.json().catch(()=>({})); toast(e.error||'Kaydedilemedi','err'); return false; }
+      const k = await r.json();
+      syncBusy = false;
+      adoptState({rev:k.rev, state:st});
+      startBatchWatch(applyFn, batchId, tries);
+      return true;
+    }
+    toast('Sunucu şu an çok yoğun — kaydedilmedi, tekrar deneyin','err');
+    return false;
+  }catch(e){
+    toast('Sunucuya ulaşılamadı — kaydedilmedi, bağlantı gelince tekrar deneyin','err');
+    return false;
+  }finally{
+    syncBusy = false; batchBusy = false;
+    if(syncQueued){ syncQueued = false; remotePushNow(); }
+  }
+}
+function checkBatchWatches(){
+  if(batchBusy || !batchWatches.length) return;
+  const now = Date.now();
+  batchWatches = batchWatches.filter(w=>w.until > now);
+  const lost = batchWatches.filter(w=>!batchInState(db, w.batchId));
+  if(!lost.length) return;
+  batchWatches = batchWatches.filter(w=>lost.indexOf(w) < 0);
+  (async()=>{
+    for(const w of lost){
+      if(w.tries >= 3){ toast('Bir stok kaydı başka bir cihazın gönderdiği veriyle ezildi ve yeniden uygulanamadı — Stok Durumu\'nu kontrol edin','err'); continue; }
+      const ok = await commitBatch(w.applyFn, w.batchId, w.tries+1);
+      if(ok) toast('Stok kaydınız başka bir cihazın verisiyle ezilmişti — yeniden uygulandı','ok');
+      else batchWatches.push(w); /* ör. bağlantı yok — bir sonraki durumda tekrar denenir */
+    }
+    if(!$('#modalWrap').classList.contains('show')) render();
+  })();
 }

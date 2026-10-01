@@ -81,7 +81,8 @@ function stockDurumHTML(){
       </div></div>
     <input id="sdQ" class="inp mb16" style="max-width:320px" placeholder="Ürün ara…" value="${esc(stockDurumQuery)}" oninput="stockDurumQuery=this.value;renderStockDurumBody()">
     ${canEdit?stockCatChipsHTML():''}
-    <div id="stockDurumBody">${stockDurumBodyHTML()}</div>`;
+    <div id="stockDurumBody">${stockDurumBodyHTML()}</div>
+    ${stockSaveBarHTML()}`;
 }
 function renderStockDurumBody(){
   const el=$('#stockDurumBody'); if(el) el.innerHTML=stockDurumBodyHTML();
@@ -90,9 +91,10 @@ function stockDurumBodyHTML(){
   const canEdit = user.role==='admin';
   const q=(stockDurumQuery||'').toLowerCase();
   const cats=stockCatList();
+  const list=stockView(), changed=stockChangedIds(list);
   let grandTotal=0;
   const sections=cats.map(cat=>{
-    const items=db.stock.filter(s=>s.cat===cat && (!q || s.name.toLowerCase().includes(q)));
+    const items=list.filter(s=>s.cat===cat && (!q || s.name.toLowerCase().includes(q)));
     if(!items.length) return '';
     let catTotal=0;
     const rows=items.map(s=>{
@@ -102,7 +104,7 @@ function stockDurumBodyHTML(){
         ? `${fmtQ(s.qty)} adet + ${fmtQ(s.extraCl||0)} cl <span class="muted tiny">(${fmtQ(stockTotalCl(s))} cl toplam)</span>`
         : `${fmtQ(s.qty)} ${esc(s.unit)}`;
       return `<tr>
-        <td>${esc(s.name)}</td>
+        <td>${esc(s.name)}${changed.has(s.id)?' <span class="badge low">Kaydedilmedi</span>':''}</td>
         <td data-lbl="Miktar">${miktar}</td>
         <td class="num right" data-lbl="Fiyat">${fmt(s.price||0)}${s.bottleCl?' <span class="muted tiny">/şişe</span>':''}</td>
         <td class="num right" data-lbl="Toplam">${fmt(lineTotal)}</td>
@@ -126,6 +128,98 @@ function stockDurumBodyHTML(){
   return `<div class="mini-row"><span><b>Toplam Stok Değeri</b></span><span class="v accent"><b>${fmt(grandTotal)}</b></span></div>
     ${sections || (q?'<div class="muted small mt12">Aramanızla eşleşen ürün bulunamadı.</div>':'')}
     ${log?`<div class="sect"><div class="st">Son Stok Hareketleri</div>${log}</div>`:''}`;
+}
+/* ---------- Stok Durumu taslağı: Stoğu Kaydet ---------- */
+/* Stok Durumu'ndaki düzeltme (Düzenle), sayım (+ Sayım) ve Stoğu Sıfırla
+   anında kaydedilmez: işlem listesi olarak bu cihazda taslakta tutulur,
+   ekranda taslak uygulanmış hali gösterilir; sayfanın altındaki Stoğu
+   Kaydet'e basınca hepsi tek seferde kaydedilip sunucuya gönderilir (bkz.
+   backend/sync.js commitBatch). Sayım sırasında kasada sipariş girilirken
+   her düzeltmenin ayrı ayrı gönderilmesi, kasanın gönderimleriyle çakışıp
+   bazı düzeltmelerin kaybolmasına yol açıyordu. Taslak tarayıcıda saklanır
+   ki sayfa yenilense ya da telefon kilitlense de kaybolmasın. Kalem
+   ekleme/silme ve kategori işlemleri eskisi gibi anında kaydedilir. */
+let stockDraftCache=null, stockDraftCacheKey=null, stockCommitting=false;
+function stockDraftKey(){return 'walky_stock_draft_v1:'+(remoteMode&&remoteSession?remoteSession.url+'|'+remoteSession.tenantName:'kasa')}
+function stockDraft(){
+  const k=stockDraftKey();
+  if(stockDraftCacheKey!==k){
+    stockDraftCacheKey=k; stockDraftCache=[];
+    try{ const r=localStorage.getItem(k); if(r) stockDraftCache=JSON.parse(r)||[]; }catch(e){}
+  }
+  return stockDraftCache;
+}
+function persistStockDraft(){
+  try{ const d=stockDraft(); if(d.length) localStorage.setItem(stockDraftKey(),JSON.stringify(d)); else localStorage.removeItem(stockDraftKey()); }catch(e){}
+}
+function addStockOp(op){ stockDraft().push(Object.assign({}, op, {u:user.name, ts:Date.now()})); persistStockDraft(); }
+function stockDraftToast(msg){ toast(msg+' — kaydetmek için Stoğu Kaydet','ok'); }
+/* taslaktaki işlemleri verilen stok listesine sırayla uygular; log
+   verilirse her işlem için stok hareketi yazar (batchId ile işaretli) */
+function applyStockOps(stock, ops, log, batchId){
+  ops.forEach(op=>{
+    const L=e=>{ if(log) log.push(Object.assign(e, {ts:op.ts, u:op.u, b:batchId})); };
+    if(op.t==='reset'){
+      let n=0;
+      stock.forEach(s=>{ if((s.qty||0)!==0 || (s.extraCl||0)!==0) n++; s.qty=0; if(s.extraCl) s.extraCl=0; });
+      L({name:'Tüm stok', delta:null, reason:`Stok sıfırlandı (${n} kalem)`});
+      return;
+    }
+    const s=stock.find(x=>x.id===op.sid); if(!s) return;
+    if(op.t==='set'){
+      const before=stockTotalCl(s), oldName=s.name;
+      s.name=op.name; s.qty=op.qty; s.price=op.price; if(s.bottleCl) s.extraCl=op.cl;
+      L({name:s.name, delta:+(stockTotalCl(s)-before).toFixed(3), reason:(s.bottleCl?'Düzeltme (cl)':'Düzeltme')+stockRenameNote(oldName,s)});
+    }else if(op.t==='add'){
+      if(s.bottleCl){ s.qty=+((s.qty||0)+op.v).toFixed(0); L({name:s.name, delta:op.v*s.bottleCl, reason:'Sayım (+'+fmtQ(op.v)+' şişe)'}); }
+      else{ s.qty=+((s.qty||0)+op.v).toFixed(3); L({name:s.name, delta:op.v, reason:'Sayım'}); }
+    }
+  });
+}
+/* ekranda gösterilen stok: kaydedilmiş stok + taslak */
+function stockView(){
+  const d=stockDraft();
+  if(!d.length) return db.stock;
+  const c=JSON.parse(JSON.stringify(db.stock));
+  applyStockOps(c, d);
+  return c;
+}
+function stockChangedIds(list){
+  if(!stockDraft().length) return new Set();
+  const m=new Map(db.stock.map(s=>[s.id,s]));
+  return new Set(list.filter(p=>{const s=m.get(p.id);return !s||s.qty!==p.qty||(s.extraCl||0)!==(p.extraCl||0)||s.price!==p.price||s.name!==p.name}).map(p=>p.id));
+}
+function stockDraftNavSuffix(){const n=stockDraft().length;return n?` (${n} kaydedilmemiş)`:''}
+function stockSaveBarHTML(){
+  const d=stockDraft();
+  if(!d.length) return `<div class="stock-save-bar"><span class="muted small">Düzeltme, sayım ve sıfırlama bu butona basılana kadar kaydedilmez.</span><span class="grow"></span><button class="btn accent" disabled>Stoğu Kaydet</button></div>`;
+  const who=[...new Set(d.map(o=>o.u))].join(', ');
+  return `<div class="stock-save-bar pending"><span><b>${d.length}</b> kaydedilmemiş değişiklik <span class="muted small">(${esc(who)})</span></span><span class="grow"></span>
+    <button class="btn ghost" ${stockCommitting?'disabled':''} onclick="askDiscardStockDraft()">Geri Al</button>
+    <button class="btn accent" ${stockCommitting?'disabled':''} onclick="commitStockDraft()">${stockCommitting?'Kaydediliyor…':'Stoğu Kaydet'}</button></div>`;
+}
+async function commitStockDraft(){
+  const ops=stockDraft().slice();
+  if(!ops.length || stockCommitting) return;
+  stockCommitting=true; render();
+  const ok=await commitBatch((st,b)=>{
+    if(!st.stockLog) st.stockLog=[];
+    applyStockOps(st.stock||[], ops, st.stockLog, b);
+  }, uid());
+  stockCommitting=false;
+  if(ok){ stockDraft().splice(0, ops.length); persistStockDraft(); toast('Stok kaydedildi','ok'); }
+  render();
+}
+function askDiscardStockDraft(){
+  const n=stockDraft().length; if(!n) return;
+  showModal(`<div class="m-head"><h3>Değişiklikleri Geri Al</h3><button class="icon-b" onclick="closeModal()">✕</button></div>
+    <p>Kaydedilmemiş <b>${n}</b> değişiklik silinecek, stok son kaydedilmiş haline döner.</p>
+    <div class="m-actions"><button class="btn ghost" onclick="closeModal()">Vazgeç</button>
+    <button class="btn red" onclick="discardStockDraft()">Geri Al</button></div>`);
+}
+function discardStockDraft(){
+  stockDraft().length=0; persistStockDraft();
+  closeModal(); render(); toast('Kaydedilmemiş değişiklikler geri alındı','ok');
 }
 /* ---------- Genel Stok: tarih aralığına göre tüketim raporu ---------- */
 /* Ayrı bir tüketim logu tutmuyoruz — bkz. backend/logic.js consumptionInRange:
@@ -236,7 +330,9 @@ function updateGiHint(){
   const hint=$('#giHint'); if(!hint) return;
   hint.textContent = s&&s.bottleCl ? `Şişeli takip: miktar kapalı şişe/adet sayısıdır (şişe boyutu ${fmtQ(s.bottleCl)} cl).` : (s?`Birim: ${s.unit}`:'');
 }
-function saveMalGirisi(){
+let malGirisiBusy=false;
+async function saveMalGirisi(){
+  if(malGirisiBusy) return;
   const sid=$('#giStock').value;
   const s=db.stock.find(x=>x.id===sid);
   if(!s){toast('Ürün seçin','err');return}
@@ -246,12 +342,22 @@ function saveMalGirisi(){
   if(!supplier){toast('Firma adı girin','err');return}
   if(qty<=0){toast('Geçerli bir miktar girin','err');return}
   if(unitPrice<0){toast('Geçerli bir birim fiyat girin','err');return}
-  s.qty = s.bottleCl ? +(s.qty+qty).toFixed(0) : +(s.qty+qty).toFixed(3);
-  s.price=unitPrice;
-  db.stockLog.push({ts:Date.now(), u:user.name, name:s.name, delta:s.bottleCl?qty*s.bottleCl:qty, reason:'Mal Girişi ('+supplier+')'});
-  db.goodsReceipts=db.goodsReceipts||[];
-  db.goodsReceipts.push({id:uid(), date, supplier, stockId:s.id, stockName:s.name, qty, unitPrice, by:user.name, ts:Date.now()});
-  saveDB(); render(); toast('Mal girişi kaydedildi','ok');
+  /* taslaktaki bir düzeltme/sıfırlama kaydedilince bu girişle gelen miktarın
+     üzerine yazacağı için önce taslak kaydedilmeli */
+  if(stockDraft().some(o=>o.t==='reset'||o.sid===sid)){toast('Bu ürün için Stok Durumu\'nda kaydedilmemiş değişiklik var — önce orada Stoğu Kaydet\'e basın','err');return}
+  const rec={id:uid(), date, supplier, stockId:sid, qty, unitPrice, by:user.name, ts:Date.now()};
+  malGirisiBusy=true;
+  const ok=await commitBatch((st,b)=>{
+    const x=(st.stock||[]).find(y=>y.id===rec.stockId); if(!x) return;
+    x.qty = x.bottleCl ? +((x.qty||0)+qty).toFixed(0) : +((x.qty||0)+qty).toFixed(3);
+    x.price=unitPrice;
+    if(!st.stockLog) st.stockLog=[];
+    st.stockLog.push({ts:rec.ts, u:rec.by, name:x.name, delta:x.bottleCl?qty*x.bottleCl:qty, reason:'Mal Girişi ('+supplier+')', b});
+    st.goodsReceipts=st.goodsReceipts||[];
+    st.goodsReceipts.push(Object.assign({}, rec, {stockName:x.name}));
+  }, uid());
+  malGirisiBusy=false;
+  if(ok){ render(); toast('Mal girişi kaydedildi','ok'); }
 }
 function askDelGoodsReceipt(id){
   const g=(db.goodsReceipts||[]).find(x=>x.id===id); if(!g) return;
@@ -352,7 +458,7 @@ function delStock(sid){
   saveDB(); closeModal(); render(); toast(s.name+' stok listesinden silindi','ok');
 }
 function openStockAdd(sid){
-  const s=db.stock.find(x=>x.id===sid);
+  const s=stockView().find(x=>x.id===sid);
   if(s.bottleCl){
     showModal(`<div class="m-head"><h3>Sayım Girişi — ${esc(s.name)}</h3><button class="icon-b" onclick="closeModal()">✕</button></div>
       <p class="muted small">Mevcut: <b>${fmtQ(s.qty)} adet + ${fmtQ(s.extraCl||0)} cl</b> (toplam ${fmtQ(stockTotalCl(s))} cl). Yeni gelen kapalı şişe adedini girin.</p>
@@ -372,21 +478,19 @@ function openStockAdd(sid){
   $('#stVal').focus();
 }
 function applyStockAdd(sid){
-  const s=db.stock.find(x=>x.id===sid); const v=num($('#stVal').value);
+  const s=stockView().find(x=>x.id===sid); const v=num($('#stVal').value);
   if(v<=0){toast('Pozitif bir miktar girin','err');return}
-  s.qty=+(s.qty+v).toFixed(3);
-  db.stockLog.push({ts:Date.now(), u:user.name, name:s.name, delta:v, reason:'Sayım'});
-  saveDB(); closeModal(); render(); toast(s.name+' stoğuna '+fmtQ(v)+' '+s.unit+' eklendi','ok');
+  addStockOp({t:'add', sid, v});
+  closeModal(); render(); stockDraftToast(s.name+' +'+fmtQ(v)+' '+s.unit);
 }
 function applyStockAddBottle(sid){
-  const s=db.stock.find(x=>x.id===sid); const v=num($('#stVal').value);
+  const s=stockView().find(x=>x.id===sid); const v=num($('#stVal').value);
   if(v<=0){toast('Pozitif bir adet girin','err');return}
-  s.qty=+(s.qty+v).toFixed(0);
-  db.stockLog.push({ts:Date.now(), u:user.name, name:s.name, delta:v*s.bottleCl, reason:'Sayım (+'+fmtQ(v)+' şişe)'});
-  saveDB(); closeModal(); render(); toast(s.name+' stoğuna '+fmtQ(v)+' adet eklendi','ok');
+  addStockOp({t:'add', sid, v});
+  closeModal(); render(); stockDraftToast(s.name+' +'+fmtQ(v)+' adet');
 }
 function openStockEdit(sid){
-  const s=db.stock.find(x=>x.id===sid);
+  const s=stockView().find(x=>x.id===sid);
   if(s.bottleCl){
     showModal(`<div class="m-head"><h3>Stok Düzenle — ${esc(s.name)}</h3><button class="icon-b" onclick="closeModal()">✕</button></div>
       <p class="muted tiny">Şişe boyutu: ${fmtQ(s.bottleCl)} cl. Şu an: ${fmtQ(stockTotalCl(s))} cl toplam.</p>
@@ -419,62 +523,50 @@ function openStockEdit(sid){
 function stockEditName(s){
   const name=$('#stName').value.trim();
   if(!name){toast('Ürün adı boş olamaz','err');return null}
-  if(db.stock.some(x=>x.id!==s.id && x.name.toLowerCase()===name.toLowerCase())){toast('Bu isimde bir stok kalemi zaten var','err');return null}
+  if(stockView().some(x=>x.id!==s.id && x.name.toLowerCase()===name.toLowerCase())){toast('Bu isimde bir stok kalemi zaten var','err');return null}
   return name;
 }
 function stockRenameNote(oldName, s){return oldName!==s.name?' · eski ad: '+oldName:''}
 function applyStockEdit(sid){
-  const s=db.stock.find(x=>x.id===sid); const v=num($('#stVal').value), price=num($('#stPrice').value);
+  const s=stockView().find(x=>x.id===sid); const v=num($('#stVal').value), price=num($('#stPrice').value);
   const name=stockEditName(s); if(name===null) return;
   if(price<0){toast('Geçerli bir fiyat girin','err');return}
-  const delta=+(v-s.qty).toFixed(3);
-  const oldName=s.name;
-  s.name=name;
-  s.qty=v;
-  s.price=price;
-  db.stockLog.push({ts:Date.now(), u:user.name, name:s.name, delta, reason:'Düzeltme'+stockRenameNote(oldName,s)});
-  saveDB(); closeModal(); render(); toast('Stok güncellendi','ok');
+  addStockOp({t:'set', sid, name, qty:v, price});
+  closeModal(); render(); stockDraftToast(name+' güncellendi');
 }
 function applyStockEditBottle(sid){
-  const s=db.stock.find(x=>x.id===sid);
+  const s=stockView().find(x=>x.id===sid);
   const adet=num($('#stAdet').value), cl=num($('#stCl').value), price=num($('#stPrice').value);
   const name=stockEditName(s); if(name===null) return;
   if(adet<0||cl<0){toast('Geçerli miktarlar girin','err');return}
   if(price<0){toast('Geçerli bir fiyat girin','err');return}
-  const oldTotal=stockTotalCl(s), oldName=s.name;
-  s.name=name; s.qty=adet; s.extraCl=cl; s.price=price;
-  const delta=+(stockTotalCl(s)-oldTotal).toFixed(3);
-  db.stockLog.push({ts:Date.now(), u:user.name, name:s.name, delta, reason:'Düzeltme (cl)'+stockRenameNote(oldName,s)});
-  saveDB(); closeModal(); render(); toast('Stok güncellendi','ok');
+  addStockOp({t:'set', sid, name, qty:adet, cl, price});
+  closeModal(); render(); stockDraftToast(name+' güncellendi');
 }
 /* ---------- Stoğu Sıfırla ---------- */
 /* ay başı sayımına temiz başlamak için: tüm kalemlerin miktarını (adet ve
    açık şişe cl'si) sıfırlar; geliş fiyatlarına, kategorilere ve kalemlerin
-   kendisine dokunmaz — ardından sayım "+ Sayım" ile girilir. Geri
-   alınamadığı için onay penceresinde önce mevcut durumun Excel'i önerilir.
-   Stok hareketlerine kalem başına ayrı satır yerine tek bir özet satır
-   düşülür ki Son Stok Hareketleri listesi sıfırlama satırlarıyla dolmasın. */
+   kendisine dokunmaz — ardından sayım "+ Sayım" ile girilir. Diğer stok
+   düzeltmeleri gibi taslağa eklenir, Stoğu Kaydet ile kaydedilir; kayıttan
+   sonra geri alınamadığı için onay penceresinde önce mevcut durumun Excel'i
+   önerilir. Stok hareketlerine kalem başına ayrı satır yerine tek bir özet
+   satır düşülür (bkz. applyStockOps) ki Son Stok Hareketleri listesi
+   sıfırlama satırlarıyla dolmasın. */
 function askResetStock(){
   if(user.role!=='admin') return;
-  const n=db.stock.filter(s=>(s.qty||0)!==0 || (s.extraCl||0)!==0).length;
+  const n=stockView().filter(s=>(s.qty||0)!==0 || (s.extraCl||0)!==0).length;
   if(!n){toast('Tüm stok miktarları zaten sıfır','err');return}
   showModal(`<div class="m-head"><h3>Stoğu Sıfırla</h3><button class="icon-b" onclick="closeModal()">✕</button></div>
     <p>Tüm stok kalemlerinin miktarı (adet ve açık şişe cl'leri) sıfırlanacak — <b>${n}</b> kalem etkilenecek. Geliş fiyatları, kategoriler ve kalemlerin kendisi değişmez.</p>
-    <p class="muted small mt8">Bu işlem geri alınamaz. Sıfırlamadan önce mevcut durumun Excel çıktısını almanız önerilir.</p>
+    <p class="muted small mt8">Sıfırlama, sayfanın altındaki Stoğu Kaydet'e basılana kadar kaydedilmez; kaydedildikten sonra geri alınamaz. Önce mevcut durumun Excel çıktısını almanız önerilir.</p>
     <div class="m-actions"><button class="btn ghost" onclick="closeModal()">Vazgeç</button>
     <button class="btn" onclick="exportStockExcel()">Önce Excel İndir</button>
     <button class="btn red" onclick="resetAllStock()">Sıfırla</button></div>`);
 }
 function resetAllStock(){
   if(user.role!=='admin') return;
-  let n=0;
-  db.stock.forEach(s=>{
-    if((s.qty||0)!==0 || (s.extraCl||0)!==0) n++;
-    s.qty=0;
-    if(s.extraCl) s.extraCl=0;
-  });
-  db.stockLog.push({ts:Date.now(), u:user.name, name:'Tüm stok', delta:null, reason:`Stok sıfırlandı (${n} kalem)`});
-  saveDB(); closeModal(); render(); toast('Stok sıfırlandı','ok');
+  addStockOp({t:'reset'});
+  closeModal(); render(); stockDraftToast('Stok sıfırlandı');
 }
 /* ---------- Excel (.xlsx) dışa aktarma ---------- */
 /* Kasa internetsiz de çalıştığı için CDN'den kütüphane yüklemiyoruz: .xlsx
@@ -609,6 +701,8 @@ function stockReportSheets(){
 function exportStockExcel(){
   if(!db.stock.length){toast('Dışa aktarılacak stok kalemi yok','err');return}
   downloadXlsx(stockReportSheets(), 'walky_stok_durumu_'+iso()+'.xlsx');
+  const n=stockDraft().length;
+  if(n) toast('Excel kaydedilmiş stoğu içerir — kaydedilmemiş '+n+' değişiklik dahil değil','ok');
 }
 /* Genel Stok: ekranda uygulanmış tarih aralığı ve arama ile aynı içerik
    (bkz. stockGenelHTML) — 1. sayfa kalem kalem tüketim, 2. sayfa kategori
