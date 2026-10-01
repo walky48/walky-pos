@@ -12,15 +12,16 @@ function render(){
     // uzak garson (ör. telefonundan sipariş giren personel) fiziksel kasa
     // sayımını yapamaz AMA gün açılmadan sipariş de giremez — aksi halde
     // satışlar hangi iş gününe ait olduğu belirsiz (tarihsiz) kaydedilir.
-    // Sadece kasadaki fiziksel cihaz gün açılışını yapabilir. Bu restoran
-    // "Uzaktan Sipariş Girişi"ni açtıysa (remoteViewOnly()===false) uzaktan
-    // bağlanan yönetici de aynı şekilde gün açılana kadar bekler; sadece
-    // salt-okunur kalan yönetici (remoteViewOnly) geçmiş istatistikleri
-    // görüntülemeye devam edebilsin diye bu ekrana düşmez. muhasebe de hiç
-    // sipariş girmediği (yalnızca İstatistikler/Stok/Cari görüntülediği) için
-    // aynı şekilde muaf — gün kapalıyken de (ör. mesai dışı ay sonu kontrolü)
-    // uzaktan bağlanıp bakabilmeli, kasanın açılmasını beklemesine gerek yok.
-    if(remoteMode && !remoteViewOnly() && user.role!=='muhasebe'){ app.innerHTML=remoteDayClosedHTML(); return; }
+    // Sadece kasadaki fiziksel cihaz gün açılışını yapabilir; uzak garson
+    // gün açılana kadar bekler. Diğer roller (yönetici, muhasebe, depo)
+    // sipariş girmeden de iş yapabildiği için beklemez: Masa Planı ve
+    // Gün Sonu gün açılana kadar menüde görünmez (bkz. layout.js navItems),
+    // geri kalan her bölüm kendi yetkileriyle kullanılabilir. Gider ve cari
+    // tahsilat gibi kayıtlar iş gününe değil kendi tarihine bağlı olduğu
+    // için gün kapalıyken girilmeleri sorun değil.
+    if(remoteMode && user.role==='garson'){ app.innerHTML=remoteDayClosedHTML(); return; }
+    // kasadaki yönetici önce Kasa Açılışı ekranını görür ama oradan
+    // "Kasa Açmadan Devam Et" ile Masa Planı dışında her şeyi kullanabilir
     if((user.role==='garson'||user.role==='admin') && !remoteMode && !(user.role==='admin' && peekMode)){ app.innerHTML=kasaHTML(); return; }
   }
   if(view==='order' && activeTableId){ app.innerHTML=orderHTML(); return; }

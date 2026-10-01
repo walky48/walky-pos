@@ -22,14 +22,21 @@ function navItems(){
 function navTo(v){view=v; sidebarOpen=false; render()}
 function toggleSidebar(open){ sidebarOpen=open; render() }
 function layoutHTML(){
-  const items=navItems().map(([v,lb])=>
+  const nav=navItems();
+  /* açık görünüm menüde artık yoksa (ör. uzaktan bağlıyken kasa gün sonu
+     alıp kapandı, Masa Planı menüden kalktı) İstatistikler'e, o da yoksa
+     ilk menü öğesine geç */
+  if(nav.length && !nav.some(([v])=>v===view)) view=nav.some(([v])=>v==='stats')?'stats':nav[0][0];
+  const items=nav.map(([v,lb])=>
     `<button class="nav-i ${view===v?'on':''}" onclick="navTo('${v}')">${lb}</button>`).join('');
   const gunsonu=((user.role==='garson'||user.role==='admin') && db.day.open && !remoteViewOnly())
     ? `<button class="nav-i" onclick="sidebarOpen=false;openGunSonu()">Gün Sonu</button>` : '';
   const peekBar=(!db.day.open && user.role==='admin')
     ? (remoteMode
-        ? `<div class="peek-bar">Kasa kapalı — sadece görüntüleme. Sipariş/masa işlemleri kasadan (restorandaki cihazdan) yapılmalı.</div>`
-        : `<div class="peek-bar">Kasa kapalı — sadece görüntüleme modundasınız, sipariş/masa işlemi yapılamaz.
+        ? (remoteViewOnly()
+            ? `<div class="peek-bar">Kasa kapalı — sadece görüntüleme. Sipariş/masa işlemleri kasadan (restorandaki cihazdan) yapılmalı.</div>`
+            : `<div class="peek-bar">Kasa kapalı — Masa Planı kasa açılınca kullanılabilir (kasa restorandaki cihazdan açılır). Diğer bölümlerde işlem yapabilirsiniz.</div>`)
+        : `<div class="peek-bar">Kasa kapalı — Masa Planı kasa açılınca kullanılabilir. Diğer bölümlerde işlem yapabilirsiniz.
             <button class="btn sm accent" onclick="peekMode=false;render()">Kasayı Aç</button></div>`)
     : '';
   const roleLbl = remoteMode

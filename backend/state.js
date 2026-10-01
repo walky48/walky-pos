@@ -13,7 +13,7 @@ let statsFrom = iso(), statsTo = iso(), statsCustom = false;
 let zHistoryExpanded = false, floatHistoryExpanded = false; // Z raporu / kasa açılış geçmişi varsayılan son 3 kayıt
 let gidFrom = weekStartISO(), gidTo = iso(), gidCustom = false;
 let sidebarOpen = false;
-let peekMode = false; // admin: kasa açılmadan sadece görüntüleme (istatistik vb.)
+let peekMode = false; // admin: kasa açılmadan devam — Masa Planı/Gün Sonu hariç her bölüm kullanılabilir
 let stockTab = 'durum'; // Stok sayfası sekmesi: durum | genel | giris
 let stockDurumQuery = '';
 let stockGenelFrom = monthStartISO(), stockGenelTo = iso(), stockGenelQuery = '';

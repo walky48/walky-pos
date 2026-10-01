@@ -159,25 +159,26 @@ function syncUnpair(){
    Bahar/Mahmut — veya e-posta ile tanımlı "patron" hesabı) HER RESTORANDA
    uzaktan giriş yapabilir ama salt-okunur kalır (bkz. layout.js navItems,
    tables.js openTableFlow, server.js /api/push 'patron'/'admin' reddi).
-   garson/depo (asıl riskin kaynağı olan sipariş girişini yapan roller) ise
+   garson (asıl riskin kaynağı olan sipariş girişini yapan rol) ise
    ancak İLGİLİ RESTORAN kendi isteğiyle bunu açtıysa uzaktan girebilir —
    bkz. db.settings.remoteOrderingEnabled (Kullanıcılar > Ayarlar). Bu,
    restoran bazında ayarlanabilir: ör. Azumare'de kapalı kalırken yeni/
    düşük yoğunluklu bir restoranda (FreshPress gibi) açılabilir — ama kapatan
    kalıcı mimari sorun düzeltilmedi, sadece riski göze alan restoran için
    bilinçli bir seçime dönüştürüldü.
-   muhasebe ise hiç sipariş girmediği (yalnızca İstatistikler/Stok/Cari
-   Hesaplar görüntülediği, ara sıra stok sayımı girdiği) için bu riskin
-   kaynağı değil — o yüzden remoteOrderingEnabled'a bakılmaksızın yönetici
-   gibi HER RESTORANDA uzaktan giriş yapabilir, ama admin'in aksine ekranda
-   salt-okunura zorlanmaz (kasadaki normal muhasebe yetkileriyle çalışır —
-   server.js zaten muhasebe pushunu hiç kısıtlamıyor, bkz. server.js
-   /api/push). Sadece gün kapalıyken bekletilme kuralından da muaftır
-   (bkz. app.js render() — user.role!=='muhasebe' kontrolü). */
+   muhasebe ve depo ise hiç sipariş girmediği (muhasebe İstatistikler/Stok/
+   Cari Hesaplar görüntüler; depo stok sayımı, mal girişi ve gider girer —
+   seyrek, tek tük yazmalar) için bu riskin kaynağı değil — o yüzden
+   remoteOrderingEnabled'a bakılmaksızın yönetici gibi HER RESTORANDA
+   uzaktan giriş yapabilir, ama admin'in aksine ekranda salt-okunura
+   zorlanmaz (kasadaki normal yetkileriyle çalışır — server.js zaten
+   muhasebe/depo pushunu hiç kısıtlamıyor, bkz. server.js /api/push).
+   Gün kapalıyken bekletilme kuralından da muaftır (bkz. app.js render() —
+   orada sadece garson bekletilir). */
 const REMOTE_VIEWER_ENABLED = true;
-const REMOTE_VIEWER_ROLES = ['patron','admin','muhasebe'];
+const REMOTE_VIEWER_ROLES = ['patron','admin','muhasebe','depo'];
 const REMOTE_DISABLED_MSG = 'Uzaktan erişim şu an kapalı.';
-const REMOTE_VIEWER_ROLE_MSG = 'Uzaktan sipariş girişi bu restoran için açık değil — yönetici hesabıyla salt-okunur görüntüleme yapabilirsiniz, sipariş girmek için Kullanıcılar > Ayarlar\'dan açılması gerekir.';
+const REMOTE_VIEWER_ROLE_MSG = 'Uzaktan sipariş girişi bu restoran için açık değil — garson hesaplarının uzaktan girebilmesi için Kullanıcılar > Ayarlar\'dan açılması gerekir.';
 const REMOTE_KEY = 'walky_remote_v1';
 let remoteMode = false;
 let remoteSession = null; // {url, token, tenantName, user:{name, role, email}}
@@ -208,9 +209,10 @@ async function remoteLogin(){
   saveRemoteSession();
   await remoteFetchAndEnter(false);
 }
-/* yönetici (admin) rolündeki kasa hesapları ve e-posta ile tanımlı patron
-   hesabı her zaman uzaktan salt-okunur girebilir. garson/depo/muhasebe
-   hesapları için ise uzaktan SİPARİŞ GİRİŞİ (yazma) her restoranda ayrı
+/* yönetici (admin) rolündeki kasa hesapları, e-posta ile tanımlı patron
+   hesabı, muhasebe ve depo her zaman uzaktan girebilir (yönetici, restoran
+   "Yönetici Tam Erişimi"ni açmadıysa salt-okunur kalır). garson hesapları
+   için ise uzaktan SİPARİŞ GİRİŞİ (yazma) her restoranda ayrı
    ayarlanabilir — bkz. Kullanıcılar > Ayarlar db.settings.remoteOrderingEnabled.
    Bu ayar tenant'ın kendi durumunda (state) tutulduğu için önce /api/state
    çekilip kontrol edilir; bu yüzden rol kontrolü login anında değil burada
