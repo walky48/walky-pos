@@ -110,8 +110,9 @@ function seedDB(){
     if(BOTTLE_CATS.includes(cat)) alkStock.push({id:nid(),name,cat:'Şaraplar',qty:0,unit:'adet',bottleCl:75,extraCl:0,price:0,low:150,crit:75});
     else if(KADEH_SPIRIT_CATS.includes(cat)) alkStock.push({id:nid(),name,cat:'Ağır Alkoller',qty:0,unit:'adet',bottleCl:70,extraCl:0,price:0,low:140,crit:70});
     else if(cat==='Biralar'){
-      const m=name.match(/(\d+)\s*cl$/i); const bcl=m?+m[1]:33;
-      alkStock.push({id:nid(),name,cat:'Biralar',qty:0,unit:'adet',bottleCl:bcl,extraCl:0,price:0,low:24*bcl,crit:6*bcl});
+      /* biralar şişeli (cl) değil sadece ADET takip edilir — reçetesi "1" = 1 şişe;
+         uyarı eşikleri de adet cinsinden (24 / 6 şişe) */
+      alkStock.push({id:nid(),name,cat:'Biralar',qty:0,unit:'adet',price:0,low:24,crit:6});
     }
   });
 
@@ -181,16 +182,17 @@ function seedDB(){
   alkStock.forEach(s=>{
     const d=ALKOL_SAYIM[s.name];
     if(!d) return;
-    s.qty=d.qty; s.extraCl=d.extraCl; s.price=d.price;
+    s.qty=d.qty; s.price=d.price;
     if(d.bottleCl) s.bottleCl=d.bottleCl;
+    if(s.bottleCl) s.extraCl=d.extraCl; // sadece şişeli takipte açık şişe cl'si var (biralar hariç)
   });
 
   /* fotoğraflarda olup menüde/reçetede hiç karşılığı olmayan (dolayısıyla yukarıdaki
      otomatik türetmede hiç oluşmayan) markalar — kendi yeni stok kalemi olarak eklenir,
      hiçbir reçeteye bağlı değildir, istenirse Menü Yönetimi'nden sonradan bağlanabilir */
   const YENI_ALKOL=[
-    {name:'Strongbow Bira', cat:'Biralar', bottleCl:33, qty:17, extraCl:0, price:199},
-    {name:'Bitburger',      cat:'Biralar', bottleCl:33, qty:23, extraCl:0, price:80},
+    {name:'Strongbow Bira', cat:'Biralar', qty:17, price:199, low:24, crit:6},
+    {name:'Bitburger',      cat:'Biralar', qty:23, price:80,  low:24, crit:6},
 
     {name:'Kastro Tirelli Elaia',   cat:'Şaraplar', bottleCl:75, qty:1,  extraCl:0, price:550},
     {name:'Suvla Clairet',          cat:'Şaraplar', bottleCl:75, qty:1,  extraCl:0, price:950},
@@ -493,6 +495,6 @@ function seedDBBlank(){
     recipeFix1Applied:true, stockDrinksAdded:true, menuVariantsAdded:true, mahmutAdminAdded:true,
     alkolsuzKokteylMovedToSoft:true, sangriaNamesRenamed:true, mojitoSadeAdded:true,
     stockSettingApplied:true, stockBottleTrackApplied:true, stockIcecekKokteylMalzemeApplied:true,
-    stockTemizlikAdded:true, stockSuruplarClFix:true
+    stockTemizlikAdded:true, stockSuruplarClFix:true, stockBiraAdetFix:true
   };
 }

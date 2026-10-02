@@ -196,6 +196,30 @@ if(!db.stockSuruplarClFix){
   if(s) s.bottleCl=75;
   db.stockSuruplarClFix=true;
 }
+/* Biralar şişeli takipte (adet + açık şişe cl'si) tanımlıydı ama reçeteleri "1"
+   (= 1 şişe) yazılmıştı: sistem her bira satışında 1 şişe yerine 1 cl düşüyor
+   (stok sadece 33-50 satışta bir şişe azalıyor) ve Genel Stok'ta biraların
+   tüketim tutarı 33-50 kat eksik çıkıyordu. Biralar sadece ADET takibine geçirilir
+   (bkz. setStockTracking); reçeteler zaten "1 adet" olduğu için dokunulmaz. Sayılan
+   tam şişe adedi aynı kalır; açık şişede görünen cl yok sayılır — bira açık şişe
+   olarak tutulmaz, o cl'ler hep eski 1 cl'lik düşümlerin kırıntısıdır. Sadece
+   Azumare soyundan gelen kurulumlarda çalışır (bkz. yukarıdaki aynı mantık) —
+   tek seferlik. */
+if(!db.stockBiraAdetFix && !db.menu.some(m=>m.name==="Gordon's Day Gin")){
+  db.stockBiraAdetFix=true;
+}
+if(!db.stockBiraAdetFix){
+  const conv=[], dropped=[];
+  db.stock.forEach(s=>{
+    if(s.cat!=='Biralar' || !s.bottleCl || s.unit!=='adet') return;
+    const d=setStockTracking(s, 0);
+    conv.push(s.name);
+    if(d) dropped.push(s.name+' '+fmtQ(d)+' cl');
+  });
+  if(conv.length) db.stockLog.push({ts:Date.now(), u:'Sistem', name:'Biralar', delta:null,
+    reason:'Biralar sadece adet takibine geçirildi ('+conv.length+' kalem)'+(dropped.length?' · yok sayılan açık şişe: '+dropped.join(', '):'')});
+  db.stockBiraAdetFix=true;
+}
 // Dolar fiyatları artık Euro fiyatından ve güncel kurdan otomatik hesaplanıyor — mevcut menüye bir kerelik uygulanır
 if(!db.usdFromEurApplied){
   recalcMenuUsdPrices();

@@ -60,6 +60,39 @@ function stockUnit(sid){const s=db.stock.find(x=>x.id===sid);return s?s.unit:''}
    için stoğun kendi birimi 'adet' olsa da reçete her zaman cl üzerinden girilir
    (bir kokteyle "0,07 şişe" değil "5 cl" yazılır). bkz. ui/js/menu.js reçete satırları */
 function recipeUnit(sid){ const s=db.stock.find(x=>x.id===sid); if(!s) return ''; return s.bottleCl ? 'cl' : s.unit; }
+/* Stok kaleminin takip şeklini değiştirir (bkz. Stok > Düzenle > Şişeli takip).
+   bottleCl>0: şişeli takip (adet + açık şişede kalan cl); bottleCl yok/0: sadece
+   adet. Tam şişe/adet sayısı (qty) ve fiyat (şişe başı = adet başı) aynı kalır;
+   cl cinsinden tutulan uyarı eşikleri (low/crit) şişe boyuyla çevrilir ki "kaç
+   şişe" anlamı korunsun. Şişeliden adede geçerken açık şişedeki cl (extraCl) yok
+   sayılır ve yok sayılan cl döndürülür; adetten şişeliye geçerken açık cl
+   extraCl ile başlar. Takip şekli zaten istenen gibiyse hiçbir şey yapmaz.
+   Reçetelere DOKUNMAZ: reçete miktarı kalemin takip şekline göre cl ya da adet
+   olarak okunur (bkz. recipeUnit) — bir bira reçetesindeki "1" şişeliyken 1 cl,
+   sadece adetken 1 adet demektir. */
+function setStockTracking(s, bottleCl, extraCl){
+  const was=s.bottleCl||0, now=bottleCl>0?+bottleCl:0;
+  const scale=(k,f)=>{ if(typeof s[k]==='number') s[k]=+(s[k]*f).toFixed(3); };
+  let droppedCl=0;
+  if(was && !now){
+    droppedCl=s.extraCl||0;
+    scale('low',1/was); scale('crit',1/was);
+    delete s.bottleCl; delete s.extraCl;
+  }else if(!was && now){
+    s.bottleCl=now; s.extraCl=extraCl||0;
+    scale('low',now); scale('crit',now);
+  }
+  return droppedCl;
+}
+/* bir stok kalemini kullanan menü reçete satırları (ürün reçetesi + seçenek ekleri) */
+function stockRecipeUses(sid){
+  const out=[];
+  (db.menu||[]).forEach(m=>{
+    (m.recipe||[]).forEach(r=>{ if(r.s===sid) out.push({menu:m.name, q:r.q}); });
+    (m.variants||[]).forEach(v=>(v.extra||[]).forEach(r=>{ if(r.s===sid) out.push({menu:m.name+' ('+v.label+')', q:r.q}); }));
+  });
+  return out;
+}
 
 /* --- Genel Stok: tüketim raporu --- */
 /* Ayrı bir "tüketim logu" tutmuyoruz — sipariş ekranındaki her +1/-1 düzeltmeyi
