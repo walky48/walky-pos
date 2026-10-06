@@ -17,6 +17,8 @@ let peekMode = false; // admin: kasa açılmadan devam — Masa Planı/Gün Sonu
 let stockTab = 'durum'; // Stok sayfası sekmesi: durum | genel | giris
 let stockDurumQuery = '';
 let stockGenelFrom = monthStartISO(), stockGenelTo = iso(), stockGenelQuery = '';
+let menuQuery = '';
+let menuCollapsedCats = new Set(); // Menü Yönetimi'nde daraltılmış kategori adları
 let stockCollapsedCats = new Set(); // Stok Durumu/Genel Stok'ta daraltılmış kategori adları — aranan kategoriyi manuel bulmayı kolaylaştırır
 
 function getTable(id){return db.tables.find(t=>t.id===id)}

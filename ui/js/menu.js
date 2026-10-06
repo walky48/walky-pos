@@ -1,19 +1,38 @@
 'use strict';
 
-function viewMenu(){
+/* Menü Yönetimi: ürün arama (yazdıkça, odak kaybetmeden sadece liste yenilenir)
+   ve kategori başlıklarında daralt/genişlet oku */
+function toggleMenuCat(cat){
+  if(menuCollapsedCats.has(cat)) menuCollapsedCats.delete(cat); else menuCollapsedCats.add(cat);
+  render();
+}
+function renderMenuBody(){
+  const el=$('#menuBody'); if(el) el.innerHTML=menuSectionsHTML();
+}
+function menuSectionsHTML(){
+  const q=(menuQuery||'').toLowerCase();
   const cats=menuCats();
   const sections=cats.map(cat=>{
-    const rows=db.menu.filter(m=>m.cat===cat).map(m=>`<tr>
+    const items=db.menu.filter(m=>m.cat===cat && (!q || m.name.toLowerCase().includes(q)));
+    if(!items.length) return '';
+    const collapsed=menuCollapsedCats.has(cat);
+    const rows=items.map(m=>`<tr>
       <td style="width:30%"><b>${esc(m.name)}</b>${(db.settings.stockEnabled && rcpSummary(m))?`<div class="muted tiny">${rcpSummary(m)}</div>`:''}</td>
       <td data-lbl="TL (₺)"><input class="inp" style="max-width:150px" value="${String(m.price.TL).replace('.',',')}" onchange="setPrice('${m.id}','TL',this.value)"></td>
       <td data-lbl="Dolar ($, otomatik)"><input class="inp" style="max-width:150px" value="${String(m.price.USD).replace('.',',')}" disabled title="Euro fiyatından ve güncel kurdan otomatik hesaplanır"></td>
       <td data-lbl="Euro (€)"><input class="inp" style="max-width:150px" value="${String(m.price.EUR).replace('.',',')}" onchange="setPrice('${m.id}','EUR',this.value)"></td>
       <td class="right tdact" style="white-space:nowrap"><button class="rowbtn" onclick="prodModal('${m.id}')">Düzenle</button>&nbsp;<button class="btn sm red" onclick="askDelProduct('${m.id}')">Sil</button></td>
     </tr>`).join('');
-    return `<div class="sect"><div class="st">${esc(cat)}</div>
-      <table class="dt"><thead><tr><th>Ürün</th><th>TL (₺)</th><th>Dolar ($)</th><th>Euro (€)</th><th></th></tr></thead>
-      <tbody>${rows}</tbody></table></div>`;
+    return `<div class="sect"><div class="st" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:9px">
+        <span>${esc(cat)}</span>
+        <span class="icon-b" style="cursor:pointer;font-size:12px" title="${collapsed?'Genişlet':'Daralt'}" onclick="toggleMenuCat(decodeURIComponent('${encodeURIComponent(cat).replace(/'/g,'%27')}'))">${collapsed?'▸':'▾'}</span>
+      </div>
+      ${collapsed?'':`<table class="dt"><thead><tr><th>Ürün</th><th>TL (₺)</th><th>Dolar ($)</th><th>Euro (€)</th><th></th></tr></thead>
+      <tbody>${rows}</tbody></table>`}</div>`;
   }).join('');
+  return sections || (q?'<div class="muted small mt12">Aramanızla eşleşen ürün bulunamadı.</div>':'');
+}
+function viewMenu(){
   return `<div class="page-head">
       <div><h1>Menü Yönetimi</h1></div>
       <div class="head-tools">
@@ -31,7 +50,8 @@ function viewMenu(){
         ${db.rates.updatedAt?`<span class="muted small">Son güncelleme: ${trDT(db.rates.updatedAt)}</span>`:''}
       </div>
     </div>
-    ${sections}`;
+    <input id="mnQ" class="inp mb16" style="max-width:320px" placeholder="Ürün ara…" value="${esc(menuQuery)}" oninput="menuQuery=this.value;renderMenuBody()">
+    <div id="menuBody">${menuSectionsHTML()}</div>`;
 }
 function setPrice(mid,cur,val){
   const m=db.menu.find(x=>x.id===mid); const v=num(val);
