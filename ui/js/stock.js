@@ -244,19 +244,20 @@ function applyStockOps(stock, ops, log, batchId){
     }
     const s=stock.find(x=>x.id===op.sid); if(!s) return;
     if(op.t==='set'){
-      const before=stockTotalCl(s), oldName=s.name, wasBottle=!!s.bottleCl;
+      const before=stockTotalCl(s), oldName=s.name, wasBottle=!!s.bottleCl, oldBcl=s.bottleCl||0;
       let dropped=0;
-      /* takip şekli değişimi (bkz. setStockTracking) — sadece adet birimli kalemlerde */
+      /* takip şekli ya da şişe boyutu değişimi (bkz. setStockTracking) — sadece adet birimli kalemlerde */
       if(s.unit==='adet'){
         if(op.trk==='adet' && wasBottle) dropped=setStockTracking(s, 0);
-        else if(op.trk==='bottle' && !wasBottle && op.bcl>0) setStockTracking(s, op.bcl, op.cl);
+        else if(op.bcl>0 && (op.trk==='bottle' || wasBottle)) setStockTracking(s, op.bcl, op.cl);
       }
       s.name=op.name; s.qty=op.qty; s.price=op.price; if(s.bottleCl) s.extraCl=op.cl||0;
-      const modeChanged=wasBottle!==!!s.bottleCl;
-      /* takip şekli değişince cl ile adet karşılaştırılamaz — fark yazılmaz */
-      L({name:s.name, delta:modeChanged?null:+(stockTotalCl(s)-before).toFixed(3),
+      const modeChanged=wasBottle!==!!s.bottleCl, sizeChanged=wasBottle && !!s.bottleCl && oldBcl!==s.bottleCl;
+      /* takip şekli ya da şişe boyutu değişince eski ve yeni cl (ya da adet) karşılaştırılamaz — fark yazılmaz */
+      L({name:s.name, delta:(modeChanged||sizeChanged)?null:+(stockTotalCl(s)-before).toFixed(3),
          reason:(s.bottleCl?'Düzeltme (cl)':'Düzeltme')
            +(modeChanged?' · takip: '+(s.bottleCl?'adet + cl':'sadece adet')+(dropped?` (açık şişe ${fmtQ(dropped)} cl yok sayıldı)`:''):'')
+           +(sizeChanged?` · şişe boyutu: ${fmtQ(oldBcl)} → ${fmtQ(s.bottleCl)} cl (toplam ${fmtQ(before)} → ${fmtQ(stockTotalCl(s))} cl)`:'')
            +stockRenameNote(oldName,s)});
     }else if(op.t==='add'){
       if(s.bottleCl){ s.qty=+((s.qty||0)+op.v).toFixed(0); L({name:s.name, delta:op.v*s.bottleCl, reason:'Sayım (+'+fmtQ(op.v)+' şişe)'}); }
@@ -579,18 +580,20 @@ function applyStockAddBottle(sid){
 }
 /* Düzenle penceresi: adet birimli kalemlerde "Şişeli takip" kutusuyla açık
    şişede kalan cl takibi eklenip kaldırılabilir (bkz. setStockTracking) —
-   ör. biralar sadece adet olarak düşmeli, alkoller adet + cl. Değişiklik diğer
-   düzeltmeler gibi taslağa girer, Stoğu Kaydet ile kaydedilir. */
-let stockEditSid=null, stockEditWasBottle=false;
+   ör. biralar sadece adet olarak düşmeli, alkoller adet + cl. Şişeli kalemin
+   şişe boyutu (cl) da düzeltilebilir: tam şişe sayısı ve açık şişedeki cl aynı
+   kalır, toplam cl yeni boyuta göre değişir. Değişiklik diğer düzeltmeler gibi
+   taslağa girer, Stoğu Kaydet ile kaydedilir. */
+let stockEditSid=null;
 function openStockEdit(sid){
   const s=stockView().find(x=>x.id===sid); if(!s) return;
-  stockEditSid=sid; stockEditWasBottle=!!s.bottleCl;
+  stockEditSid=sid;
   const track = s.unit==='adet' ? `<label class="fl" style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:12px">
-      <input type="checkbox" id="stBottle" ${s.bottleCl?'checked':''} onchange="stEditToggleBottle()"> Şişeli takip (adet + açık şişede kalan cl, alkoller için)
+      <input type="checkbox" id="stBottle" ${s.bottleCl?'checked':''} onchange="stEditRefresh()"> Şişeli takip (adet + açık şişede kalan cl, alkoller için)
     </label>
     <div id="stBclWrap">
       <label class="fl">Şişe Boyutu (cl)</label>
-      <input id="stBcl" class="inp" inputmode="decimal" value="${s.bottleCl||''}" ${s.bottleCl?'readonly':'placeholder="ör. 70"'}>
+      <input id="stBcl" class="inp" inputmode="decimal" value="${s.bottleCl||''}" ${s.bottleCl?'':'placeholder="ör. 70"'} oninput="stEditRefresh()">
     </div>` : '';
   showModal(`<div class="m-head"><h3>Stok Düzenle — ${esc(s.name)}</h3><button class="icon-b" onclick="closeModal()">✕</button></div>
     <label class="fl">Ürün Adı</label>
@@ -598,31 +601,46 @@ function openStockEdit(sid){
     ${track}
     <p id="stInfo" class="muted tiny mt8"></p>
     <label class="fl" id="stQtyLbl"></label>
-    <input id="stQty" class="inp" inputmode="decimal" value="${s.qty}">
+    <input id="stQty" class="inp" inputmode="decimal" value="${s.qty}" oninput="stEditRefresh()">
     <div id="stClWrap">
       <label class="fl">Açık Şişede Kalan (cl)</label>
-      <input id="stCl" class="inp" inputmode="decimal" value="${s.extraCl||0}">
+      <input id="stCl" class="inp" inputmode="decimal" value="${s.extraCl||0}" oninput="stEditRefresh()">
     </div>
     <label class="fl" id="stPriceLbl"></label>
     <input id="stPrice" class="inp" inputmode="decimal" value="${s.price||0}">
     <div id="stNote" class="muted small mt12"></div>
     <div class="m-actions"><button class="btn ghost" onclick="closeModal()">Vazgeç</button>
     <button class="btn accent" onclick="applyStockEdit('${sid}')">Kaydet</button></div>`);
-  stEditToggleBottle();
+  stEditRefresh();
 }
-/* kutunun durumuna göre alanları, etiketleri ve uyarıları günceller */
-function stEditToggleBottle(){
+/* kutunun durumuna ve yazılan değerlere göre alanları, etiketleri, toplam cl'yi
+   ve uyarıları günceller (kutu ve alanlar değişince çağrılır) */
+function stEditRefresh(){
   const s=stockView().find(x=>x.id===stockEditSid); if(!s) return;
   const cb=$('#stBottle'), on=cb?cb.checked:false;
   const show=(id,v)=>{const el=$('#'+id); if(el) el.style.display=v?'block':'none'};
   show('stBclWrap', on); show('stClWrap', on);
   $('#stQtyLbl').textContent = on ? 'Tam Şişe (adet)' : `Stok Miktarı (${s.unit})`;
   $('#stPriceLbl').textContent = on ? 'Birim Fiyatı (₺, şişe başı)' : 'Birim Fiyatı (₺)';
-  $('#stInfo').textContent = (on && stockEditWasBottle) ? `Şişe boyutu: ${fmtQ(s.bottleCl)} cl. Şu an: ${fmtQ(stockTotalCl(s))} cl toplam.` : '';
+  let info='';
+  if(on){
+    const bcl=num($('#stBcl').value), qty=num($('#stQty').value), cl=num($('#stCl').value);
+    if(bcl>0){
+      info=`Toplam: ${fmtQ(qty*bcl+cl)} cl (${fmtQ(qty)} × ${fmtQ(bcl)} + ${fmtQ(cl)})`;
+      if(cl>=bcl) info+=' — açık şişedeki cl, şişe boyutundan küçük olmalı';
+    }
+  }
+  $('#stInfo').textContent=info;
   $('#stNote').innerHTML = stockEditNoteHTML(s, on);
 }
 function stockEditNoteHTML(s, on){
   const was=!!s.bottleCl;
+  if(on && was){
+    const nb=num($('#stBcl').value);
+    return nb>0 && nb!==s.bottleCl
+      ? `Şişe boyutu <b>${fmtQ(s.bottleCl)} → ${fmtQ(nb)} cl</b> olarak değişecek. Tam şişe ve açık şişedeki cl aynı kalır, toplam cl yeni boyuta göre hesaplanır. Reçete miktarları (cl) değişmez. Fiyat şişe başıdır; boyutla birlikte değişmesi gerekiyorsa aşağıdan güncelleyin.`
+      : '';
+  }
   if(on===was) return '';
   const parts=[];
   if(was && (s.extraCl||0)>0) parts.push(`Açık şişedeki <b>${fmtQ(s.extraCl)} cl</b> yok sayılacak; tam şişe sayısı aynı kalır (aşağıdan değiştirebilirsiniz).`);
@@ -652,14 +670,16 @@ function applyStockEdit(sid){
   const qty=num($('#stQty').value), price=num($('#stPrice').value);
   const cl=on?num($('#stCl').value):0;
   let bcl=0;
-  if(on && !was){
+  if(on){
     bcl=num($('#stBcl').value);
     if(bcl<=0){toast('Geçerli bir şişe boyutu (cl) girin','err');return}
   }
   if(on && (qty<0||cl<0)){toast('Geçerli miktarlar girin','err');return}
+  if(on && cl>=bcl){toast(`Açık şişede kalan cl, şişe boyutundan (${fmtQ(bcl)} cl) küçük olmalı`,'err');return}
   if(price<0){toast('Geçerli bir fiyat girin','err');return}
   const op={t:'set', sid, name, qty, price, cl};
-  if(on!==was){ op.trk=on?'bottle':'adet'; if(on) op.bcl=bcl; }
+  if(on!==was) op.trk=on?'bottle':'adet';
+  if(on && bcl!==(s.bottleCl||0)) op.bcl=bcl; // yeni takipte şişe boyutu, şişeli kalemde boyut düzeltmesi
   addStockOp(op);
   closeModal(); render(); stockDraftToast(name+' güncellendi');
 }

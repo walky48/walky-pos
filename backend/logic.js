@@ -66,7 +66,11 @@ function recipeUnit(sid){ const s=db.stock.find(x=>x.id===sid); if(!s) return ''
    cl cinsinden tutulan uyarı eşikleri (low/crit) şişe boyuyla çevrilir ki "kaç
    şişe" anlamı korunsun. Şişeliden adede geçerken açık şişedeki cl (extraCl) yok
    sayılır ve yok sayılan cl döndürülür; adetten şişeliye geçerken açık cl
-   extraCl ile başlar. Takip şekli zaten istenen gibiyse hiçbir şey yapmaz.
+   extraCl ile başlar. Zaten şişeli olan kalemde farklı bir şişe boyutu verilirse
+   (yanlış girilmiş boyutu düzeltmek için) yalnızca boyut değişir: tam şişe sayısı,
+   açık şişedeki cl (extraCl) ve fiyat (şişe başı) aynı kalır, toplam cl yeni boyuta
+   göre hesaplanır; low/crit yine "kaç şişe" korunacak şekilde ölçeklenir. Takip
+   şekli ve boyut zaten istenen gibiyse hiçbir şey yapmaz.
    Reçetelere DOKUNMAZ: reçete miktarı kalemin takip şekline göre cl ya da adet
    olarak okunur (bkz. recipeUnit) — bir bira reçetesindeki "1" şişeliyken 1 cl,
    sadece adetken 1 adet demektir. */
@@ -81,6 +85,9 @@ function setStockTracking(s, bottleCl, extraCl){
   }else if(!was && now){
     s.bottleCl=now; s.extraCl=extraCl||0;
     scale('low',now); scale('crit',now);
+  }else if(was && now && was!==now){
+    s.bottleCl=now;
+    scale('low',now/was); scale('crit',now/was);
   }
   return droppedCl;
 }
