@@ -227,40 +227,6 @@ if(!db.stockBiraAdetFix){
     reason:'Biralar sadece adet takibine geçirildi ('+conv.length+' kalem)'+(dropped.length?' · yok sayılan açık şişe: '+dropped.join(', '):'')});
   db.stockBiraAdetFix=true;
 }
-/* Ağır Alkoller / Şaraplar / Biralar kategorilerindeki geliş fiyatları (Bitburger
-   hariç) 1,20'ye bölünür — sahibinin isteğiyle (06.10.2026). Yeni fiyat kuruşa
-   yuvarlanır (yarım kuruş yukarı), kayan nokta hatası olmasın diye tam sayı
-   (kuruş) aritmetiğiyle: yeniKuruş = floor((5*eskiKuruş+3)/6). Fiyatı 0 olanlar
-   değişmez. Geri alınabilsin diye: (1) değişiklikten hemen önce mevcut stok
-   "Fiyat güncellemesi öncesi" adıyla otomatik bir kayıt olarak saklanır (bkz.
-   makeStockSnapshot, Stok Durumu > Dönem); (2) stok hareketine kalem başına
-   [id, eski, yeni] listesi (prices) yazılır. Eski aylık sayım kayıtlarına
-   dokunulmaz. Sadece Azumare soyunda, tek seferlik (bkz. yukarıdaki aynı mantık). */
-if(!db.stockGelisBol120 && !db.menu.some(m=>m.name==="Gordon's Day Gin")){
-  db.stockGelisBol120=true;
-}
-/* BEKLEMEDE (06.10.2026): bölme, kasa sayfası yenilenir yenilenmez çalışacak şekilde
-   yayına alındıktan sonra bazı geliş fiyatlarının elle değiştirildiği görüldü (ör.
-   Campari 3.240 → 2.700, yani zaten bölünmüş değer); çalışsaydı ikinci kez bölünürdü.
-   Sahibine sorulana kadar çalıştırılmaz ve bayrak (stockGelisBol120) KONMAZ; yeniden
-   açmak için false yapmak yeterli. */
-const GELIS_BOL_120_BEKLEMEDE=true;
-if(!GELIS_BOL_120_BEKLEMEDE && !db.stockGelisBol120){
-  const CATS=['Ağır Alkoller','Şaraplar','Biralar'];
-  const plan=db.stock
-    .filter(s=>CATS.includes(s.cat) && s.name!=='Bitburger')
-    .map(s=>{ const old=s.price||0; return {s, old, nu:Math.floor((5*Math.round(old*100)+3)/6)/100}; })
-    .filter(p=>p.nu!==p.old);
-  if(plan.length){
-    const today=iso();
-    db.stockSnapshots.push(makeStockSnapshot(today, 'Sistem', {label:'Fiyat güncellemesi öncesi ('+trDate(today)+')', auto:true}));
-    plan.forEach(p=>{ p.s.price=p.nu; });
-    db.stockLog.push({ts:Date.now(), u:'Sistem', name:'Geliş fiyatları', delta:null,
-      reason:"Geliş fiyatları 1,20'ye bölündü ("+plan.length+' kalem: Ağır Alkoller, Şaraplar, Biralar; Bitburger hariç)',
-      prices:plan.map(p=>[p.s.id, p.old, p.nu])});
-  }
-  db.stockGelisBol120=true;
-}
 // Dolar fiyatları artık Euro fiyatından ve güncel kurdan otomatik hesaplanıyor — mevcut menüye bir kerelik uygulanır
 if(!db.usdFromEurApplied){
   recalcMenuUsdPrices();
