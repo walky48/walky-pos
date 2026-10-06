@@ -495,6 +495,7 @@ function seedDBBlank(){
     recipeFix1Applied:true, stockDrinksAdded:true, menuVariantsAdded:true, mahmutAdminAdded:true,
     alkolsuzKokteylMovedToSoft:true, sangriaNamesRenamed:true, mojitoSadeAdded:true,
     stockSettingApplied:true, stockBottleTrackApplied:true, stockIcecekKokteylMalzemeApplied:true,
-    stockTemizlikAdded:true, stockSuruplarClFix:true, stockBiraAdetFix:true
+    stockTemizlikAdded:true, stockSuruplarClFix:true, stockBiraAdetFix:true,
+    stockGelisBol120:true
   };
 }

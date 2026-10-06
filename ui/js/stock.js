@@ -79,6 +79,10 @@ function setStockTab(t){ stockTab=t; render(); }
    alınır. Güncel Stok (db.stock) çalışan listedir, kayıtlı aylar salt okunur. */
 const TR_MONTHS=['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
 function periodLabel(p){const a=String(p).split('-');return (TR_MONTHS[(+a[1])-1]||a[1])+' '+a[0]}
+/* kaydın görünen adı: aylık sayımlarda "Eylül 2026 sayımı"; sistemin otomatik aldığı
+   kayıtlarda (ör. toplu fiyat güncellemesi öncesi) kendi label'ı */
+function snapShort(s){return s.label || periodLabel(s.period)}
+function snapLabel(s){return s.label || (periodLabel(s.period)+' sayımı')}
 function stockSnapshots(){
   return (db.stockSnapshots||[]).slice().sort((a,b)=>a.period<b.period?1:a.period>b.period?-1:(b.savedAt||0)-(a.savedAt||0));
 }
@@ -93,8 +97,8 @@ function snapshotTotal(snap){ return snap.items.reduce((a,i)=>a+stockLineValue(i
 function snapshotSavedText(snap){ return trDate(iso(new Date(snap.savedAt)))+' '+trTime(snap.savedAt); }
 function snapshotBannerHTML(snap){
   return `<div class="panel mb16">
-    <div><b>${esc(periodLabel(snap.period))} sayımı</b> <span class="muted small">· ${snap.items.length} kalem · ${fmt(snapshotTotal(snap))}</span></div>
-    <div class="muted small mt8">${esc(snapshotSavedText(snap))} tarihinde ${esc(snap.savedBy||'')} tarafından kaydedildi. Bu liste kaydedildiği andaki miktar ve fiyatları gösterir; sonradan yapılan stok veya fiyat değişiklikleri bu listeyi etkilemez.</div>
+    <div><b>${esc(snapLabel(snap))}</b> <span class="muted small">· ${snap.items.length} kalem · ${fmt(snapshotTotal(snap))}</span></div>
+    <div class="muted small mt8">${esc(snapshotSavedText(snap))} tarihinde ${esc(snap.savedBy||'')} tarafından kaydedildi${snap.auto?' (otomatik)':''}. Bu liste kaydedildiği andaki miktar ve fiyatları gösterir; sonradan yapılan stok veya fiyat değişiklikleri bu listeyi etkilemez.${snap.auto?' Toplu fiyat güncellemesinden hemen önce alındı; eski fiyatlar burada durur.':''}</div>
   </div>`;
 }
 function stockQtyHTML(s){
@@ -108,7 +112,7 @@ function stockDurumHTML(){
   const snap = currentSnapshot();
   const periodSel = `<div class="fld"><span>Dönem</span><select id="sdPeriod" class="inp" style="min-width:200px" onchange="setStockPeriod(this.value)">
       <option value="live" ${snap?'':'selected'}>Güncel Stok</option>
-      ${stockSnapshots().map(x=>`<option value="${x.id}" ${snap&&snap.id===x.id?'selected':''}>${esc(periodLabel(x.period))} sayımı</option>`).join('')}
+      ${stockSnapshots().map(x=>`<option value="${x.id}" ${snap&&snap.id===x.id?'selected':''}>${esc(snapLabel(x))}</option>`).join('')}
     </select></div>`;
   const tools = snap
     ? `<button class="btn sm" onclick="exportStockExcel()">Excel İndir</button>
@@ -119,7 +123,7 @@ function stockDurumHTML(){
        <button class="btn sm" onclick="openNewStockCatModal()">+ Yeni Kategori</button>
        <button class="btn accent sm" onclick="openNewStockModal()">+ Yeni Stok Kalemi</button>`:''}`;
   return `<div class="page-head">
-      <div><h1>Stok Durumu</h1>${snap?`<div class="sub">${esc(periodLabel(snap.period))} sayımı — kayıtlı liste, değişmez</div>`:''}</div>
+      <div><h1>Stok Durumu</h1>${snap?`<div class="sub">${esc(snapLabel(snap))} — kayıtlı liste, değişmez</div>`:''}</div>
       <div class="head-tools">${tools}</div></div>
     <div class="range-bar mb16">${periodSel}
       <input id="sdQ" class="inp" style="flex:1;min-width:160px;max-width:320px" placeholder="Ürün ara…" value="${esc(stockDurumQuery)}" oninput="stockDurumQuery=this.value;renderStockDurumBody()">
@@ -700,14 +704,15 @@ function scCheckExisting(){
   if(user.role==='admin'){ warn.innerHTML=`<span class="amber"><b>${info}</b> Kaydederseniz eskisinin yerine geçer.</span>`; btn.textContent='Eskisinin Yerine Kaydet'; btn.disabled=false; }
   else{ warn.innerHTML=`<span class="amber"><b>${info}</b> Değiştirmek için yönetici hesabı gerekir.</span>`; btn.disabled=true; }
 }
-function buildStockSnapshot(period){
+function buildStockSnapshot(period){ return makeStockSnapshot(period, user.name); }
+function makeStockSnapshot(period, by, extra){
   const items=[];
   stockCatList().forEach(cat=>db.stock.filter(s=>s.cat===cat).forEach(s=>{
     const o={id:s.id, name:s.name, cat:s.cat, unit:s.unit, qty:s.qty||0, price:s.price||0};
     if(s.bottleCl){ o.bottleCl=s.bottleCl; o.extraCl=s.extraCl||0; }
     items.push(o);
   }));
-  return {id:uid(), period, savedAt:Date.now(), savedBy:user.name, items};
+  return Object.assign({id:uid(), period, savedAt:Date.now(), savedBy:by, items}, extra||{});
 }
 /* commitBatch'e verilen işlem (bkz. backend/sync.js): kaydı ekler (aynı dönemin
    eskisinin yerine), stok hareketlerine toplu kayıt kimlikli satır düşer.
@@ -743,7 +748,7 @@ function askDelStockCount(id){
   if(user.role!=='admin') return;
   const s=(db.stockSnapshots||[]).find(x=>x.id===id); if(!s) return;
   showModal(`<div class="m-head"><h3>Sayımı Sil</h3><button class="icon-b" onclick="closeModal()">✕</button></div>
-    <p><b>${esc(periodLabel(s.period))}</b> sayımı (${s.items.length} kalem, ${fmt(snapshotTotal(s))}) kalıcı olarak silinecek. Güncel stok etkilenmez. Silmeden önce Excel çıktısını almanız önerilir.</p>
+    <p><b>${esc(snapLabel(s))}</b> (${s.items.length} kalem, ${fmt(snapshotTotal(s))}) kalıcı olarak silinecek. Güncel stok etkilenmez. Silmeden önce Excel çıktısını almanız önerilir.</p>
     <div class="m-actions"><button class="btn ghost" onclick="closeModal()">Vazgeç</button>
     <button class="btn" onclick="exportStockExcel()">Önce Excel İndir</button>
     <button class="btn red" onclick="delStockCount('${id}')">Evet, Sil</button></div>`);
@@ -751,13 +756,13 @@ function askDelStockCount(id){
 async function delStockCount(id){
   if(user.role!=='admin') return;
   const s=(db.stockSnapshots||[]).find(x=>x.id===id); if(!s) return;
-  const label=periodLabel(s.period), n=s.items.length;
+  const label=snapShort(s), n=s.items.length;
   const ok=await commitBatch((st,b)=>{
     st.stockSnapshots=(st.stockSnapshots||[]).filter(x=>x.id!==id);
     if(!st.stockLog) st.stockLog=[];
     if(!st.stockLog.some(l=>l.b===b)) st.stockLog.push({ts:Date.now(), u:user.name, name:'Aylık sayım', delta:null, reason:'Sayım silindi: '+label+' ('+n+' kalem)', b});
   }, uid());
-  if(ok){ if(stockPeriod===id) stockPeriod='live'; closeModal(); render(); toast(label+' sayımı silindi','ok'); }
+  if(ok){ if(stockPeriod===id) stockPeriod='live'; closeModal(); render(); toast(snapLabel(s)+' silindi','ok'); }
 }
 /* ---------- Stoğu Sıfırla ---------- */
 /* ay başı sayımına temiz başlamak için: tüm kalemlerin miktarını (adet ve
@@ -919,8 +924,8 @@ function exportStockExcel(mode){
   /* kayıtlı bir aylık sayım seçiliyse onu indirir; 'live' verilirse her zaman güncel stoğu */
   const snap = mode==='live' ? null : currentSnapshot();
   if(snap){
-    const label=periodLabel(snap.period);
-    downloadXlsx(stockReportSheets(snap.items, {label, sub:`Sayım dönemi: ${label} · Kaydedilme: ${snapshotSavedText(snap)} · Kaydeden: ${snap.savedBy||''}`}),
+    const label=snapShort(snap);
+    downloadXlsx(stockReportSheets(snap.items, {label, sub:`${snap.label?'Kayıt':'Sayım dönemi'}: ${label} · Kaydedilme: ${snapshotSavedText(snap)} · Kaydeden: ${snap.savedBy||''}`}),
       'walky_stok_sayimi_'+snap.period+'.xlsx');
     return;
   }
