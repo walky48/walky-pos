@@ -16,6 +16,7 @@ let sidebarOpen = false;
 let peekMode = false; // admin: kasa açılmadan devam — Masa Planı/Gün Sonu hariç her bölüm kullanılabilir
 let stockTab = 'durum'; // Stok sayfası sekmesi: durum | genel | giris
 let stockDurumQuery = '';
+let stockPeriod = 'live'; // Stok Durumu dönemi: 'live' (güncel stok) | kaydedilmiş aylık sayımın id'si
 let stockGenelFrom = monthStartISO(), stockGenelTo = iso(), stockGenelQuery = '';
 let menuQuery = '';
 let menuCollapsedCats = new Set(); // Menü Yönetimi'nde daraltılmış kategori adları
