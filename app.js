@@ -25,7 +25,13 @@ function render(){
     if((user.role==='garson'||user.role==='admin') && !remoteMode && !(user.role==='admin' && peekMode)){ app.innerHTML=kasaHTML(); return; }
   }
   if(view==='order' && activeTableId){ app.innerHTML=orderHTML(); return; }
+  /* tam yeniden çizim sayfanın kaydırma konumunu sıfırlardı (ör. Menü'de bir
+     fiyat güncellenince en üste atıyordu) — aynı ekranda kalındıysa konum korunur */
+  const prev=app.querySelector('.main');
+  const keep=(prev && prev.dataset.view===view)?prev.scrollTop:0;
   app.innerHTML=layoutHTML();
+  const main=app.querySelector('.main');
+  if(main){ main.dataset.view=view; if(keep) main.scrollTop=keep; }
 }
 
 /* ---------- başlatma ---------- */
