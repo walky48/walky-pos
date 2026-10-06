@@ -239,7 +239,13 @@ if(!db.stockBiraAdetFix){
 if(!db.stockGelisBol120 && !db.menu.some(m=>m.name==="Gordon's Day Gin")){
   db.stockGelisBol120=true;
 }
-if(!db.stockGelisBol120){
+/* BEKLEMEDE (06.10.2026): bölme, kasa sayfası yenilenir yenilenmez çalışacak şekilde
+   yayına alındıktan sonra bazı geliş fiyatlarının elle değiştirildiği görüldü (ör.
+   Campari 3.240 → 2.700, yani zaten bölünmüş değer); çalışsaydı ikinci kez bölünürdü.
+   Sahibine sorulana kadar çalıştırılmaz ve bayrak (stockGelisBol120) KONMAZ; yeniden
+   açmak için false yapmak yeterli. */
+const GELIS_BOL_120_BEKLEMEDE=true;
+if(!GELIS_BOL_120_BEKLEMEDE && !db.stockGelisBol120){
   const CATS=['Ağır Alkoller','Şaraplar','Biralar'];
   const plan=db.stock
     .filter(s=>CATS.includes(s.cat) && s.name!=='Bitburger')
