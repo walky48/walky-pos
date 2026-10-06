@@ -315,7 +315,7 @@ function stockMalGirisiHTML(){
       ${canEdit?`<td class="right tdact"><button class="btn sm red" onclick="askDelGoodsReceipt('${g.id}')">Sil</button></td>`:''}
     </tr>`).join('');
   return `<div class="page-head"><div><h1>Mal Girişi</h1><div class="sub">Her mal geldiğinde firma/tarih/miktar/geliş fiyatı buradan kaydedilir</div></div>
-      ${list.length?`<div class="head-tools"><button class="btn sm" onclick="exportMalGirisiExcel()">Excel İndir</button></div>`:''}</div>
+      <div class="head-tools"><button class="btn sm" onclick="exportMalGirisiExcel()">Excel İndir</button></div></div>
     <div class="panel mb16">
       <div class="st" style="margin-bottom:12px">YENİ MAL GİRİŞİ</div>
       <div class="range-bar">
