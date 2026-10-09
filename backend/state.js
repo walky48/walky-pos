@@ -9,6 +9,7 @@ let orderSubCat = null; // Yemekler/Alkollü İçecekler gibi gruplanmış üst 
 let orderSearch = '';
 let tableFilter = 'all';
 let payState = null;
+let splitSel = null; // ayrı ödeme için seçilen adetler: {tid: masa id, q: {satır anahtarı: adet}} — bkz. ui/js/split.js
 let statsFrom = iso(), statsTo = iso(), statsCustom = false;
 let zHistoryExpanded = false, floatHistoryExpanded = false; // Z raporu / kasa açılış geçmişi varsayılan son 3 kayıt
 let gidFrom = weekStartISO(), gidTo = iso(), gidCustom = false;

@@ -18,7 +18,7 @@ function guestStatCard(st){
 }
 function ordersRowsHTML(sales){
   return sales.slice().reverse().map(s=>`<tr>
-      <td>${trDate(s.bd)}</td><td data-lbl="Çek No">#${fmtCheckNo(s.checkNo)}</td><td data-lbl="Masa"><b>${esc(s.table)}</b></td><td class="muted" data-lbl="Garson">${esc(s.waiter||'')}</td>
+      <td>${trDate(s.bd)}</td><td data-lbl="Çek No">#${fmtCheckNo(s.checkNo)}</td><td data-lbl="Masa"><b>${esc(s.table)}</b>${s.splitId?' <span class="badge gray">ayrı ödeme</span>':''}</td><td class="muted" data-lbl="Garson">${esc(s.waiter||'')}</td>
       <td data-lbl="Açılış">${trTime(s.openedAt)}</td><td data-lbl="Kapanış">${trTime(s.closedAt)}</td>
       <td class="num" data-lbl="Tutar">${fmt(s.totalTL)}</td><td data-lbl="Ödeme">${payLabel(s)}</td>
       <td class="right tdact"><button class="rowbtn" onclick="orderDetail('${s.id}')">Detay</button>
@@ -120,7 +120,8 @@ function orderDetail(id){
   const items=s.items.map(i=>`<div class="sum-line"><span>${esc(i.name)} <span class="muted">x${i.qty}</span></span><b>${fmt(i.qty*i.unit,c)}</b></div>`).join('');
   showModal(`<div class="m-head"><h3>Sipariş Detayı — ${esc(s.table)} <span class="muted small" style="font-weight:500">Çek #${fmtCheckNo(s.checkNo)}</span></h3><button class="icon-b" onclick="closeModal()">✕</button></div>
     <div class="muted small mb12">${trDate(s.bd)} · Garson: ${esc(s.waiter||'')} · Açılış ${trTime(s.openedAt)} → Kapanış ${trTime(s.closedAt)}
-      ${s.origTable!==s.table?`<br>Orijinal masa: ${esc(s.origTable)}`:''}</div>
+      ${s.origTable!==s.table?`<br>Orijinal masa: ${esc(s.origTable)}`:''}
+      ${s.splitId?`<br>Ayrı ödeme: bu çek ${db.sales.filter(x=>x.splitId===s.splitId).length} ödemeyle alındı, burada onlardan biri görünüyor`:''}</div>
     ${items}
     <div class="mt12">
       <div class="trow"><span>Ara Toplam</span><b>${fmt(s.sub,c)}</b></div>
@@ -141,12 +142,15 @@ function reopenSaleAsk(id){
   if(!user || user.role!=='admin' || remoteViewOnly()) return;
   const s=db.sales.find(x=>x.id===id); if(!s) return;
   if(s.bd!==db.day.date){toast('Yalnızca bugünün çekleri yeniden açılabilir','err');return}
+  if(s.splitId && db.tables.some(x=>x.status==='open' && x.splitId===s.splitId)){toast('Bu ödeme hâlâ açık olan masaya ait — masayı açıp "Alınan Ödemeler" bölümünden iptal edin','err');return}
   const empties=db.tables.filter(x=>x.status==='empty');
   if(!empties.length){toast('Yeniden açmak için boş masa yok','err');return}
   const cards=empties.map(x=>`<button class="cur-card" onclick="reopenSaleTo('${id}','${x.id}')">${esc(x.name)}</button>`).join('');
   showModal(`<div class="m-head"><h3>Çeki Yeniden Aç <span class="muted small" style="font-weight:500">&nbsp;${esc(s.table)} → hangi masaya?</span></h3>
     <button class="icon-b" onclick="closeModal()">✕</button></div>
-    <p class="muted small">Bu çek satış kaydından silinir ve kapanmadan önceki haliyle seçtiğiniz boş masaya açık sipariş olarak taşınır. Stok tekrar düşülmez (sipariş girilirken zaten düşülmüştü).</p>
+    <p class="muted small">${s.splitId
+      ? `Bu çek ayrı ödemelerle alınmıştı: ${db.sales.filter(x=>x.splitId===s.splitId).length} ödemenin hepsi satış kayıtlarında kalır; çek, ödemeleriyle birlikte (hepsi ödenmiş olarak) seçtiğiniz boş masaya açılır. Oradan ödemeleri tek tek iptal edebilir ya da masayı yeniden kapatabilirsiniz. Stok tekrar düşülmez.`
+      : 'Bu çek satış kaydından silinir ve kapanmadan önceki haliyle seçtiğiniz boş masaya açık sipariş olarak taşınır. Stok tekrar düşülmez (sipariş girilirken zaten düşülmüştü).'}</p>
     <div class="cur-grid">${cards}</div>`,true);
 }
 function reopenSaleTo(saleId, tableId){
@@ -154,6 +158,7 @@ function reopenSaleTo(saleId, tableId){
   const idx=db.sales.findIndex(x=>x.id===saleId); if(idx<0) return;
   const s=db.sales[idx];
   const dst=getTable(tableId); if(!dst||dst.status!=='empty') return;
+  if(s.splitId){ reopenSplitTo(s,dst); return; } /* ayrı ödemeli çek: bkz. ui/js/split.js */
   dst.status='open';
   dst.customName = (s.table!==s.origTable) ? s.table : null;
   dst.currency=s.currency; dst.openedAt=s.openedAt; dst.openedBy=s.waiter;

@@ -4,13 +4,13 @@ function viewTables(){
   const all=db.tables, open=all.filter(t=>t.status==='open'), empty=all.length-open.length;
   const shown=all.filter(t=> tableFilter==='all' ? true : tableFilter==='open' ? t.status==='open' : t.status==='empty');
   const cards=shown.map(t=>{
-    const tot=t.status==='open'?calcTotals(t):null;
+    const tot=t.status==='open'?billTotals(t):null; /* ayrı ödeme alındıysa kalan tutar */
     return `<button class="tcard ${t.status==='open'?'open':''}" ${remoteViewOnly()?'disabled':`onclick="openTableFlow('${t.id}')"`}>
       <div class="top"><span class="nm">${esc(displayName(t))}${t.status==='open'?` <span class="muted tiny">#${fmtCheckNo(t.checkNo)}</span>`:''}</span>
         ${t.status==='open'?`<span class="badge cur">${CUR_LABEL[t.currency]}</span>`:`<span class="badge gray">BOŞ</span>`}</div>
       ${t.status==='open'?`<div class="meta">
           <span>${elapsedMin(t.openedAt)} dk · ${t.items.reduce((a,i)=>a+i.qty,0)} ürün · ${esc(t.openedBy||'')}</span>
-          <span class="tot">${fmt(tot.total,t.currency)}${t.currency!=='TL'?` <span class="muted tiny">(${fmt(tot.totalTL)})</span>`:''}</span>
+          <span class="tot">${fmt(tot.total,t.currency)}${t.currency!=='TL'?` <span class="muted tiny">(${fmt(tot.totalTL)})</span>`:''}${t.splitId?' <span class="muted tiny">kalan</span>':''}</span>
         </div>`:''}
     </button>`;}).join('');
   return `<div class="page-head">
@@ -44,7 +44,7 @@ function createNewTable(){
   if(!name){toast('Masa adı girin','err');return}
   if(db.tables.some(t=>t.name.toLowerCase()===name.toLowerCase())){toast('Bu isimde bir masa zaten var','err');return}
   db.tables.push({id:uid(), name, customName:null, status:'empty',
-    currency:null, openedAt:null, openedBy:null, items:[], discount:null, service:null, complimentary:null, couvert:null, checkNo:null});
+    currency:null, openedAt:null, openedBy:null, items:[], discount:null, service:null, complimentary:null, couvert:null, checkNo:null, splitId:null});
   saveDB(); closeModal(); render(); toast(name+' masası oluşturuldu','ok');
 }
 
@@ -52,7 +52,7 @@ function createNewTable(){
 function openTableFlow(id){
   if(remoteViewOnly()) return; /* restoran uzaktan sipariş girişini açmadıysa patron salt-okunur kalır */
   const t=getTable(id);
-  if(t.status==='open'){ activeTableId=id; orderCat=orderTopCats()[0]; orderSubCat=null; orderSearch=''; view='order'; render(); return; }
+  if(t.status==='open'){ activeTableId=id; splitSel=null; orderCat=orderTopCats()[0]; orderSubCat=null; orderSearch=''; view='order'; render(); return; }
   showModal(`<div class="m-head"><h3>Para Birimi Seçin <span class="muted small" style="font-weight:500">&nbsp;${esc(t.name)}</span></h3>
     <button class="icon-b" onclick="closeModal()">✕</button></div>
     <div class="cur-grid">
@@ -64,7 +64,7 @@ function openTableFlow(id){
 function openWith(id,cur){
   const t=getTable(id);
   t.status='open'; t.currency=cur; t.openedAt=Date.now(); t.openedBy=user.name;
-  t.items=[]; t.discount=null; t.service=null; t.couvert=null;
+  t.items=[]; t.discount=null; t.service=null; t.couvert=null; t.splitId=null;
   assignCheckNo(t);
   saveDB(); closeModal();
   activeTableId=id; orderCat=orderTopCats()[0]; orderSubCat=null; orderSearch=''; view='order';

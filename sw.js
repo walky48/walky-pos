@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE = 'walky-v9';
+const CACHE = 'walky-v10';
 const ASSETS = [
   './',
   './index.html',
@@ -21,6 +21,7 @@ const ASSETS = [
   './ui/js/layout.js',
   './ui/js/tables.js',
   './ui/js/order.js',
+  './ui/js/split.js',
   './ui/js/print.js',
   './ui/js/stock.js',
   './ui/js/expenses.js',

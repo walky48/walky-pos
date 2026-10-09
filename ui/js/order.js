@@ -78,31 +78,52 @@ function renderProdGrid(){const g=$('#prodGrid'); if(g) g.innerHTML=prodGridHTML
 function renderOrderPanel(){const p=$('#orderPanel'); if(p) p.innerHTML=orderPanelHTML()}
 
 function orderPanelHTML(){
-  const t=getTable(activeTableId), c=t.currency, tot=calcTotals(t);
-  const lines=t.items.length ? t.items.map(i=>{const lk=i.lid||i.mid; return `<div class="oline">
+  const t=getTable(activeTableId), c=t.currency;
+  const pm=splitPaidMap(t), sel=splitSelNow(t,pm), sales=splitSales(t), split=sales.length>0;
+  const tot=billTotals(t); /* ayrı ödeme varsa kalan; yoksa calcTotals ile aynı */
+  const leftQty=splitRows(t,pm).reduce((a,r)=>a+r.qty,0);
+  const lines=t.items.length ? t.items.map(i=>{
+      const lk=lineKey(i), paid=Math.min(i.qty,pm[lk]||0), left=i.qty-paid, sq=sel[lk]||0;
+      const sub=(paid>0||sq>0) ? `<div class="osub">
+          ${paid>0?`<span class="badge ok">${paid>=i.qty?'Ödendi':'Ödenen '+paid+'/'+i.qty}</span>`:''}
+          ${sq>0?`<span class="osel">Ödenecek <span class="qty"><button onclick="splitSub('${lk}')">−</button><span class="q">${sq}</span><button onclick="splitAdd('${lk}')" ${sq>=left?'disabled':''}>+</button></span></span>`:''}
+        </div>`:'';
+      return `<div class="oline ${paid>=i.qty?'paid':''}">
       <span class="n">${esc(i.name)}${c!=='TL'?`<span class="sub-tl">${fmt(i.unit*rateOf(c))} / adet</span>`:''}</span>
       <span class="qty"><button onclick="decLine('${lk}')">−</button><span class="q">${i.qty}</span><button onclick="incLine('${lk}')">+</button></span>
       <span class="p">${fmt(i.qty*i.unit,c)}${c!=='TL'?`<span class="sub-tl">${fmt(i.qty*i.unit*rateOf(c))}</span>`:''}</span>
+      ${left>0 && !t.complimentary?`<button class="sp-b" title="Bu üründen 1 adedi ayrı öde" onclick="splitAdd('${lk}')">Öde</button>`:''}
       <button class="x" title="Kaldır" onclick="removeLine('${lk}')">✕</button>
+      ${sub}
     </div>`;}).join('')
     : `<div class="empty-o">Henüz ürün eklenmedi.<br>Soldaki menüden ürün seçin.</div>`;
   const dLabel=t.complimentary ? `İkram — ${esc(t.complimentary.name)}` : (t.discount ? (t.discount.type==='pct'?`İndirim (%${fmtQ(t.discount.value)})`:'İndirim') : null);
   const sLabel=t.service ? (t.service.type==='pct'?`Servis Ücreti (%${fmtQ(t.service.value)})`:'Servis Ücreti') : null;
+  const selRows=splitRows(t,pm,sel), selQty=selRows.reduce((a,r)=>a+r.qty,0);
+  const selBar=selQty>0 ? `<div class="split-bar">
+      <div class="trow"><span>Ayrı ödenecek: <b>${selQty}</b> ürün</span><b class="accent">${fmt(partTotals(t,selRows,pm).total,c)}</b></div>
+      <div class="btn-grid"><button class="btn ghost" onclick="splitClear()">Seçimi Temizle</button><button class="btn green" onclick="startSplitPay()">Seçilenleri Öde</button></div>
+    </div>`:'';
+  const paidTotal=sales.reduce((a,x)=>a+x.total,0);
   return `<div class="rt"><h3>Sipariş</h3><span class="badge gray">${t.items.reduce((a,i)=>a+i.qty,0)} kalem</span></div>
-    <div class="olines">${lines}</div>
+    <div class="olines">${lines}${splitPaymentsHTML(t,sales)}</div>
     <div class="ord-foot">
+      ${selBar}
+      ${split?`<div class="trow"><span>Ödenen (${sales.length} ödeme)</span><b class="green">${fmt(paidTotal,c)}</b></div>`:''}
       <div class="trow"><span>Ara Toplam</span><b>${fmt(tot.sub,c)}</b></div>
       ${t.discount?`<div class="trow"><span>${dLabel}</span><b class="green">−${fmt(tot.disc,c)}</b></div>`:''}
       ${t.service?`<div class="trow"><span>${sLabel}</span><b class="amber">+${fmt(tot.serv,c)}</b></div>`:''}
-      <div class="trow big"><span>Toplam</span><span class="v">${fmt(tot.total,c)}</span></div>
+      <div class="trow big"><span>${split?'Kalan':'Toplam'}</span><span class="v">${fmt(tot.total,c)}</span></div>
       ${c!=='TL'?`<div class="trow"><span>TL Karşılığı (POS)</span><b class="accent">${fmt(tot.totalTL)}</b></div>`:''}
       <div class="btn-grid">
         <button class="btn" onclick="openAdjModal('discount')">İndirim</button>
         <button class="btn" onclick="openAdjModal('service')">Servis Ücreti</button>
         <button class="btn" onclick="sendOrder()">Sipariş Gönder</button>
         <button class="btn" onclick="printReceipt()">Hesap Yazdır</button>
-        <button class="btn amber" style="grid-column:1/-1" onclick="openIkramModal()" ${t.items.length?'':'disabled'}>İkram</button>
-        <button class="btn green" style="grid-column:1/-1" onclick="startPayment()" ${t.items.length?'':'disabled'}>Hesap Al</button>
+        <button class="btn amber" style="grid-column:1/-1" onclick="openIkramModal()" ${leftQty?'':'disabled'}>İkram</button>
+        ${split && !leftQty
+          ? `<button class="btn green" style="grid-column:1/-1" onclick="splitCloseTable()">Tüm Hesap Ödendi — Masayı Kapat</button>`
+          : `<button class="btn green" style="grid-column:1/-1" onclick="startPayment()" ${t.items.length?'':'disabled'}>Hesap Al</button>`}
       </div>
     </div>`;
 }
@@ -143,8 +164,12 @@ function incLine(lid){
   line.qty++;
   saveDB(true); renderOrderPanel();
 }
+/* ödemesi alınmış (ayrı ödeme) adedin altına inilemez ve satır kaldırılamaz —
+   önce ödeme iptal edilmeli (bkz. ui/js/split.js) */
+function paidOf(t,line){ return Math.min(line.qty, splitPaidMap(t)[lineKey(line)]||0); }
 function decLine(lid){
   const t=getTable(activeTableId); const line=findLine(lid); if(!line) return;
+  if(paidOf(t,line)>line.qty-1){toast('Bu üründen ödemesi alınmış adet var — önce ödemeyi iptal edin','err');return}
   applyRecipe({recipe:lineRecipe(line)},-1);
   line.qty--; if(line.sent>line.qty) line.sent=line.qty;
   if(line.qty<=0) t.items=t.items.filter(i=>i!==line);
@@ -152,6 +177,7 @@ function decLine(lid){
 }
 function removeLine(lid){
   const t=getTable(activeTableId); const line=findLine(lid); if(!line) return;
+  if(paidOf(t,line)>0){toast('Bu ürünün ödemesi alınmış — önce ödemeyi iptal edin','err');return}
   applyRecipe({recipe:lineRecipe(line)},-line.qty);
   t.items=t.items.filter(i=>i!==line);
   saveDB(true); renderOrderPanel();
@@ -196,7 +222,7 @@ function openIkramModal(){
   const t=getTable(activeTableId);
   if(!t.items.length){toast('Masada ürün yok','err');return}
   showModal(`<div class="m-head"><h3>İkram</h3><button class="icon-b" onclick="closeModal()">✕</button></div>
-    <p class="muted small">Masadaki tüm tutara %100 indirim uygulanır. Kime ve hangi sebeple ikram edildiği; kim tarafından verildiği ve içerdiği ürünler muhasebe kayıtlarında görünür.</p>
+    <p class="muted small">${t.splitId?'Masada kalan (ödenmemiş) tutara':'Masadaki tüm tutara'} %100 indirim uygulanır. Kime ve hangi sebeple ikram edildiği; kim tarafından verildiği ve içerdiği ürünler muhasebe kayıtlarında görünür.</p>
     <label class="fl">Kime / Hangi Sebeple</label>
     <input id="ikramVal" class="inp" value="${t.complimentary?esc(t.complimentary.name):''}">
     <div class="m-actions">
@@ -256,6 +282,7 @@ function moveTableTo(destId){
   dst.status='open'; dst.currency=src.currency; dst.openedAt=src.openedAt; dst.openedBy=src.openedBy;
   dst.customName=src.customName; dst.items=src.items; dst.discount=src.discount;
   dst.service=src.service; dst.complimentary=src.complimentary; dst.couvert=src.couvert; dst.checkNo=src.checkNo;
+  dst.splitId=src.splitId; splitSel=null;
   resetTable(src);
   activeTableId=destId;
   saveDB(); closeModal(); render();
@@ -309,6 +336,7 @@ function addFreeItem(){
 /* --- masa iptali --- */
 function cancelTableAsk(){
   const t=getTable(activeTableId);
+  if(splitSales(t).length){toast('Bu masada ayrı ödeme alınmış — önce alınan ödemeleri iptal edin','err');return}
   showModal(`<div class="m-head"><h3>Masayı İptal Et</h3><button class="icon-b" onclick="closeModal()">✕</button></div>
     <p class="muted">${esc(displayName(t))} satış kaydı oluşturulmadan kapatılacak ve girilen ürünler stoğa geri eklenecek. Emin misiniz?</p>
     <div class="m-actions"><button class="btn ghost" onclick="closeModal()">Vazgeç</button>
@@ -321,19 +349,34 @@ function cancelTable(){
 }
 function resetTable(t){
   t.status='empty'; t.customName=null; t.currency=null; t.openedAt=null; t.openedBy=null;
-  t.items=[]; t.discount=null; t.service=null; t.complimentary=null; t.couvert=null; t.checkNo=null;
+  t.items=[]; t.discount=null; t.service=null; t.complimentary=null; t.couvert=null; t.checkNo=null; t.splitId=null;
 }
 
 /* --- ödeme --- */
 function startPayment(){
-  payState={method:null, payCur:getTable(activeTableId).currency, cariName:'', print:false};
+  payState={method:null, payCur:getTable(activeTableId).currency, cariName:'', print:false, sel:null};
   openPaymentModal();
 }
+/* ödenecek kalemler ve tutarlar: sel yoksa masada kalan her şey (ayrı ödeme yoksa
+   eskisi gibi bütün masa), sel varsa seçilen adetler. final: bu ödeme masada
+   ödenmemiş hiçbir şey bırakmıyor → masa kapanır. split: kayıt ayrı ödeme olarak
+   (splitId, kalem anahtarları ile) yazılır. */
+function payTarget(t){
+  const pm=splitPaidMap(t), sel=payState&&payState.sel;
+  const rows=splitRows(t,pm,sel||null);
+  const left=splitRows(t,pm).reduce((a,r)=>a+r.qty,0), q=rows.reduce((a,r)=>a+r.qty,0);
+  const final=q>=left, split=!!t.splitId || !final;
+  const tot=split ? partTotals(t,rows,pm) : calcTotals(t);
+  return {rows, tot, final, split};
+}
 function openPaymentModal(){
-  const t=getTable(activeTableId), c=t.currency, tot=calcTotals(t);
-  if(!payState) payState={method:null, payCur:c, cariName:'', print:false};
-  const items=t.items.map(i=>`<div class="sum-line"><span>${esc(i.name)} <span class="muted">x${i.qty}</span></span><b>${fmt(i.qty*i.unit,c)}</b></div>`).join('');
+  const t=getTable(activeTableId), c=t.currency;
+  if(!payState) payState={method:null, payCur:c, cariName:'', print:false, sel:null};
+  const tg=payTarget(t), tot=tg.tot;
+  const items=tg.rows.map(i=>`<div class="sum-line"><span>${esc(i.name)} <span class="muted">x${i.qty}</span></span><b>${fmt(i.qty*i.unit,c)}</b></div>`).join('');
   const mSel=m=>payState.method===m?'on':'';
+  const showDisc=tg.split?tot.disc>0:!!t.discount, showServ=tg.split?tot.serv>0:!!t.service;
+  const after=tg.final?0:Math.max(0, billTotals(t).total-tot.total);
   let extra='';
   if(payState.method==='nakit' && c!=='TL'){
     extra=`<label class="fl">Müşteri hangi para birimiyle ödedi?</label>
@@ -349,15 +392,16 @@ function openPaymentModal(){
       <datalist id="cariList">${dl}</datalist>
       <p class="muted tiny mt8">Tutar bu isme veresiye olarak yazılır; tahsilatı Cari Hesaplar ekranından alınır.</p>`;
   }
-  showModal(`<div class="m-head"><h3>Hesap Al <span class="muted small" style="font-weight:500">&nbsp;${esc(displayName(t))}</span></h3>
+  showModal(`<div class="m-head"><h3>${tg.final?'Hesap Al':'Ayrı Ödeme'} <span class="muted small" style="font-weight:500">&nbsp;${esc(displayName(t))}</span></h3>
     <button class="icon-b" onclick="payState=null;closeModal()">✕</button></div>
     ${items}
     <div class="mt12">
       <div class="trow"><span>Ara Toplam</span><b>${fmt(tot.sub,c)}</b></div>
-      ${t.discount?`<div class="trow"><span>${t.complimentary?'İkram — '+esc(t.complimentary.name):'İndirim'+(t.discount.type==='pct'?' (%'+fmtQ(t.discount.value)+')':'')}</span><b class="green">−${fmt(tot.disc,c)}</b></div>`:''}
-      ${t.service?`<div class="trow"><span>Servis Ücreti${t.service.type==='pct'?' (%'+fmtQ(t.service.value)+')':''}</span><b class="amber">+${fmt(tot.serv,c)}</b></div>`:''}
+      ${showDisc?`<div class="trow"><span>${t.complimentary?'İkram — '+esc(t.complimentary.name):'İndirim'+(t.discount.type==='pct'?' (%'+fmtQ(t.discount.value)+')':'')}</span><b class="green">−${fmt(tot.disc,c)}</b></div>`:''}
+      ${showServ?`<div class="trow"><span>Servis Ücreti${t.service.type==='pct'?' (%'+fmtQ(t.service.value)+')':''}</span><b class="amber">+${fmt(tot.serv,c)}</b></div>`:''}
       <div class="trow big"><span>Toplam</span><span class="v">${fmt(tot.total,c)}</span></div>
       ${c!=='TL'?`<div class="trow"><span>TL Karşılığı (Kur: 1${SYM[c]} = ${fmt(rateOf(c))})</span><b class="accent">${fmt(tot.totalTL)}</b></div>`:''}
+      ${tg.final?'':`<div class="trow"><span>Bu ödemeden sonra masada kalan</span><b>${fmt(after,c)}</b></div>`}
     </div>
     <label class="fl" style="letter-spacing:1px;font-size:11.5px;color:var(--muted)">ÖDEME YÖNTEMİ</label>
     <div class="pay-grid">
@@ -375,23 +419,26 @@ function openPaymentModal(){
     </div>`);
 }
 function completePayment(){
-  const t=getTable(activeTableId), tot=calcTotals(t);
+  const t=getTable(activeTableId), tg=payTarget(t), tot=tg.tot;
   if(!payState||!payState.method) return;
   if(payState.method==='cari' && !(payState.cariName||'').trim()){toast('Cari için bir isim girin','err');return}
+  if(!tg.rows.length){toast('Ödenecek ürün kalmadı','err');return}
   const sale={
     id:uid(), bd:db.day.date, checkNo:t.checkNo, table:displayName(t), origTable:t.name, waiter:t.openedBy,
     currency:t.currency, rate:rateOf(t.currency), openedAt:t.openedAt, closedAt:Date.now(),
     /* mid/variant, Genel Stok tüketim raporunun (bkz. backend/logic.js
        resolveSaleItemRecipe) satış anındaki reçeteyi doğru çözebilmesi için
        tutulur — isimden tahmin etmek yerine doğrudan menü kalemine bağlanır. */
-    items:t.items.map(i=>({name:i.name, cat:i.cat, qty:i.qty, unit:i.unit, mid:i.mid, variant:i.variant})),
+    items:tg.rows.map(r=>{ const o={name:r.name, cat:r.cat, qty:r.qty, unit:r.unit, mid:r.mid, variant:r.variant}; if(tg.split) o.lk=r.lk; return o; }),
     sub:tot.sub, disc:tot.disc, serv:tot.serv, total:tot.total, totalTL:tot.totalTL,
-    discount:t.discount?{...t.discount}:null,
+    discount:t.discount?(tg.split && t.discount.type==='amt' ? {type:'amt', value:tot.disc} : {...t.discount}):null,
     method:payState.method, payCur:payState.method==='nakit'?payState.payCur:null,
     cariName:payState.method==='cari'?payState.cariName.trim():null,
     complimentary:t.complimentary?{name:t.complimentary.name, by:t.complimentary.by}:null,
     couvert:t.couvert?{...t.couvert}:null
   };
+  /* ayrı ödeme: kayıt masanın splitId'sine bağlanır (bkz. backend/logic.js splitPaidMap) */
+  if(tg.split){ if(!t.splitId) t.splitId=uid(); sale.splitId=t.splitId; sale.paidBy=user.name; }
   db.sales.push(sale);
   if(sale.method==='cari'){
     let acc=db.cari.find(x=>x.name.toLowerCase()===sale.cariName.toLowerCase());
@@ -399,6 +446,13 @@ function completePayment(){
     acc.entries.push({d:db.day.date, ts:Date.now(), type:'borc', amtTL:sale.totalTL, note:sale.table, saleId:sale.id});
   }
   if(payState.print) printReceipt(sale);
-  resetTable(t); payState=null; saveDB(); closeModal();
-  view='tables'; render(); toast('Ödeme alındı, masa kapatıldı','ok');
+  splitSel=null;
+  if(tg.final){
+    resetTable(t); payState=null; saveDB(); closeModal();
+    view='tables'; render(); toast('Ödeme alındı, masa kapatıldı','ok');
+  }else{
+    const rem=billTotals(t);
+    payState=null; saveDB(); closeModal();
+    render(); toast('Ayrı ödeme alındı — kalan '+fmt(rem.total,t.currency),'ok');
+  }
 }

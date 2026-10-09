@@ -32,6 +32,7 @@ function receiptHTML(t, tot, sale){
     <div class="rc-row"><span>Masa: ${esc(displayName(t))}</span><span>${trTime(Date.now())}</span></div>
     <div class="rc-row"><span>Garson: ${esc(t.openedBy||'')}</span><span>${trDate(db.day.date||iso())}</span></div>
     <div class="rc-row"><span>Çek No: #${fmtCheckNo(t.checkNo)}</span><span>${CUR_LABEL[c]}</span></div>
+    ${t.billNote?`<div class="rc-row"><span><b>${esc(t.billNote)}</b></span><span></span></div>`:''}
     <div class="rc-hr"></div>
     ${lines}
     <div class="rc-hr"></div>
@@ -75,6 +76,7 @@ function receiptLines(t, tot, sale){
     {text:'Masa: '+displayName(t)+'   '+trTime(Date.now())},
     {text:'Garson: '+(t.openedBy||'')+'   '+trDate(db.day.date||iso())},
     {text: padLine('Çek No: #'+fmtCheckNo(t.checkNo), CUR_LABEL[c])},
+    ...(t.billNote?[{text:t.billNote, bold:true}]:[]),
     {text:'--------------------------------'}
   ];
   t.items.forEach(i=>{
@@ -99,9 +101,20 @@ function receiptLines(t, tot, sale){
   return L;
 }
 async function printReceipt(sale){
-  const t=getTable(activeTableId);
-  if(!t||!t.items.length){toast('Yazdırılacak ürün yok','err');return}
-  const tot=calcTotals(t), s=sale&&sale.id?sale:null;
+  const t0=getTable(activeTableId);
+  if(!t0||!t0.items.length){toast('Yazdırılacak ürün yok','err');return}
+  let t=t0, tot, s=sale&&sale.id?sale:null;
+  if(s && s.splitId){
+    /* ayrı ödeme fişi: yalnızca bu ödemenin kalemleri ve tutarları */
+    t={...t0, items:s.items.map(i=>({name:i.name, qty:i.qty, unit:i.unit})), billNote:'AYRI ÖDEME'};
+    tot={sub:s.sub, disc:s.disc, serv:s.serv, total:s.total, totalTL:s.totalTL};
+  }else if(t0.splitId){
+    /* ayrı ödemesi alınmış masanın hesabı: yalnızca kalan kalemler */
+    const pm=splitPaidMap(t0), rows=splitRows(t0,pm);
+    if(!rows.length){toast('Yazdırılacak ürün yok','err');return}
+    t={...t0, items:rows.map(r=>({name:r.name, qty:r.qty, unit:r.unit})), billNote:'KALAN HESAP (önceki ödemeler düşüldü)'};
+    tot=partTotals(t0,rows,pm);
+  }else tot=calcTotals(t0);
   const lines=receiptLines(t, tot, s), html=receiptHTML(t, tot, s);
   if(remoteMode){ await remotePrintRequest('receipt', lines, html); return; }
   const silent = typeof printLinesSilently==='function' && await printLinesSilently(lines);

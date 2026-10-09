@@ -130,7 +130,7 @@ label.fl{display:block;font-size:13px;color:var(--muted);margin:14px 0 6px}
 .ord-right .rt{display:flex;justify-content:space-between;align-items:center;padding:16px 16px 10px}
 .ord-right .rt h3{margin:0}
 .olines{flex:1;overflow:auto;padding:0 12px}
-.oline{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:9px 11px;display:flex;align-items:center;gap:9px;margin-bottom:8px}
+.oline{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:9px 11px;display:flex;flex-wrap:wrap;align-items:center;gap:9px;margin-bottom:8px}
 .oline .n{flex:1;font-weight:700;font-size:13px;min-width:0}
 .oline .n .sub-tl{display:block;color:var(--muted);font-size:11px;font-weight:500}
 .qty{display:flex;align-items:center;gap:6px}
@@ -141,6 +141,23 @@ label.fl{display:block;font-size:13px;color:var(--muted);margin:14px 0 6px}
 .oline .p .sub-tl{display:block;color:var(--muted);font-size:10.5px;font-weight:500}
 .oline .x{color:var(--muted2);font-size:15px;padding:2px 5px}
 .oline .x:hover{color:var(--red)}
+.qty button:disabled{opacity:.35;cursor:default}
+.oline.paid{opacity:.72}
+.oline .sp-b{font-size:11.5px;font-weight:800;padding:4px 9px;border-radius:7px;background:rgba(46,204,113,.13);color:var(--green);border:1px solid rgba(46,204,113,.35)}
+.oline .sp-b:hover{background:rgba(46,204,113,.22)}
+.oline .osub{flex:0 0 100%;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted)}
+.oline .osel{display:inline-flex;align-items:center;gap:8px;font-weight:700;color:var(--text)}
+.split-bar{background:var(--panel2);border:1px solid rgba(46,204,113,.4);border-radius:10px;padding:9px 11px 11px;margin-bottom:10px}
+.split-bar .btn-grid{margin-top:8px}
+.osec{margin:12px 0 6px}
+.osec-t{font-size:11px;font-weight:800;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:7px}
+.opay{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:8px 11px;margin-bottom:7px}
+.opay-h{display:flex;align-items:center;gap:8px;font-size:13px}
+.opay-h .opay-m{flex:1;min-width:0}
+.opay-i{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.pchip{display:inline-flex;align-items:center;gap:5px;background:var(--panel3);border-radius:999px;padding:2px 4px 2px 10px;font-size:12px;font-weight:600}
+.pchip button{width:19px;height:19px;border-radius:50%;background:var(--panel);font-weight:800;line-height:1}
+.pchip button:hover{background:var(--hover-bg);color:var(--red)}
 .ord-foot{border-top:1px solid var(--border);padding:13px 16px 15px}
 .trow{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);padding:2.5px 0}
 .trow b{color:var(--text)}

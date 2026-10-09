@@ -46,6 +46,54 @@ function calcTotals(t){
   return {sub, disc, serv, total, totalTL: total*rateOf(t.currency)};
 }
 
+/* --- ayrı (kalem bazlı) ödeme ---
+   Bir masa, ürünler tek tek (herkes kendi payını) ödenerek kapatılabilir. Her ayrı
+   ödeme normal bir satış kaydı (db.sales) olarak ANINDA yazılır; kayıtlar masanın
+   splitId'siyle bağlanır ve kalemleri, masadaki satırın anahtarını (lk = lineKey)
+   taşır. Bir satırın ödenen adedi bu kayıtlardan hesaplanır — masada ayrıca bir
+   "ödendi" sayacı tutulmaz; böylece ödeme iptal edilip kayıt silinince sayaç ile
+   para hiçbir zaman ayrışmaz. Ayrı ödeme yoksa (splitId yok) her şey eskisi gibi,
+   tek satışla çalışır. */
+function lineKey(i){ return i.lid||i.mid; }
+function splitSales(t){ return t.splitId ? db.sales.filter(s=>s.splitId===t.splitId) : []; }
+function splitPaidMap(t){
+  const m={};
+  splitSales(t).forEach(s=>(s.items||[]).forEach(i=>{ if(i.lk) m[i.lk]=(m[i.lk]||0)+i.qty; }));
+  return m;
+}
+function lineLeft(i, pm){ return i.qty-Math.min(i.qty, pm[lineKey(i)]||0); }
+/* ödenmemiş kalemler; sel verilirse (lineKey → adet) yalnızca seçilen adetler (kalanı geçemez) */
+function splitRows(t, pm, sel){
+  const rows=[];
+  t.items.forEach(i=>{
+    const k=lineKey(i), left=lineLeft(i,pm), q=sel?Math.min(sel[k]||0,left):left;
+    if(q>0) rows.push({lk:k, name:i.name, cat:i.cat, qty:q, unit:i.unit, mid:i.mid, variant:i.variant});
+  });
+  return rows;
+}
+/* masa düzeyindeki indirim/servis ücreti, ödenecek kısma (rows) dağıtılır.
+   Yüzde: kısmın kendi tutarı üzerinden. Sabit tutar: (tutar − önceki ödemelere
+   verilen) × kısmın ödenmemiş toplam içindeki payı; son kısım kalanı tam alır, yani
+   parçaların toplamı masa tutarına eşit çıkar. Ayrı ödeme yokken ve her şey
+   seçiliyken calcTotals ile birebir aynıdır. */
+function partTotals(t, rows, pm){
+  const sum=a=>a.reduce((x,r)=>x+r.qty*r.unit,0);
+  const P=sum(rows), U=sum(splitRows(t,pm)), sales=splitSales(t), last=P>=U-1e-9;
+  const given=k=>sales.reduce((a,s)=>a+(s[k]||0),0);
+  const share=left=>last?left:Math.round(left*(U>0?P/U:0)*100)/100;
+  let disc=0, serv=0;
+  if(t.discount) disc = t.discount.type==='pct' ? P*t.discount.value/100 : Math.min(share(Math.max(0,t.discount.value-given('disc'))), P);
+  if(t.service)  serv = t.service.type==='pct'  ? P*t.service.value/100  : share(Math.max(0,t.service.value-given('serv')));
+  const total=Math.max(0, P-disc+serv);
+  return {sub:P, disc, serv, total, totalTL: total*rateOf(t.currency)};
+}
+/* masada şu an ödenmesi gereken (ayrı ödemeler düşülmüş) tutarlar */
+function billTotals(t){
+  if(!t.splitId) return calcTotals(t);
+  const pm=splitPaidMap(t);
+  return partTotals(t, splitRows(t,pm), pm);
+}
+
 /* --- stok durumu --- */
 /* şişeli takip edilen kalemler (bkz. stock.js — adet + açık şişe cl'si) için
    reçete düşümü hep TOPLAM cl üzerinden yapılır. */
@@ -186,11 +234,17 @@ function computeStats(f,t){
     kart:sum(S.filter(s=>s.method==='kart')),
     cari:sum(S.filter(s=>s.method==='cari')),
     yemekTL:S.reduce((a,s)=>a+saleKitchenTotalTL(s),0),
-    guestK:S.reduce((a,s)=>a+(s.couvert?s.couvert.k:0),0),
-    guestE:S.reduce((a,s)=>a+(s.couvert?s.couvert.e:0),0),
-    guestC:S.reduce((a,s)=>a+(s.couvert?s.couvert.c:0),0),
-    count:S.length, tahN:0, tahK:0, sales:S
+    guestK:0, guestE:0, guestC:0,
+    count:0, tahN:0, tahK:0, sales:S
   };
+  /* ayrı ödemeyle kapanan bir masa birden çok satış kaydıdır (aynı splitId) —
+     masa ve misafir sayısı her çek için yalnızca bir kez sayılır */
+  const seen=new Set();
+  S.forEach(s=>{
+    const k=s.splitId||s.id; if(seen.has(k)) return; seen.add(k);
+    stats.count++;
+    if(s.couvert){ stats.guestK+=s.couvert.k; stats.guestE+=s.couvert.e; stats.guestC+=s.couvert.c; }
+  });
   db.cari.forEach(c=>c.entries.forEach(e=>{
     if(e.type==='tahsilat' && e.d>=f && e.d<=t){ if(e.method==='nakit') stats.tahN+=e.amtTL; else stats.tahK+=e.amtTL; }
   }));
