@@ -49,7 +49,6 @@ if(!db.expenses) db.expenses=[];
 if(!db.stockCats) db.stockCats=[];
 if(!db.goodsReceipts) db.goodsReceipts=[];
 if(!db.stockSnapshots) db.stockSnapshots=[]; // aylık stok sayımları — bkz. ui/js/stock.js
-if(!db.payCancels) db.payCancels=[]; // ayrı ödeme iptalleri/düzeltmeleri kaydı — bkz. ui/js/split.js
 if(!db.menuCatList) db.menuCatList=[];
 if(!db.nextCheckNo) db.nextCheckNo=1;
 (db.stock||[]).forEach(s=>{ if(s.price===undefined) s.price=0; });

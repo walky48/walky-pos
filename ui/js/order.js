@@ -165,11 +165,11 @@ function incLine(lid){
   saveDB(true); renderOrderPanel();
 }
 /* ödemesi alınmış (ayrı ödeme) adedin altına inilemez ve satır kaldırılamaz —
-   önce ödeme iptal edilmeli (bkz. ui/js/split.js) */
+   alınan ödemeler değiştirilemez (bkz. ui/js/split.js) */
 function paidOf(t,line){ return Math.min(line.qty, splitPaidMap(t)[lineKey(line)]||0); }
 function decLine(lid){
   const t=getTable(activeTableId); const line=findLine(lid); if(!line) return;
-  if(paidOf(t,line)>line.qty-1){toast('Bu üründen ödemesi alınmış adet var — önce ödemeyi iptal edin','err');return}
+  if(paidOf(t,line)>line.qty-1){toast('Ödemesi alınmış adetler azaltılamaz','err');return}
   applyRecipe({recipe:lineRecipe(line)},-1);
   line.qty--; if(line.sent>line.qty) line.sent=line.qty;
   if(line.qty<=0) t.items=t.items.filter(i=>i!==line);
@@ -177,7 +177,7 @@ function decLine(lid){
 }
 function removeLine(lid){
   const t=getTable(activeTableId); const line=findLine(lid); if(!line) return;
-  if(paidOf(t,line)>0){toast('Bu ürünün ödemesi alınmış — önce ödemeyi iptal edin','err');return}
+  if(paidOf(t,line)>0){toast('Ödemesi alınmış ürün kaldırılamaz','err');return}
   applyRecipe({recipe:lineRecipe(line)},-line.qty);
   t.items=t.items.filter(i=>i!==line);
   saveDB(true); renderOrderPanel();
@@ -336,7 +336,7 @@ function addFreeItem(){
 /* --- masa iptali --- */
 function cancelTableAsk(){
   const t=getTable(activeTableId);
-  if(splitSales(t).length){toast('Bu masada ayrı ödeme alınmış — önce alınan ödemeleri iptal edin','err');return}
+  if(splitSales(t).length){toast('Bu masada ayrı ödeme alınmış — masa iptal edilemez','err');return}
   showModal(`<div class="m-head"><h3>Masayı İptal Et</h3><button class="icon-b" onclick="closeModal()">✕</button></div>
     <p class="muted">${esc(displayName(t))} satış kaydı oluşturulmadan kapatılacak ve girilen ürünler stoğa geri eklenecek. Emin misiniz?</p>
     <div class="m-actions"><button class="btn ghost" onclick="closeModal()">Vazgeç</button>
@@ -367,13 +367,18 @@ function payTarget(t){
   const left=splitRows(t,pm).reduce((a,r)=>a+r.qty,0), q=rows.reduce((a,r)=>a+r.qty,0);
   const final=q>=left, split=!!t.splitId || !final;
   const tot=split ? partTotals(t,rows,pm) : calcTotals(t);
-  return {rows, tot, final, split};
+  const lefts={}; splitRows(t,pm).forEach(r=>{ lefts[r.lk]=r.qty; });
+  return {rows, tot, final, split, lefts};
 }
 function openPaymentModal(){
   const t=getTable(activeTableId), c=t.currency;
   if(!payState) payState={method:null, payCur:c, cariName:'', print:false, sel:null};
   const tg=payTarget(t), tot=tg.tot;
-  const items=tg.rows.map(i=>`<div class="sum-line"><span>${esc(i.name)} <span class="muted">x${i.qty}</span></span><b>${fmt(i.qty*i.unit,c)}</b></div>`).join('');
+  /* ayrı ödeme akışında (Seçilenleri Öde) her ürünün yanında −/+ var: ödeme
+     tamamlanmadan ödenecek adet azaltılıp artırılabilir (bkz. ui/js/split.js payStep) */
+  const items=tg.rows.map(i=>`<div class="sum-line"><span>${esc(i.name)} ${payState.sel
+      ? `<span class="qty" style="display:inline-flex;margin-left:8px"><button onclick="payStep('${i.lk}',-1)">−</button><span class="q">${i.qty}</span><button onclick="payStep('${i.lk}',1)" ${i.qty>=tg.lefts[i.lk]?'disabled':''}>+</button></span>`
+      : `<span class="muted">x${i.qty}</span>`}</span><b>${fmt(i.qty*i.unit,c)}</b></div>`).join('');
   const mSel=m=>payState.method===m?'on':'';
   const showDisc=tg.split?tot.disc>0:!!t.discount, showServ=tg.split?tot.serv>0:!!t.service;
   const after=tg.final?0:Math.max(0, billTotals(t).total-tot.total);
@@ -393,7 +398,7 @@ function openPaymentModal(){
       <p class="muted tiny mt8">Tutar bu isme veresiye olarak yazılır; tahsilatı Cari Hesaplar ekranından alınır.</p>`;
   }
   showModal(`<div class="m-head"><h3>${tg.final?'Hesap Al':'Ayrı Ödeme'} <span class="muted small" style="font-weight:500">&nbsp;${esc(displayName(t))}</span></h3>
-    <button class="icon-b" onclick="payState=null;closeModal()">✕</button></div>
+    <button class="icon-b" onclick="payCancel()">✕</button></div>
     ${items}
     <div class="mt12">
       <div class="trow"><span>Ara Toplam</span><b>${fmt(tot.sub,c)}</b></div>
@@ -414,7 +419,7 @@ function openPaymentModal(){
       <input type="checkbox" ${payState.print?'checked':''} onchange="payState.print=this.checked"> Ödeme sonrası fiş yazdır
     </label>
     <div class="m-actions">
-      <button class="btn ghost" onclick="payState=null;closeModal()">Vazgeç</button>
+      <button class="btn ghost" onclick="payCancel()">Vazgeç</button>
       <button class="btn green" onclick="completePayment()" ${payState.method?'':'disabled'}>Ödemeyi Tamamla</button>
     </div>`);
 }

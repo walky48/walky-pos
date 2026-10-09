@@ -22,7 +22,7 @@ function ordersRowsHTML(sales){
       <td data-lbl="Açılış">${trTime(s.openedAt)}</td><td data-lbl="Kapanış">${trTime(s.closedAt)}</td>
       <td class="num" data-lbl="Tutar">${fmt(s.totalTL)}</td><td data-lbl="Ödeme">${payLabel(s)}</td>
       <td class="right tdact"><button class="rowbtn" onclick="orderDetail('${s.id}')">Detay</button>
-        ${(user.role==='admin' && !remoteViewOnly() && s.bd===db.day.date)?`<button class="rowbtn" style="color:var(--red);margin-left:8px" onclick="reopenSaleAsk('${s.id}')">Yeniden Aç</button>`:''}</td></tr>`).join('');
+        ${(user.role==='admin' && !remoteViewOnly() && s.bd===db.day.date && !s.splitId)?`<button class="rowbtn" style="color:var(--red);margin-left:8px" onclick="reopenSaleAsk('${s.id}')">Yeniden Aç</button>`:''}</td></tr>`).join('');
 }
 function viewStats(){
   const today=db.day.open?db.day.date:iso();
@@ -132,7 +132,7 @@ function orderDetail(id){
       <div class="trow"><span>Ödeme Yöntemi</span><b>${payLabel(s)}</b></div>
     </div>
     <div class="m-actions">
-      ${(user.role==='admin' && !remoteViewOnly() && s.bd===db.day.date)?`<button class="btn red" onclick="reopenSaleAsk('${s.id}')">Çeki Yeniden Aç</button>`:''}
+      ${(user.role==='admin' && !remoteViewOnly() && s.bd===db.day.date && !s.splitId)?`<button class="btn red" onclick="reopenSaleAsk('${s.id}')">Çeki Yeniden Aç</button>`:''}
       <button class="btn accent" onclick="closeModal()">Kapat</button>
     </div>`);
 }
@@ -142,15 +142,13 @@ function reopenSaleAsk(id){
   if(!user || user.role!=='admin' || remoteViewOnly()) return;
   const s=db.sales.find(x=>x.id===id); if(!s) return;
   if(s.bd!==db.day.date){toast('Yalnızca bugünün çekleri yeniden açılabilir','err');return}
-  if(s.splitId && db.tables.some(x=>x.status==='open' && x.splitId===s.splitId)){toast('Bu ödeme hâlâ açık olan masaya ait — masayı açıp "Alınan Ödemeler" bölümünden iptal edin','err');return}
+  if(s.splitId){toast('Ayrı ödemeyle alınan çekler yeniden açılamaz','err');return}
   const empties=db.tables.filter(x=>x.status==='empty');
   if(!empties.length){toast('Yeniden açmak için boş masa yok','err');return}
   const cards=empties.map(x=>`<button class="cur-card" onclick="reopenSaleTo('${id}','${x.id}')">${esc(x.name)}</button>`).join('');
   showModal(`<div class="m-head"><h3>Çeki Yeniden Aç <span class="muted small" style="font-weight:500">&nbsp;${esc(s.table)} → hangi masaya?</span></h3>
     <button class="icon-b" onclick="closeModal()">✕</button></div>
-    <p class="muted small">${s.splitId
-      ? `Bu çek ayrı ödemelerle alınmıştı: ${db.sales.filter(x=>x.splitId===s.splitId).length} ödemenin hepsi satış kayıtlarında kalır; çek, ödemeleriyle birlikte (hepsi ödenmiş olarak) seçtiğiniz boş masaya açılır. Oradan ödemeleri tek tek iptal edebilir ya da masayı yeniden kapatabilirsiniz. Stok tekrar düşülmez.`
-      : 'Bu çek satış kaydından silinir ve kapanmadan önceki haliyle seçtiğiniz boş masaya açık sipariş olarak taşınır. Stok tekrar düşülmez (sipariş girilirken zaten düşülmüştü).'}</p>
+    <p class="muted small">Bu çek satış kaydından silinir ve kapanmadan önceki haliyle seçtiğiniz boş masaya açık sipariş olarak taşınır. Stok tekrar düşülmez (sipariş girilirken zaten düşülmüştü).</p>
     <div class="cur-grid">${cards}</div>`,true);
 }
 function reopenSaleTo(saleId, tableId){
@@ -158,7 +156,7 @@ function reopenSaleTo(saleId, tableId){
   const idx=db.sales.findIndex(x=>x.id===saleId); if(idx<0) return;
   const s=db.sales[idx];
   const dst=getTable(tableId); if(!dst||dst.status!=='empty') return;
-  if(s.splitId){ reopenSplitTo(s,dst); return; } /* ayrı ödemeli çek: bkz. ui/js/split.js */
+  if(s.splitId) return; /* ayrı ödemeyle alınan çekler değiştirilemez */
   dst.status='open';
   dst.customName = (s.table!==s.origTable) ? s.table : null;
   dst.currency=s.currency; dst.openedAt=s.openedAt; dst.openedBy=s.waiter;
