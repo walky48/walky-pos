@@ -47,12 +47,19 @@ function viewStats(){
       <td>${trDate(c.date)}</td><td data-lbl="Beklenen">${fmt(c.expected)}</td><td data-lbl="Girilen">${fmt(c.actual)}</td>
       <td data-lbl="Durum">${c.match?'<span class="green">Uyumlu</span>':'<span class="red">Uyuşmuyor</span>'}</td>
       <td class="muted" data-lbl="Açan">${esc(c.by)}</td><td class="muted" data-lbl="Saat">${trDT(c.at)}</td></tr>`).join('');
-  const ikramRows=stR.sales.filter(s=>s.complimentary).slice().reverse().map(s=>`<tr>
+  /* ikramlar: tüm masa ikramı (satır başına bir kayıt) ve ürün bazlı ikramlar (ürün başına bir kayıt) */
+  const ikramRow=(s,who,by,what,amtTL)=>`<tr>
       <td>${trDate(s.bd)}</td><td data-lbl="Masa">${esc(s.table)}</td>
-      <td data-lbl="Kime"><b>${esc(s.complimentary.name)}</b></td>
-      <td class="muted" data-lbl="Veren">${esc(s.complimentary.by)}</td>
-      <td data-lbl="İçerik">${esc(s.items.map(i=>fmtQ(i.qty)+'x '+i.name).join(', '))}</td>
-      <td class="num" data-lbl="Tutar (TL)">${fmt(s.sub*s.rate)}</td></tr>`).join('');
+      <td data-lbl="Kime"><b>${esc(who)}</b></td>
+      <td class="muted" data-lbl="Veren">${esc(by)}</td>
+      <td data-lbl="İçerik">${esc(what)}</td>
+      <td class="num" data-lbl="Tutar (TL)">${fmt(amtTL)}</td></tr>`;
+  const ikramRows=stR.sales.slice().reverse().flatMap(s=>{
+    const out=[], plain=s.items.filter(i=>!i.ikram);
+    if(s.complimentary && plain.length) out.push(ikramRow(s, s.complimentary.name, s.complimentary.by, plain.map(i=>fmtQ(i.qty)+'x '+i.name).join(', '), (s.sub-(s.ikramAmt||0))*s.rate));
+    s.items.filter(i=>i.ikram).forEach(i=>out.push(ikramRow(s, i.ikram.name, i.ikram.by, fmtQ(i.qty)+'x '+i.name, i.qty*i.unit*s.rate)));
+    return out;
+  }).join('');
   return `<div class="page-head">
       <div><h1>İstatistikler</h1><div class="sub">${db.day.open?'Açık iş günü: '+trDate(db.day.date):'Kasa kapalı · Son gün: '+trDate(today)}</div></div>
     </div>
@@ -122,7 +129,8 @@ function applyRange(){
 function orderDetail(id){
   const s=findCheck(id); if(!s) return;
   const c=s.currency, pays=s.parts||[];
-  const items=s.items.map(i=>`<div class="sum-line"><span>${esc(i.name)} <span class="muted">x${i.qty}</span></span><b>${fmt(i.qty*i.unit,c)}</b></div>`).join('');
+  const items=s.items.map(i=>`<div class="sum-line"><span>${esc(i.name)} <span class="muted">x${i.qty}</span>${i.ikram?` <span class="badge low">İkram — ${esc(i.ikram.name)}</span>`:''}</span><b>${fmt(i.qty*i.unit,c)}</b></div>`).join('');
+  const dOnly=s.disc-(s.ikramAmt||0); /* ürün ikramları dışındaki indirim */
   showModal(`<div class="m-head"><h3>Sipariş Detayı — ${esc(s.table)} <span class="muted small" style="font-weight:500">Çek #${fmtCheckNo(s.checkNo)}</span></h3><button class="icon-b" onclick="closeModal()">✕</button></div>
     <div class="muted small mb12">${trDate(s.bd)} · Garson: ${esc(s.waiter||'')} · Açılış ${trTime(s.openedAt)} → Kapanış ${trTime(s.closedAt)}
       ${s.origTable!==s.table?`<br>Orijinal masa: ${esc(s.origTable)}`:''}
@@ -130,7 +138,8 @@ function orderDetail(id){
     ${items}
     <div class="mt12">
       <div class="trow"><span>Ara Toplam</span><b>${fmt(s.sub,c)}</b></div>
-      ${s.disc>0?`<div class="trow"><span>${s.complimentary?'İkram — '+esc(s.complimentary.name)+' <span class="muted tiny">(veren: '+esc(s.complimentary.by)+')</span>':'İndirim'}</span><b class="green">−${fmt(s.disc,c)}</b></div>`:''}
+      ${s.ikramAmt>0?`<div class="trow"><span>İkram (ürün)</span><b class="green">−${fmt(s.ikramAmt,c)}</b></div>`:''}
+      ${dOnly>1e-9?`<div class="trow"><span>${s.complimentary?'İkram — '+esc(s.complimentary.name)+' <span class="muted tiny">(veren: '+esc(s.complimentary.by)+')</span>':'İndirim'}</span><b class="green">−${fmt(dOnly,c)}</b></div>`:''}
       ${s.serv>0?`<div class="trow"><span>Servis Ücreti</span><b class="amber">+${fmt(s.serv,c)}</b></div>`:''}
       <div class="trow big"><span>Toplam</span><span class="v">${fmt(s.total,c)}</span></div>
       ${c!=='TL'?`<div class="trow"><span>TL Karşılığı (Kur ${fmt(s.rate)})</span><b class="accent">${fmt(s.totalTL)}</b></div>`:''}
@@ -171,9 +180,9 @@ function reopenSaleTo(saleId, tableId){
   dst.status='open';
   dst.customName = (s.table!==s.origTable) ? s.table : null;
   dst.currency=s.currency; dst.openedAt=s.openedAt; dst.openedBy=s.waiter;
-  dst.items=s.items.map(i=>({lid:uid(), mid:null, name:i.name, cat:i.cat||'Diğer', qty:i.qty, unit:i.unit, sent:i.qty, variant:null, recipe:[]}));
+  dst.items=s.items.map(i=>({lid:uid(), mid:null, name:i.name, cat:i.cat||'Diğer', qty:i.qty, unit:i.unit, sent:i.qty, variant:null, recipe:[], ...(i.ikram?{ikram:{...i.ikram}}:{})}));
   dst.complimentary = s.complimentary ? {name:s.complimentary.name, by:s.complimentary.by} : null;
-  dst.discount = s.discount ? {...s.discount} : (dst.complimentary ? {type:'pct', value:100} : (s.disc>0 ? {type:'amt', value:s.disc} : null));
+  dst.discount = s.discount ? {...s.discount} : (dst.complimentary ? {type:'pct', value:100} : (s.disc-(s.ikramAmt||0)>1e-9 ? {type:'amt', value:s.disc-(s.ikramAmt||0)} : null));
   dst.service = s.serv>0 ? {type:'amt', value:s.serv} : null;
   dst.couvert = s.couvert ? {...s.couvert} : null;
   dst.checkNo = s.checkNo || null;

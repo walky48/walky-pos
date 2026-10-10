@@ -23,7 +23,8 @@ function fmtPrn(n, cur){
 function receiptHTML(t, tot, sale){
   const c=t.currency;
   const {totalTL, totalEUR, totalUSD} = receiptTotals3(t, tot);
-  const lines=t.items.map(i=>`<div class="rc-row"><span>${i.qty}x ${esc(i.name)}</span><span>${fmtPrn(i.qty*i.unit,c)}</span></div>`).join('');
+  const lines=t.items.map(i=>`<div class="rc-row"><span>${i.qty}x ${esc(i.name)}${i.ikram?' (İkram)':''}</span><span>${fmtPrn(i.qty*i.unit,c)}</span></div>`).join('');
+  const dOnly=tot.disc-(tot.ik||0); /* ürün ikramları dışındaki indirim */
   const payLbl = sale ? (sale.method==='nakit' ? 'Nakit ('+CUR_LABEL[sale.payCur]+')'
                     : sale.method==='kart' ? 'Kredi Kartı' : 'Cari: '+esc(sale.cariName)) : null;
   return `<div class="rc">
@@ -37,7 +38,8 @@ function receiptHTML(t, tot, sale){
     ${lines}
     <div class="rc-hr"></div>
     <div class="rc-row"><span>Ara Toplam</span><span>${fmtPrn(tot.sub,c)}</span></div>
-    ${tot.disc>0?`<div class="rc-row"><span>${t.complimentary?'İkram':'İndirim'}</span><span>-${fmtPrn(tot.disc,c)}</span></div>`:''}
+    ${tot.ik>0?`<div class="rc-row"><span>İkram (ürün)</span><span>-${fmtPrn(tot.ik,c)}</span></div>`:''}
+    ${dOnly>1e-9?`<div class="rc-row"><span>${t.complimentary?'İkram':'İndirim'}</span><span>-${fmtPrn(dOnly,c)}</span></div>`:''}
     ${tot.serv>0?`<div class="rc-row"><span>Servis Ücreti</span><span>+${fmtPrn(tot.serv,c)}</span></div>`:''}
     <div class="rc-hr"></div>
     <div class="rc-row rc-tot"><span>TOPLAM (TL)</span><span>${fmtPrn(totalTL,'TL')}</span></div>
@@ -80,11 +82,12 @@ function receiptLines(t, tot, sale){
     {text:'--------------------------------'}
   ];
   t.items.forEach(i=>{
-    L.push({text: padLine(i.qty+'x '+i.name, fmtPrn(i.qty*i.unit,c))});
+    L.push({text: padLine(i.qty+'x '+i.name+(i.ikram?' (İkram)':''), fmtPrn(i.qty*i.unit,c))});
   });
   L.push({text:'--------------------------------'});
   L.push({text: padLine('Ara Toplam', fmtPrn(tot.sub,c))});
-  if(tot.disc>0) L.push({text: padLine(t.complimentary?'İkram':'İndirim', '-'+fmtPrn(tot.disc,c))});
+  if(tot.ik>0) L.push({text: padLine('İkram (ürün)', '-'+fmtPrn(tot.ik,c))});
+  if(tot.disc-(tot.ik||0)>1e-9) L.push({text: padLine(t.complimentary?'İkram':'İndirim', '-'+fmtPrn(tot.disc-(tot.ik||0),c))});
   if(tot.serv>0) L.push({text: padLine('Servis Ücreti', '+'+fmtPrn(tot.serv,c))});
   L.push({text:'--------------------------------'});
   L.push({text: padLine('TOPLAM (TL)', fmtPrn(totalTL,'TL')), bold:true});
@@ -106,19 +109,19 @@ async function printReceipt(sale){
   let t=t0, tot, s=sale&&sale.id?sale:null;
   if(s && s.splitId){
     /* ayrı ödeme fişi: yalnızca bu ödemenin kalemleri ve tutarları */
-    t={...t0, items:s.items.map(i=>({name:i.name, qty:i.qty, unit:i.unit})), billNote:'AYRI ÖDEME'};
-    tot={sub:s.sub, disc:s.disc, serv:s.serv, total:s.total, totalTL:s.totalTL};
+    t={...t0, items:s.items.map(i=>({name:i.name, qty:i.qty, unit:i.unit, ikram:i.ikram})), billNote:'AYRI ÖDEME'};
+    tot={sub:s.sub, ik:s.ikramAmt||0, disc:s.disc, serv:s.serv, total:s.total, totalTL:s.totalTL};
   }else if(t0.splitId){
     /* ayrı ödemesi alınmış masanın hesabı: yalnızca kalan kalemler */
     const pm=splitPaidMap(t0), rows=splitRows(t0,pm);
     if(rows.length){
-      t={...t0, items:rows.map(r=>({name:r.name, qty:r.qty, unit:r.unit})), billNote:'KALAN HESAP (önceki ödemeler düşüldü)'};
+      t={...t0, items:rows.map(r=>({name:r.name, qty:r.qty, unit:r.unit, ikram:r.ikram})), billNote:'KALAN HESAP (önceki ödemeler düşüldü)'};
       tot=partTotals(t0,rows,pm);
     }else{
       /* her şey ödenmiş (masa elle kapatılmadan önce): tüm adisyon, ödemelerin toplamıyla */
       const ps=splitSales(t0), sum=k=>ps.reduce((a,x)=>a+(x[k]||0),0);
-      t={...t0, items:t0.items.map(i=>({name:i.name, qty:i.qty, unit:i.unit})), billNote:'ADİSYON (hesap ödendi)'};
-      tot={sub:sum('sub'), disc:sum('disc'), serv:sum('serv'), total:sum('total'), totalTL:sum('totalTL')};
+      t={...t0, items:t0.items.map(i=>({name:i.name, qty:i.qty, unit:i.unit, ikram:i.ikram})), billNote:'ADİSYON (hesap ödendi)'};
+      tot={sub:sum('sub'), ik:sum('ikramAmt'), disc:sum('disc'), serv:sum('serv'), total:sum('total'), totalTL:sum('totalTL')};
     }
   }else tot=calcTotals(t0);
   const lines=receiptLines(t, tot, s), html=receiptHTML(t, tot, s);

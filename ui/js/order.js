@@ -84,22 +84,26 @@ function orderPanelHTML(){
   const leftQty=splitRows(t,pm).reduce((a,r)=>a+r.qty,0);
   const lines=t.items.length ? t.items.map(i=>{
       const lk=lineKey(i), paid=Math.min(i.qty,pm[lk]||0), left=i.qty-paid, sq=sel[lk]||0;
-      const sub=(paid>0||sq>0) ? `<div class="osub">
-          ${paid>0?`<span class="badge ok">${paid>=i.qty?'Ödendi':'Ödenen '+paid+'/'+i.qty}</span>`:''}
+      const sub=(paid>0||sq>0||i.ikram) ? `<div class="osub">
+          ${i.ikram?`<span class="badge low">İkram — ${esc(i.ikram.name)}</span>`:(paid>0?`<span class="badge ok">${paid>=i.qty?'Ödendi':'Ödenen '+paid+'/'+i.qty}</span>`:'')}
           ${sq>0?`<span class="osel">Ödenecek <span class="qty"><button onclick="splitSub('${lk}')">−</button><span class="q">${sq}</span><button onclick="splitAdd('${lk}')" ${sq>=left?'disabled':''}>+</button></span></span>`:''}
         </div>`:'';
-      return `<div class="oline ${paid>=i.qty?'paid':''}">
-      <span class="n">${esc(i.name)}${c!=='TL'?`<span class="sub-tl">${fmt(i.unit*rateOf(c))} / adet</span>`:''}</span>
+      /* hediye düğmesi: yalnızca bu ürünü ikram eder; ikramlıysa aynı düğme ikramı iptal ettirir */
+      const gift=(!t.complimentary && (i.ikram || left>0))
+        ? `<button class="gift-b ${i.ikram?'on':''}" title="${i.ikram?'İkramı iptal et':'Bu ürünü ikram et'}" onclick="openGiftModal('${lk}')">${GIFT_SVG}</button>` : '';
+      return `<div class="oline ${paid>=i.qty?'paid':''} ${i.ikram?'ik':''}">
+      ${gift}<span class="n">${esc(i.name)}${c!=='TL'?`<span class="sub-tl">${fmt(i.unit*rateOf(c))} / adet</span>`:''}</span>
       <span class="qty"><button onclick="decLine('${lk}')">−</button><span class="q">${i.qty}</span><button onclick="incLine('${lk}')">+</button></span>
       <span class="p">${fmt(i.qty*i.unit,c)}${c!=='TL'?`<span class="sub-tl">${fmt(i.qty*i.unit*rateOf(c))}</span>`:''}</span>
-      ${left>0 && !t.complimentary?`<button class="sp-b" title="Bu üründen 1 adedi ayrı öde" onclick="splitAdd('${lk}')">Öde</button>`:''}
+      ${left>0 && !t.complimentary && !i.ikram?`<button class="sp-b" title="Bu üründen 1 adedi ayrı öde" onclick="splitAdd('${lk}')">Öde</button>`:''}
       <button class="x" title="Kaldır" onclick="removeLine('${lk}')">✕</button>
       ${sub}
     </div>`;}).join('')
     : `<div class="empty-o">Henüz ürün eklenmedi.<br>Soldaki menüden ürün seçin.</div>`;
   const dLabel=t.complimentary ? `İkram — ${esc(t.complimentary.name)}` : (t.discount ? (t.discount.type==='pct'?`İndirim (%${fmtQ(t.discount.value)})`:'İndirim') : null);
   const sLabel=t.service ? (t.service.type==='pct'?`Servis Ücreti (%${fmtQ(t.service.value)})`:'Servis Ücreti') : null;
-  const selRows=splitRows(t,pm,sel), selQty=selRows.reduce((a,r)=>a+r.qty,0);
+  /* ikramlı satırlar sıradaki ödemeye kendiliğinden girer (selRows'ta var) ama "ödenecek ürün" sayısına katılmaz */
+  const selRows=splitRows(t,pm,sel), selQty=selRows.reduce((a,r)=>a+(r.ikram?0:r.qty),0);
   const selBar=selQty>0 ? `<div class="split-bar">
       <div class="trow"><span>Ayrı ödenecek: <b>${selQty}</b> ürün</span><b class="accent">${fmt(partTotals(t,selRows,pm).total,c)}</b></div>
       <div class="btn-grid"><button class="btn ghost" onclick="splitClear()">Seçimi Temizle</button><button class="btn green" onclick="startSplitPay()">Seçilenleri Öde</button></div>
@@ -111,7 +115,8 @@ function orderPanelHTML(){
       ${selBar}
       ${split?`<div class="trow"><span>Ödenen (${sales.length} ödeme)</span><b class="green">${fmt(paidTotal,c)}</b></div>`:''}
       <div class="trow"><span>Ara Toplam</span><b>${fmt(tot.sub,c)}</b></div>
-      ${t.discount?`<div class="trow"><span>${dLabel}</span><b class="green">−${fmt(tot.disc,c)}</b></div>`:''}
+      ${tot.ik>0?`<div class="trow"><span>İkram (ürün)</span><b class="green">−${fmt(tot.ik,c)}</b></div>`:''}
+      ${t.discount?`<div class="trow"><span>${dLabel}</span><b class="green">−${fmt(tot.dsc,c)}</b></div>`:''}
       ${t.service?`<div class="trow"><span>${sLabel}</span><b class="amber">+${fmt(tot.serv,c)}</b></div>`:''}
       <div class="trow big"><span>${split?'Kalan':'Toplam'}</span><span class="v">${fmt(tot.total,c)}</span></div>
       ${c!=='TL'?`<div class="trow"><span>TL Karşılığı (POS)</span><b class="accent">${fmt(tot.totalTL)}</b></div>`:''}
@@ -150,7 +155,7 @@ function addItemVariant(mid, idx){
 function addLine(mid, recipe, name, variant){
   const t=getTable(activeTableId); const m=db.menu.find(x=>x.id===mid); if(!t||!m) return;
   const warn=applyRecipe({recipe},1);
-  const line=t.items.find(i=>i.mid===mid && (i.variant||null)===variant);
+  const line=t.items.find(i=>i.mid===mid && (i.variant||null)===variant && !i.ikram); /* ikram edilen satıra eklenmez */
   if(line) line.qty++;
   else t.items.push({lid:uid(), mid, name, cat:m.cat, qty:1, unit:m.price[t.currency], sent:0, variant, recipe});
   if(warn) toast(m.name+' için stok eksiye düştü!','err');
@@ -244,6 +249,92 @@ function clearIkram(){
   const t=getTable(activeTableId);
   t.discount=null; t.complimentary=null;
   saveDB(); closeModal(); renderOrderPanel();
+}
+
+/* --- ürün bazlı ikram: satırın solundaki hediye düğmesi ---
+   Yalnızca o ürün (ya da birkaç adedi) ücretsiz olur; masanın geri kalanı normal ödenir.
+   Birkaç adedi ikram edilirse satır ikiye bölünür (ikramlı ve ikramsız). İkramlı satırda
+   aynı düğme ikramı iptal ettirir. Satış kaydı alınmış (ödemeye girmiş) ikram geri
+   alınamaz — alınan ödemeler gibi değiştirilemez. Hesap/stok mantığı backend/logic.js
+   (calcTotals, splitRows, partTotals): ikram edilen kalem sub'da kalır, ik olarak düşer. */
+const GIFT_SVG='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/></svg>';
+let giftState=null; /* {lk, q, name} — açık ikram penceresi */
+function openGiftModal(lk){
+  const t=getTable(activeTableId); if(!t) return;
+  if(t.complimentary){toast('Masa zaten tamamen ikram','err');return}
+  const line=findLine(lk); if(!line) return;
+  const left=line.qty-paidOf(t,line);
+  if(line.ikram){ giftCancelModal(t,line); return; }
+  if(left<=0){toast('Bu ürünün ödemesi alınmış','err');return}
+  giftState={lk, q:1, name:''};
+  renderGiftModal();
+}
+function renderGiftModal(){
+  const t=getTable(activeTableId), g=giftState; if(!t||!g) return;
+  const line=findLine(g.lk); if(!line){giftClose();return}
+  const c=t.currency, left=line.qty-paidOf(t,line);
+  g.q=Math.max(1,Math.min(g.q,left));
+  showModal(`<div class="m-head"><h3>İkram <span class="muted small" style="font-weight:500">&nbsp;${esc(line.name)}</span></h3>
+    <button class="icon-b" onclick="giftClose()">✕</button></div>
+    <p class="muted small">Yalnızca bu ürün ikram edilir ve hesaptan düşer; masanın geri kalanı normal ödenir. Kime ve hangi sebeple ikram edildiği ve kim tarafından verildiği muhasebe kayıtlarında görünür.</p>
+    <div class="sum-line"><span>${esc(line.name)} ${left>1
+      ? `<span class="qty" style="display:inline-flex;margin-left:8px"><button onclick="giftStep(-1)" ${g.q<=1?'disabled':''}>−</button><span class="q">${g.q}</span><button onclick="giftStep(1)" ${g.q>=left?'disabled':''}>+</button></span><span class="muted tiny" style="margin-left:6px">/ ${left}</span>`
+      : '<span class="muted">x1</span>'}</span><b>${fmt(g.q*line.unit,c)}</b></div>
+    <label class="fl">Kime / Hangi Sebeple</label>
+    <input id="giftNm" class="inp" value="${esc(g.name)}">
+    <div class="m-actions">
+      <button class="btn ghost" onclick="giftClose()">İptal Et</button>
+      <button class="btn accent" onclick="giftApply()">İkram Yaz</button>
+    </div>`);
+  $('#giftNm').focus();
+}
+function giftStep(d){
+  if(!giftState) return;
+  const el=$('#giftNm'); if(el) giftState.name=el.value;
+  giftState.q+=d; renderGiftModal();
+}
+function giftClose(){ giftState=null; closeModal(); }
+function giftApply(){
+  const t=getTable(activeTableId), g=giftState; if(!t||!g) return;
+  const name=$('#giftNm').value.trim();
+  if(!name){toast('Bir isim/sebep girin','err');return}
+  ensureLids(t);
+  const line=t.items.find(i=>lineKey(i)===g.lk)||findLine(g.lk); if(!line||line.ikram){giftClose();return}
+  const left=line.qty-paidOf(t,line), q=Math.min(g.q,left);
+  if(q<1){toast('Bu ürünün ödemesi alınmış','err');giftClose();return}
+  const ik={name, by:user.name};
+  if(q>=line.qty){ line.ikram=ik; }
+  else{
+    /* bir kısmı ikram: ikramlı yeni satır ayrılır, kalanı ikramsız kalır (stok değişmez) */
+    line.qty-=q; if(line.sent>line.qty) line.sent=line.qty;
+    const g2={...line, lid:uid(), qty:q, sent:q, ikram:ik};
+    if(line.recipe) g2.recipe=line.recipe.map(r=>({...r}));
+    t.items.splice(t.items.indexOf(line)+1,0,g2);
+  }
+  giftState=null; saveDB(); closeModal(); renderOrderPanel(); toast('İkram yazıldı — '+name,'ok');
+}
+/* ikramlı satırın düğmesi: ikramı iptal ettirir (kaydı alınmışsa yalnızca bilgi verir) */
+function giftCancelModal(t,line){
+  const c=t.currency, taken=paidOf(t,line)>0;
+  showModal(`<div class="m-head"><h3>${taken?'İkram':'İkramı İptal Et'} <span class="muted small" style="font-weight:500">&nbsp;${esc(line.name)}</span></h3>
+    <button class="icon-b" onclick="closeModal()">✕</button></div>
+    <div class="sum-line"><span>${esc(line.name)} <span class="muted">x${line.qty}</span></span><b>${fmt(line.qty*line.unit,c)}</b></div>
+    <p class="muted small mt12">İkram: <b>${esc(line.ikram.name)}</b> <span class="muted tiny">(veren: ${esc(line.ikram.by)})</span></p>
+    <p class="muted small">${taken?'Bu ikram hesaba işlenmiş (ödeme kaydına yazılmış); alınan ödemeler gibi değiştirilemez.':'İkramı iptal ederseniz ürün tekrar normal fiyatıyla hesaba katılır.'}</p>
+    <div class="m-actions">
+      <button class="btn ghost" onclick="closeModal()">${taken?'Kapat':'Vazgeç'}</button>
+      ${taken?'':`<button class="btn red" onclick="giftCancel('${lineKey(line)}')">İkramı İptal Et</button>`}
+    </div>`);
+}
+function giftCancel(lk){
+  const t=getTable(activeTableId); if(!t) return;
+  const line=findLine(lk); if(!line||!line.ikram){closeModal();return}
+  if(paidOf(t,line)>0){toast('Hesaba işlenmiş ikram geri alınamaz','err');closeModal();return}
+  delete line.ikram;
+  /* aynı üründen ikramsız bir satır varsa tekrar onunla birleşir */
+  const sib=t.items.find(x=>x!==line && !x.ikram && x.mid===line.mid && (x.variant||null)===(line.variant||null) && x.name===line.name && x.unit===line.unit);
+  if(sib){ sib.qty+=line.qty; sib.sent=(sib.sent||0)+(line.sent||0); t.items=t.items.filter(x=>x!==line); }
+  saveDB(); closeModal(); renderOrderPanel(); toast('İkram iptal edildi','ok');
 }
 
 /* --- masayı geçici adlandırma --- */
@@ -379,11 +470,11 @@ function openPaymentModal(){
   const tg=payTarget(t), tot=tg.tot;
   /* ayrı ödeme akışında (Seçilenleri Öde) her ürünün yanında −/+ var: ödeme
      tamamlanmadan ödenecek adet azaltılıp artırılabilir (bkz. ui/js/split.js payStep) */
-  const items=tg.rows.map(i=>`<div class="sum-line"><span>${esc(i.name)} ${payState.sel
+  const items=tg.rows.map(i=>`<div class="sum-line"><span>${esc(i.name)} ${payState.sel && !i.ikram
       ? `<span class="qty" style="display:inline-flex;margin-left:8px"><button onclick="payStep('${i.lk}',-1)">−</button><span class="q">${i.qty}</span><button onclick="payStep('${i.lk}',1)" ${i.qty>=tg.lefts[i.lk]?'disabled':''}>+</button></span>`
-      : `<span class="muted">x${i.qty}</span>`}</span><b>${fmt(i.qty*i.unit,c)}</b></div>`).join('');
+      : `<span class="muted">x${i.qty}</span>`}${i.ikram?` <span class="badge low">İkram — ${esc(i.ikram.name)}</span>`:''}</span><b>${fmt(i.qty*i.unit,c)}</b></div>`).join('');
   const mSel=m=>payState.method===m?'on':'';
-  const showDisc=tg.split?tot.disc>0:!!t.discount, showServ=tg.split?tot.serv>0:!!t.service;
+  const showDisc=tg.split?tot.dsc>0:!!t.discount, showServ=tg.split?tot.serv>0:!!t.service;
   const after=tg.final?0:Math.max(0, billTotals(t).total-tot.total);
   let extra='';
   if(payState.method==='nakit' && c!=='TL'){
@@ -405,7 +496,8 @@ function openPaymentModal(){
     ${items}
     <div class="mt12">
       <div class="trow"><span>Ara Toplam</span><b>${fmt(tot.sub,c)}</b></div>
-      ${showDisc?`<div class="trow"><span>${t.complimentary?'İkram — '+esc(t.complimentary.name):'İndirim'+(t.discount.type==='pct'?' (%'+fmtQ(t.discount.value)+')':'')}</span><b class="green">−${fmt(tot.disc,c)}</b></div>`:''}
+      ${tot.ik>0?`<div class="trow"><span>İkram (ürün)</span><b class="green">−${fmt(tot.ik,c)}</b></div>`:''}
+      ${showDisc?`<div class="trow"><span>${t.complimentary?'İkram — '+esc(t.complimentary.name):'İndirim'+(t.discount.type==='pct'?' (%'+fmtQ(t.discount.value)+')':'')}</span><b class="green">−${fmt(tot.dsc,c)}</b></div>`:''}
       ${showServ?`<div class="trow"><span>Servis Ücreti${t.service.type==='pct'?' (%'+fmtQ(t.service.value)+')':''}</span><b class="amber">+${fmt(tot.serv,c)}</b></div>`:''}
       <div class="trow big"><span>Toplam</span><span class="v">${fmt(tot.total,c)}</span></div>
       ${c!=='TL'?`<div class="trow"><span>TL Karşılığı (Kur: 1${SYM[c]} = ${fmt(rateOf(c))})</span><b class="accent">${fmt(tot.totalTL)}</b></div>`:''}
@@ -438,9 +530,9 @@ function completePayment(){
     /* mid/variant, Genel Stok tüketim raporunun (bkz. backend/logic.js
        resolveSaleItemRecipe) satış anındaki reçeteyi doğru çözebilmesi için
        tutulur — isimden tahmin etmek yerine doğrudan menü kalemine bağlanır. */
-    items:tg.rows.map(r=>{ const o={name:r.name, cat:r.cat, qty:r.qty, unit:r.unit, mid:r.mid, variant:r.variant}; if(tg.split) o.lk=r.lk; return o; }),
+    items:tg.rows.map(r=>{ const o={name:r.name, cat:r.cat, qty:r.qty, unit:r.unit, mid:r.mid, variant:r.variant}; if(tg.split) o.lk=r.lk; if(r.ikram) o.ikram={...r.ikram}; return o; }),
     sub:tot.sub, disc:tot.disc, serv:tot.serv, total:tot.total, totalTL:tot.totalTL,
-    discount:t.discount?(tg.split && t.discount.type==='amt' ? {type:'amt', value:tot.disc} : {...t.discount}):null,
+    discount:t.discount?(tg.split && t.discount.type==='amt' ? {type:'amt', value:tot.dsc} : {...t.discount}):null,
     service:tg.split && t.service?(t.service.type==='amt' ? {type:'amt', value:tot.serv} : {...t.service}):null,
     method:payState.method, payCur:payState.method==='nakit'?payState.payCur:null,
     cariName:payState.method==='cari'?payState.cariName.trim():null,
@@ -448,6 +540,7 @@ function completePayment(){
     couvert:t.couvert?{...t.couvert}:null
   };
   /* ayrı ödeme: kayıt masanın splitId'sine bağlanır (bkz. backend/logic.js splitPaidMap) */
+  if(tot.ik>0) sale.ikramAmt=tot.ik; /* ürün bazlı ikramların tutarı (disc'in içinde) */
   if(tg.split){ if(!t.splitId) t.splitId=uid(); sale.splitId=t.splitId; sale.paidBy=user.name; }
   db.sales.push(sale);
   if(sale.method==='cari'){

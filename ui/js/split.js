@@ -19,7 +19,7 @@ function ensureLids(t){ t.items.forEach(i=>{ if(!i.lid) i.lid=uid(); }); }
 function splitSelNow(t,pm){
   if(!splitSel || splitSel.tid!==t.id) return {};
   const out={};
-  t.items.forEach(i=>{ const k=lineKey(i), q=Math.min(splitSel.q[k]||0, lineLeft(i,pm)); if(q>0) out[k]=q; });
+  t.items.forEach(i=>{ if(i.ikram) return; const k=lineKey(i), q=Math.min(splitSel.q[k]||0, lineLeft(i,pm)); if(q>0) out[k]=q; });
   return out;
 }
 function splitSelPut(tid,k,q){
@@ -30,6 +30,7 @@ function splitAdd(lk){
   const t=getTable(activeTableId); if(!t) return;
   if(t.complimentary){toast('İkram masada ayrı ödeme alınamaz','err');return}
   const line=findLine(lk); if(!line) return;
+  if(line.ikram){toast('İkram edilen ürün ayrıca ödenmez','err');return}
   if(!line.lid){ ensureLids(t); saveDB(true); }
   const k=lineKey(line), pm=splitPaidMap(t), cur=splitSelNow(t,pm)[k]||0;
   if(cur>=lineLeft(line,pm)){toast('Bu üründen ödenecek adet kalmadı','err');return}
@@ -90,7 +91,7 @@ function reopenSplitTo(chk,dst){
   const lines=new Map();
   parts.forEach(p=>(p.items||[]).forEach(i=>{
     const k=i.lk||uid();
-    if(!lines.has(k)) lines.set(k,{lid:k, mid:null, name:i.name, cat:i.cat||'Diğer', qty:0, unit:i.unit, sent:0, variant:null, recipe:[]});
+    if(!lines.has(k)) lines.set(k,{lid:k, mid:null, name:i.name, cat:i.cat||'Diğer', qty:0, unit:i.unit, sent:0, variant:null, recipe:[], ...(i.ikram?{ikram:{...i.ikram}}:{})});
     const l=lines.get(k); l.qty+=i.qty; l.sent=l.qty;
   }));
   dst.status='open';
@@ -98,7 +99,7 @@ function reopenSplitTo(chk,dst){
   dst.currency=first.currency; dst.openedAt=first.openedAt; dst.openedBy=first.waiter;
   dst.items=[...lines.values()];
   const same=k=>parts.every(p=>JSON.stringify(p[k])===JSON.stringify(first[k]));
-  const discSum=parts.reduce((a,p)=>a+(p.disc||0),0), servSum=parts.reduce((a,p)=>a+(p.serv||0),0);
+  const discSum=parts.reduce((a,p)=>a+(p.disc||0)-(p.ikramAmt||0),0), servSum=parts.reduce((a,p)=>a+(p.serv||0),0);
   dst.complimentary=parts.every(p=>p.complimentary) ? {name:first.complimentary.name, by:first.complimentary.by} : null;
   dst.discount=(same('discount') && first.discount && first.discount.type==='pct') ? {...first.discount} : (discSum>0 ? {type:'amt', value:discSum} : null);
   dst.service=(same('service') && first.service && first.service.type==='pct') ? {...first.service} : (servSum>0 ? {type:'amt', value:servSum} : null);

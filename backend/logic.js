@@ -38,12 +38,17 @@ function usdFromEur(eur, rates){
 function recalcMenuUsdPrices(){
   db.menu.forEach(m=>{ m.price.USD = usdFromEur(m.price.EUR, db.rates); });
 }
+/* Ürün bazlı ikram: satırın ikram alanı ({name, by}) doluysa o satır ücretsizdir.
+   sub: tüm kalemler (ikramlılar dahil); ik: ikram edilen kalemlerin tutarı; dsc: masa
+   indirimi (yalnızca ikramsız kalemler üzerinden, servis ücreti de öyle); disc =
+   ik + dsc (toplam düşüş), yani total = sub − disc + serv her zaman geçerli. */
 function calcTotals(t){
   const sub=t.items.reduce((a,i)=>a+i.qty*i.unit,0);
-  let disc=0; if(t.discount) disc = t.discount.type==='pct' ? sub*t.discount.value/100 : Math.min(t.discount.value,sub);
-  let serv=0; if(t.service)  serv = t.service.type==='pct'  ? sub*t.service.value/100  : t.service.value;
-  const total=Math.max(0, sub-disc+serv);
-  return {sub, disc, serv, total, totalTL: total*rateOf(t.currency)};
+  const ik=t.items.reduce((a,i)=>a+(i.ikram?i.qty*i.unit:0),0), base=sub-ik;
+  let dsc=0; if(t.discount) dsc = t.discount.type==='pct' ? base*t.discount.value/100 : Math.min(t.discount.value,base);
+  let serv=0; if(t.service)  serv = t.service.type==='pct'  ? base*t.service.value/100  : t.service.value;
+  const disc=ik+dsc, total=Math.max(0, sub-disc+serv);
+  return {sub, ik, dsc, disc, serv, total, totalTL: total*rateOf(t.currency)};
 }
 
 /* --- ayrı (kalem bazlı) ödeme ---
@@ -62,12 +67,19 @@ function splitPaidMap(t){
   return m;
 }
 function lineLeft(i, pm){ return i.qty-Math.min(i.qty, pm[lineKey(i)]||0); }
-/* ödenmemiş kalemler; sel verilirse (lineKey → adet) yalnızca seçilen adetler (kalanı geçemez) */
+/* ödenmemiş kalemler; sel verilirse (lineKey → adet) yalnızca seçilen adetler (kalanı geçemez).
+   İkram edilen satırlar (ikram alanı dolu) seçilemez ve ücretsizdir: seçim olsa da olmasa da
+   henüz kaydı alınmamış olanlar sıradaki ödemeye otomatik girer (ikram, satış kaydında,
+   stok tüketiminde ve ikram raporunda görünsün diye); ödemeye bir tutar eklemezler. */
 function splitRows(t, pm, sel){
   const rows=[];
   t.items.forEach(i=>{
-    const k=lineKey(i), left=lineLeft(i,pm), q=sel?Math.min(sel[k]||0,left):left;
-    if(q>0) rows.push({lk:k, name:i.name, cat:i.cat, qty:q, unit:i.unit, mid:i.mid, variant:i.variant});
+    const k=lineKey(i), left=lineLeft(i,pm), q=(sel&&!i.ikram)?Math.min(sel[k]||0,left):left;
+    if(q>0){
+      const r={lk:k, name:i.name, cat:i.cat, qty:q, unit:i.unit, mid:i.mid, variant:i.variant};
+      if(i.ikram) r.ikram={...i.ikram};
+      rows.push(r);
+    }
   });
   return rows;
 }
@@ -77,15 +89,17 @@ function splitRows(t, pm, sel){
    parçaların toplamı masa tutarına eşit çıkar. Ayrı ödeme yokken ve her şey
    seçiliyken calcTotals ile birebir aynıdır. */
 function partTotals(t, rows, pm){
-  const sum=a=>a.reduce((x,r)=>x+r.qty*r.unit,0);
-  const P=sum(rows), U=sum(splitRows(t,pm)), sales=splitSales(t), last=P>=U-1e-9;
-  const given=k=>sales.reduce((a,s)=>a+(s[k]||0),0);
+  /* ikram satırları (r.ikram) ücretsizdir: dağıtılan indirim/servis yalnızca ödenecek
+     kalemler üzerindendir (P, U); ikramın tutarı ik olarak ayrıca düşer */
+  const pay=a=>a.reduce((x,r)=>x+(r.ikram?0:r.qty*r.unit),0), all=a=>a.reduce((x,r)=>x+r.qty*r.unit,0);
+  const P=pay(rows), ik=all(rows)-P, U=pay(splitRows(t,pm)), sales=splitSales(t), last=P>=U-1e-9;
+  const given=k=>sales.reduce((a,s)=>a+(s[k]||0)-(k==='disc'?(s.ikramAmt||0):0),0);
   const share=left=>last?left:Math.round(left*(U>0?P/U:0)*100)/100;
-  let disc=0, serv=0;
-  if(t.discount) disc = t.discount.type==='pct' ? P*t.discount.value/100 : Math.min(share(Math.max(0,t.discount.value-given('disc'))), P);
+  let dsc=0, serv=0;
+  if(t.discount) dsc = t.discount.type==='pct' ? P*t.discount.value/100 : Math.min(share(Math.max(0,t.discount.value-given('disc'))), P);
   if(t.service)  serv = t.service.type==='pct'  ? P*t.service.value/100  : share(Math.max(0,t.service.value-given('serv')));
-  const total=Math.max(0, P-disc+serv);
-  return {sub:P, disc, serv, total, totalTL: total*rateOf(t.currency)};
+  const total=Math.max(0, P-dsc+serv);
+  return {sub:P+ik, ik, dsc, disc:ik+dsc, serv, total, totalTL: total*rateOf(t.currency)};
 }
 /* masada şu an ödenmesi gereken (ayrı ödemeler düşülmüş) tutarlar */
 function billTotals(t){
@@ -204,14 +218,15 @@ function consumedValue(s, consumedQty){
    ise (garsonun tarif ettiği kural gereği) çekteki kalem SAYISINA eşit
    bölünüp her kalemden o pay kadar düşülür. */
 function saleKitchenTotalTL(s){
-  const kLines=(s.items||[]).filter(i=>KITCHEN_CATS.includes(i.cat));
+  const items=(s.items||[]).filter(i=>!i.ikram); /* ikram edilen kalemler ücretsiz: yemek tutarına girmez */
+  const kLines=items.filter(i=>KITCHEN_CATS.includes(i.cat));
   if(!kLines.length) return 0;
   const rawSum=a=>a.reduce((x,i)=>x+i.qty*i.unit,0);
   let sub;
   if(s.discount && s.discount.type==='pct'){
     sub = rawSum(kLines) * (1 - s.discount.value/100);
-  }else if(s.discount && s.discount.type==='amt' && s.items.length){
-    const perLine = s.discount.value / s.items.length;
+  }else if(s.discount && s.discount.type==='amt' && items.length){
+    const perLine = s.discount.value / items.length;
     sub = kLines.reduce((a,i)=>a + Math.max(0, i.qty*i.unit - perLine), 0);
   }else{
     sub = rawSum(kLines);
@@ -272,7 +287,7 @@ function mergeSplitSales(parts){
   const sum=k=>parts.reduce((a,p)=>a+(p[k]||0),0), total=sum('total'), totalTL=sum('totalTL');
   return {...last, id:first.splitId, splitId:first.splitId, parts, items:[...lines.values()],
     openedAt:first.openedAt, checkNo:first.checkNo||last.checkNo,
-    sub:sum('sub'), disc:sum('disc'), serv:sum('serv'), total, totalTL,
+    sub:sum('sub'), disc:sum('disc'), serv:sum('serv'), ikramAmt:sum('ikramAmt'), total, totalTL,
     rate:parts.every(p=>p.rate===first.rate) ? first.rate : (total>0 ? totalTL/total : last.rate),
     complimentary:parts.every(p=>p.complimentary) ? first.complimentary : null,
     cariName:[...new Set(parts.filter(p=>p.method==='cari').map(p=>p.cariName))].join(', ')||null};
