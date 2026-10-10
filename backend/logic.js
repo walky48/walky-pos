@@ -256,6 +256,52 @@ function payLabel(s){
   return 'Cari: '+esc(s.cariName||'');
 }
 
+/* Ayrı ödemeyle alınan bir masa birden çok satış kaydıdır (aynı splitId) ama
+   istatistikte TEK çektir. mergeSplitSales: bir çekin ödemelerini (zaman sırasıyla)
+   tek çek nesnesinde birleştirir — kalemler (lk'ye göre) ve tutarlar toplanır,
+   parts ödemelerin kendisidir. groupChecks: sırayla gelen satışlardan çek listesi
+   çıkarır (ayrı ödemesiz satış olduğu gibi kalır; çek, son ödemesinin sırasında
+   görünür). findCheck: satış ya da splitId'den çeki bulur. Veriye dokunmaz. */
+function mergeSplitSales(parts){
+  const first=parts[0], last=parts[parts.length-1];
+  const lines=new Map();
+  parts.forEach(p=>(p.items||[]).forEach(i=>{
+    const k=i.lk||(i.name+'|'+i.unit), l=lines.get(k);
+    if(l) l.qty+=i.qty; else lines.set(k,{...i});
+  }));
+  const sum=k=>parts.reduce((a,p)=>a+(p[k]||0),0), total=sum('total'), totalTL=sum('totalTL');
+  return {...last, id:first.splitId, splitId:first.splitId, parts, items:[...lines.values()],
+    openedAt:first.openedAt, checkNo:first.checkNo||last.checkNo,
+    sub:sum('sub'), disc:sum('disc'), serv:sum('serv'), total, totalTL,
+    rate:parts.every(p=>p.rate===first.rate) ? first.rate : (total>0 ? totalTL/total : last.rate),
+    complimentary:parts.every(p=>p.complimentary) ? first.complimentary : null,
+    cariName:[...new Set(parts.filter(p=>p.method==='cari').map(p=>p.cariName))].join(', ')||null};
+}
+function splitParts(key){ return db.sales.filter(x=>x.splitId===key).sort((a,b)=>a.closedAt-b.closedAt); }
+function groupChecks(sales){
+  const by=new Map();
+  sales.forEach(s=>{ if(s.splitId){ if(!by.has(s.splitId)) by.set(s.splitId,[]); by.get(s.splitId).push(s); } });
+  by.forEach(a=>a.sort((x,y)=>x.closedAt-y.closedAt));
+  const out=[];
+  sales.forEach(s=>{
+    if(!s.splitId){ out.push(s); return; }
+    const parts=by.get(s.splitId);
+    if(parts[parts.length-1]===s) out.push(mergeSplitSales(parts));
+  });
+  return out;
+}
+function findCheck(id){
+  const s=db.sales.find(x=>x.id===id), key=s?s.splitId:id;
+  if(key){ const parts=splitParts(key); if(parts.length) return mergeSplitSales(parts); }
+  return s||null;
+}
+/* çekin ödeme yöntemi: tek yöntemse o, karışıksa "Nakit (TL) + Kredi Kartı" */
+function checkPayLabel(c){
+  if(!c.parts) return payLabel(c);
+  const u=[]; c.parts.forEach(p=>{ const l=payLabel(p); if(!u.includes(l)) u.push(l); });
+  return u.join(' + ');
+}
+
 /* --- cari (veresiye) --- */
 function cariBalance(c){
   let borc=0, tah=0;

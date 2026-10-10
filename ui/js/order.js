@@ -119,7 +119,7 @@ function orderPanelHTML(){
         <button class="btn" onclick="openAdjModal('discount')">İndirim</button>
         <button class="btn" onclick="openAdjModal('service')">Servis Ücreti</button>
         <button class="btn" onclick="sendOrder()">Sipariş Gönder</button>
-        <button class="btn" onclick="printReceipt()">Hesap Yazdır</button>
+        <button class="btn" onclick="printReceipt()">${split && !leftQty?'Adisyon Yazdır':'Hesap Yazdır'}</button>
         <button class="btn amber" style="grid-column:1/-1" onclick="openIkramModal()" ${leftQty?'':'disabled'}>İkram</button>
         ${split && !leftQty
           ? `<button class="btn green" style="grid-column:1/-1" onclick="splitCloseTable()">Tüm Hesap Ödendi — Masayı Kapat</button>`
@@ -359,13 +359,16 @@ function startPayment(){
 }
 /* ödenecek kalemler ve tutarlar: sel yoksa masada kalan her şey (ayrı ödeme yoksa
    eskisi gibi bütün masa), sel varsa seçilen adetler. final: bu ödeme masada
-   ödenmemiş hiçbir şey bırakmıyor → masa kapanır. split: kayıt ayrı ödeme olarak
-   (splitId, kalem anahtarları ile) yazılır. */
+   ödenmemiş hiçbir şey bırakmıyor. split: kayıt ayrı ödeme olarak (splitId, kalem
+   anahtarları ile) yazılır — ürün seçilerek ya da ayrı ödemesi olan masada yapılan
+   her ödeme. Masa YALNIZCA ayrı ödemesiz, tek seferlik "Hesap Al"da (final && !split)
+   kendiliğinden kapanır; ayrı ödemeli masa her şey ödenince de açık kalır, adisyon
+   basılıp elle kapatılır (bkz. ui/js/split.js splitCloseTable). */
 function payTarget(t){
   const pm=splitPaidMap(t), sel=payState&&payState.sel;
   const rows=splitRows(t,pm,sel||null);
   const left=splitRows(t,pm).reduce((a,r)=>a+r.qty,0), q=rows.reduce((a,r)=>a+r.qty,0);
-  const final=q>=left, split=!!t.splitId || !final;
+  const final=q>=left, split=!!t.splitId || !final || !!sel;
   const tot=split ? partTotals(t,rows,pm) : calcTotals(t);
   const lefts={}; splitRows(t,pm).forEach(r=>{ lefts[r.lk]=r.qty; });
   return {rows, tot, final, split, lefts};
@@ -407,6 +410,7 @@ function openPaymentModal(){
       <div class="trow big"><span>Toplam</span><span class="v">${fmt(tot.total,c)}</span></div>
       ${c!=='TL'?`<div class="trow"><span>TL Karşılığı (Kur: 1${SYM[c]} = ${fmt(rateOf(c))})</span><b class="accent">${fmt(tot.totalTL)}</b></div>`:''}
       ${tg.final?'':`<div class="trow"><span>Bu ödemeden sonra masada kalan</span><b>${fmt(after,c)}</b></div>`}
+      ${tg.final && tg.split?`<p class="muted tiny mt8">Bu ödemeden sonra hesabın tamamı ödenmiş olur; masa kendiliğinden kapanmaz, adisyonu yazdırıp masayı elle kapatırsınız.</p>`:''}
     </div>
     <label class="fl" style="letter-spacing:1px;font-size:11.5px;color:var(--muted)">ÖDEME YÖNTEMİ</label>
     <div class="pay-grid">
@@ -437,6 +441,7 @@ function completePayment(){
     items:tg.rows.map(r=>{ const o={name:r.name, cat:r.cat, qty:r.qty, unit:r.unit, mid:r.mid, variant:r.variant}; if(tg.split) o.lk=r.lk; return o; }),
     sub:tot.sub, disc:tot.disc, serv:tot.serv, total:tot.total, totalTL:tot.totalTL,
     discount:t.discount?(tg.split && t.discount.type==='amt' ? {type:'amt', value:tot.disc} : {...t.discount}):null,
+    service:tg.split && t.service?(t.service.type==='amt' ? {type:'amt', value:tot.serv} : {...t.service}):null,
     method:payState.method, payCur:payState.method==='nakit'?payState.payCur:null,
     cariName:payState.method==='cari'?payState.cariName.trim():null,
     complimentary:t.complimentary?{name:t.complimentary.name, by:t.complimentary.by}:null,
@@ -452,12 +457,13 @@ function completePayment(){
   }
   if(payState.print) printReceipt(sale);
   splitSel=null;
-  if(tg.final){
+  if(tg.final && !tg.split){
     resetTable(t); payState=null; saveDB(); closeModal();
     view='tables'; render(); toast('Ödeme alındı, masa kapatıldı','ok');
   }else{
+    /* ayrı ödemeli masa kendiliğinden kapanmaz: hepsi ödenmiş olsa da açık kalır */
     const rem=billTotals(t);
     payState=null; saveDB(); closeModal();
-    render(); toast('Ayrı ödeme alındı — kalan '+fmt(rem.total,t.currency),'ok');
+    render(); toast(tg.final ? 'Tüm hesap ödendi — adisyonu yazdırıp masayı kapatabilirsiniz' : 'Ayrı ödeme alındı — kalan '+fmt(rem.total,t.currency),'ok');
   }
 }

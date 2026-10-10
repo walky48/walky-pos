@@ -4,10 +4,12 @@
    Hesaplamalar backend/logic.js'te (splitPaidMap, partTotals, billTotals), ödeme
    penceresi ve kaydı ui/js/order.js'te (payTarget, completePayment). Burada:
    ödenecek adetlerin seçimi ve alınan ödemelerin (salt okunur) listesi var.
-   Alınmış bir ödeme ve kapanmış çek DEĞİŞTİRİLEMEZ: ödeme iptali, ödemeden adet
-   çıkarma ve ayrı ödemeli çeki yeniden açma bilerek yok. Yanlış seçim, ödeme
-   TAMAMLANMADAN önce ürünün yanındaki "−" ile (sipariş panelinde ya da ödeme
-   penceresinde) düzeltilir. */
+   Alınmış bir ödeme DEĞİŞTİRİLEMEZ: ödeme iptali ve ödemeden adet çıkarma bilerek
+   yok. Yanlış seçim, ödeme TAMAMLANMADAN önce ürünün yanındaki "−" ile (sipariş
+   panelinde ya da ödeme penceresinde) düzeltilir. Ayrı ödemeli masa her şey
+   ödenince KENDİLİĞİNDEN KAPANMAZ (adisyon basılabilsin diye) — splitCloseTable ile
+   elle kapatılır; kapanmış çek istatistikten yeniden açılabilir (reopenSplitTo):
+   ödemeler olduğu gibi kalır, yalnızca masa açık haline döner. */
 
 /* eski satırlarda lid olmayabilir (anahtar mid'e düşer) — ayrı ödeme anahtarı
    kalıcı olsun diye eksik olanlara verilir */
@@ -73,4 +75,37 @@ function splitCloseTable(){
   const t=getTable(activeTableId); if(!t) return;
   if(splitRows(t,splitPaidMap(t)).length){toast('Masada ödenmemiş ürün var','err');return}
   resetTable(t); splitSel=null; saveDB(); view='tables'; render(); toast('Masa kapatıldı','ok');
+}
+
+/* ---------- kapanmış ayrı ödemeli çeki yeniden açma (bkz. ui/js/stats.js) ----------
+   chk: mergeSplitSales çıktısı (parts = çekin ödemeleri). Ödemelerin hiçbiri
+   silinmez/değişmez: masa, ödemeleriyle birlikte (hepsi ödenmiş olarak) kapanmadan
+   önceki haline açılır; yeni eklenen ürünler ödenmemiş olarak görünür. Stok tekrar
+   düşülmez (sipariş girilirken zaten düşülmüştü). */
+function reopenSplitTo(chk,dst){
+  const parts=splitParts(chk.splitId), first=parts[0];
+  if(!parts.length) return;
+  if(db.tables.some(x=>x.status==='open' && x.splitId===chk.splitId)){toast('Bu masa zaten açık','err');return}
+  if(!parts.every(p=>p.bd===db.day.date)){toast('Yalnızca bugünün çekleri yeniden açılabilir','err');return}
+  const lines=new Map();
+  parts.forEach(p=>(p.items||[]).forEach(i=>{
+    const k=i.lk||uid();
+    if(!lines.has(k)) lines.set(k,{lid:k, mid:null, name:i.name, cat:i.cat||'Diğer', qty:0, unit:i.unit, sent:0, variant:null, recipe:[]});
+    const l=lines.get(k); l.qty+=i.qty; l.sent=l.qty;
+  }));
+  dst.status='open';
+  dst.customName=(first.table!==first.origTable)?first.table:null;
+  dst.currency=first.currency; dst.openedAt=first.openedAt; dst.openedBy=first.waiter;
+  dst.items=[...lines.values()];
+  const same=k=>parts.every(p=>JSON.stringify(p[k])===JSON.stringify(first[k]));
+  const discSum=parts.reduce((a,p)=>a+(p.disc||0),0), servSum=parts.reduce((a,p)=>a+(p.serv||0),0);
+  dst.complimentary=parts.every(p=>p.complimentary) ? {name:first.complimentary.name, by:first.complimentary.by} : null;
+  dst.discount=(same('discount') && first.discount && first.discount.type==='pct') ? {...first.discount} : (discSum>0 ? {type:'amt', value:discSum} : null);
+  dst.service=(same('service') && first.service && first.service.type==='pct') ? {...first.service} : (servSum>0 ? {type:'amt', value:servSum} : null);
+  dst.couvert=first.couvert?{...first.couvert}:null;
+  dst.checkNo=first.checkNo||null;
+  dst.splitId=chk.splitId;
+  splitSel=null;
+  saveDB(); closeModal(); render();
+  toast('Çek yeniden açıldı: '+dst.name+' ('+parts.length+' ödemesiyle)','ok');
 }

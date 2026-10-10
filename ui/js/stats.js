@@ -16,13 +16,18 @@ function miniRows(st){
 function guestStatCard(st){
   return statCard(st.guestK+st.guestE+st.guestC, 'Misafir Sayısı', '', `K:${st.guestK} · E:${st.guestE} · Ç:${st.guestC}`);
 }
+/* sales: groupChecks() çıktısı — ayrı ödemeyle alınan masa tek çek olarak gelir */
+function checkIsOpen(c){ return !!c.splitId && db.tables.some(x=>x.status==='open' && x.splitId===c.splitId); }
+function checkReopenable(c){
+  return user.role==='admin' && !remoteViewOnly() && !checkIsOpen(c) && (c.parts ? c.parts.every(p=>p.bd===db.day.date) : c.bd===db.day.date);
+}
 function ordersRowsHTML(sales){
   return sales.slice().reverse().map(s=>`<tr>
-      <td>${trDate(s.bd)}</td><td data-lbl="Çek No">#${fmtCheckNo(s.checkNo)}</td><td data-lbl="Masa"><b>${esc(s.table)}</b>${s.splitId?' <span class="badge gray">ayrı ödeme</span>':''}</td><td class="muted" data-lbl="Garson">${esc(s.waiter||'')}</td>
-      <td data-lbl="Açılış">${trTime(s.openedAt)}</td><td data-lbl="Kapanış">${trTime(s.closedAt)}</td>
-      <td class="num" data-lbl="Tutar">${fmt(s.totalTL)}</td><td data-lbl="Ödeme">${payLabel(s)}</td>
+      <td>${trDate(s.bd)}</td><td data-lbl="Çek No">#${fmtCheckNo(s.checkNo)}</td><td data-lbl="Masa"><b>${esc(s.table)}</b>${s.parts&&s.parts.length>1?` <span class="badge gray">${s.parts.length} ödeme</span>`:''}${checkIsOpen(s)?' <span class="badge ok">masa açık</span>':''}</td><td class="muted" data-lbl="Garson">${esc(s.waiter||'')}</td>
+      <td data-lbl="Açılış">${trTime(s.openedAt)}</td><td data-lbl="Kapanış">${checkIsOpen(s)?'-':trTime(s.closedAt)}</td>
+      <td class="num" data-lbl="Tutar">${fmt(s.totalTL)}</td><td data-lbl="Ödeme">${checkPayLabel(s)}</td>
       <td class="right tdact"><button class="rowbtn" onclick="orderDetail('${s.id}')">Detay</button>
-        ${(user.role==='admin' && !remoteViewOnly() && s.bd===db.day.date && !s.splitId)?`<button class="rowbtn" style="color:var(--red);margin-left:8px" onclick="reopenSaleAsk('${s.id}')">Yeniden Aç</button>`:''}</td></tr>`).join('');
+        ${checkReopenable(s)?`<button class="rowbtn" style="color:var(--red);margin-left:8px" onclick="reopenSaleAsk('${s.id}')">Yeniden Aç</button>`:''}</td></tr>`).join('');
 }
 function viewStats(){
   const today=db.day.open?db.day.date:iso();
@@ -31,7 +36,7 @@ function viewStats(){
   const stM=computeStats(monthStartISO(),iso());
   const listF=statsCustom?statsFrom:today, listT=statsCustom?statsTo:today;
   const stR=computeStats(listF,listT);
-  const orders=ordersRowsHTML(stR.sales);
+  const orders=ordersRowsHTML(groupChecks(stR.sales));
   const zList=zHistoryExpanded?db.dayHistory:db.dayHistory.slice(-3);
   const zRows=zList.slice().reverse().map(z=>`<tr>
       <td>${trDate(z.date)}</td><td class="num" data-lbl="Ciro">${fmt(z.ciro)}</td><td data-lbl="Yemek">${fmt(z.yemekTL||0)}</td><td data-lbl="Nakit">${fmt(z.nakitTL+z.nakitDvTL)}</td>
@@ -115,13 +120,13 @@ function applyRange(){
   statsCustom=true; render();
 }
 function orderDetail(id){
-  const s=db.sales.find(x=>x.id===id); if(!s) return;
-  const c=s.currency;
+  const s=findCheck(id); if(!s) return;
+  const c=s.currency, pays=s.parts||[];
   const items=s.items.map(i=>`<div class="sum-line"><span>${esc(i.name)} <span class="muted">x${i.qty}</span></span><b>${fmt(i.qty*i.unit,c)}</b></div>`).join('');
   showModal(`<div class="m-head"><h3>Sipariş Detayı — ${esc(s.table)} <span class="muted small" style="font-weight:500">Çek #${fmtCheckNo(s.checkNo)}</span></h3><button class="icon-b" onclick="closeModal()">✕</button></div>
     <div class="muted small mb12">${trDate(s.bd)} · Garson: ${esc(s.waiter||'')} · Açılış ${trTime(s.openedAt)} → Kapanış ${trTime(s.closedAt)}
       ${s.origTable!==s.table?`<br>Orijinal masa: ${esc(s.origTable)}`:''}
-      ${s.splitId?`<br>Ayrı ödeme: bu çek ${db.sales.filter(x=>x.splitId===s.splitId).length} ödemeyle alındı, burada onlardan biri görünüyor`:''}</div>
+      ${checkIsOpen(s)?'<br><b>Masa şu an açık</b> (hesap henüz kapatılmadı)':''}</div>
     ${items}
     <div class="mt12">
       <div class="trow"><span>Ara Toplam</span><b>${fmt(s.sub,c)}</b></div>
@@ -129,10 +134,13 @@ function orderDetail(id){
       ${s.serv>0?`<div class="trow"><span>Servis Ücreti</span><b class="amber">+${fmt(s.serv,c)}</b></div>`:''}
       <div class="trow big"><span>Toplam</span><span class="v">${fmt(s.total,c)}</span></div>
       ${c!=='TL'?`<div class="trow"><span>TL Karşılığı (Kur ${fmt(s.rate)})</span><b class="accent">${fmt(s.totalTL)}</b></div>`:''}
-      <div class="trow"><span>Ödeme Yöntemi</span><b>${payLabel(s)}</b></div>
+      <div class="trow"><span>Ödeme Yöntemi</span><b>${checkPayLabel(s)}</b></div>
     </div>
+    ${pays.length>1?`<div class="osec"><div class="osec-t">Ödemeler (${pays.length})</div>${pays.map(p=>`<div class="opay">
+        <div class="opay-h"><span class="muted tiny">${trTime(p.closedAt)}</span><span class="opay-m">${payLabel(p)}</span><b>${fmt(p.total,c)}</b></div>
+        <div class="opay-i muted">${p.items.map(i=>fmtQ(i.qty)+'x '+esc(i.name)).join(', ')}</div></div>`).join('')}</div>`:''}
     <div class="m-actions">
-      ${(user.role==='admin' && !remoteViewOnly() && s.bd===db.day.date && !s.splitId)?`<button class="btn red" onclick="reopenSaleAsk('${s.id}')">Çeki Yeniden Aç</button>`:''}
+      ${checkReopenable(s)?`<button class="btn red" onclick="reopenSaleAsk('${s.id}')">Çeki Yeniden Aç</button>`:''}
       <button class="btn accent" onclick="closeModal()">Kapat</button>
     </div>`);
 }
@@ -140,23 +148,26 @@ function orderDetail(id){
 /* --- yanlışlıkla kapatılan çeki yeniden açma (sadece admin) --- */
 function reopenSaleAsk(id){
   if(!user || user.role!=='admin' || remoteViewOnly()) return;
-  const s=db.sales.find(x=>x.id===id); if(!s) return;
-  if(s.bd!==db.day.date){toast('Yalnızca bugünün çekleri yeniden açılabilir','err');return}
-  if(s.splitId){toast('Ayrı ödemeyle alınan çekler yeniden açılamaz','err');return}
+  const s=findCheck(id); if(!s) return; /* ayrı ödemeli masada s: birleşik çek, id: splitId */
+  if(s.parts ? !s.parts.every(p=>p.bd===db.day.date) : s.bd!==db.day.date){toast('Yalnızca bugünün çekleri yeniden açılabilir','err');return}
+  if(checkIsOpen(s)){toast('Bu masa zaten açık','err');return}
   const empties=db.tables.filter(x=>x.status==='empty');
   if(!empties.length){toast('Yeniden açmak için boş masa yok','err');return}
   const cards=empties.map(x=>`<button class="cur-card" onclick="reopenSaleTo('${id}','${x.id}')">${esc(x.name)}</button>`).join('');
   showModal(`<div class="m-head"><h3>Çeki Yeniden Aç <span class="muted small" style="font-weight:500">&nbsp;${esc(s.table)} → hangi masaya?</span></h3>
     <button class="icon-b" onclick="closeModal()">✕</button></div>
-    <p class="muted small">Bu çek satış kaydından silinir ve kapanmadan önceki haliyle seçtiğiniz boş masaya açık sipariş olarak taşınır. Stok tekrar düşülmez (sipariş girilirken zaten düşülmüştü).</p>
+    <p class="muted small">${s.parts
+      ? `Bu çek ayrı ödemelerle alınmıştı (${s.parts.length} ödeme). Ödemeler satış kayıtlarında olduğu gibi KALIR ve değiştirilemez; çek, ödemeleriyle birlikte (hepsi ödenmiş olarak) seçtiğiniz boş masaya açılır. Yeni ürün ekleyip kalanı ödeyebilir ya da masayı yeniden kapatabilirsiniz. Stok tekrar düşülmez.`
+      : 'Bu çek satış kaydından silinir ve kapanmadan önceki haliyle seçtiğiniz boş masaya açık sipariş olarak taşınır. Stok tekrar düşülmez (sipariş girilirken zaten düşülmüştü).'}</p>
     <div class="cur-grid">${cards}</div>`,true);
 }
 function reopenSaleTo(saleId, tableId){
   if(!user || user.role!=='admin' || remoteViewOnly()) return;
+  const dst=getTable(tableId); if(!dst||dst.status!=='empty') return;
+  const chk=findCheck(saleId);
+  if(chk && chk.parts){ reopenSplitTo(chk,dst); return; } /* ayrı ödemeli çek: bkz. ui/js/split.js */
   const idx=db.sales.findIndex(x=>x.id===saleId); if(idx<0) return;
   const s=db.sales[idx];
-  const dst=getTable(tableId); if(!dst||dst.status!=='empty') return;
-  if(s.splitId) return; /* ayrı ödemeyle alınan çekler değiştirilemez */
   dst.status='open';
   dst.customName = (s.table!==s.origTable) ? s.table : null;
   dst.currency=s.currency; dst.openedAt=s.openedAt; dst.openedBy=s.waiter;
@@ -175,12 +186,12 @@ function reopenSaleTo(saleId, tableId){
   toast('Çek yeniden açıldı: '+dst.name,'ok');
 }
 function exportCSV(f,t){
-  const S=db.sales.filter(s=>s.bd>=f&&s.bd<=t);
+  const S=groupChecks(db.sales.filter(s=>s.bd>=f&&s.bd<=t)); /* ayrı ödemeli masa tek satır */
   if(!S.length){toast('Bu aralıkta dışa aktarılacak satış yok','err');return}
   const head='Tarih;Masa;Garson;Acilis;Kapanis;ParaBirimi;AraToplam;Indirim;Servis;Toplam;ToplamTL;Odeme;Cari';
   const rows=S.map(s=>[trDate(s.bd),s.table,s.waiter||'',trTime(s.openedAt),trTime(s.closedAt),s.currency,
     s.sub.toFixed(2).replace('.',','),s.disc.toFixed(2).replace('.',','),s.serv.toFixed(2).replace('.',','),
-    s.total.toFixed(2).replace('.',','),s.totalTL.toFixed(2).replace('.',','),payLabel(s).replace(/;/g,','),s.cariName||''
+    s.total.toFixed(2).replace('.',','),s.totalTL.toFixed(2).replace('.',','),checkPayLabel(s).replace(/;/g,','),s.cariName||''
   ].map(v=>String(v)).join(';'));
   const blob=new Blob(['\uFEFF'+head+'\n'+rows.join('\n')],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);

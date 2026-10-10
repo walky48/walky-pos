@@ -5,12 +5,14 @@ function viewTables(){
   const shown=all.filter(t=> tableFilter==='all' ? true : tableFilter==='open' ? t.status==='open' : t.status==='empty');
   const cards=shown.map(t=>{
     const tot=t.status==='open'?billTotals(t):null; /* ayrı ödeme alındıysa kalan tutar */
+    const allPaid=t.status==='open' && !!t.splitId && !splitRows(t,splitPaidMap(t)).length; /* ödendi, masa henüz kapatılmadı */
     return `<button class="tcard ${t.status==='open'?'open':''}" ${remoteViewOnly()?'disabled':`onclick="openTableFlow('${t.id}')"`}>
       <div class="top"><span class="nm">${esc(displayName(t))}${t.status==='open'?` <span class="muted tiny">#${fmtCheckNo(t.checkNo)}</span>`:''}</span>
         ${t.status==='open'?`<span class="badge cur">${CUR_LABEL[t.currency]}</span>`:`<span class="badge gray">BOŞ</span>`}</div>
       ${t.status==='open'?`<div class="meta">
           <span>${elapsedMin(t.openedAt)} dk · ${t.items.reduce((a,i)=>a+i.qty,0)} ürün · ${esc(t.openedBy||'')}</span>
-          <span class="tot">${fmt(tot.total,t.currency)}${t.currency!=='TL'?` <span class="muted tiny">(${fmt(tot.totalTL)})</span>`:''}${t.splitId?' <span class="muted tiny">kalan</span>':''}</span>
+          ${allPaid?`<span class="tot green">Ödendi <span class="muted tiny">kapatılmadı</span></span>`
+          :`<span class="tot">${fmt(tot.total,t.currency)}${t.currency!=='TL'?` <span class="muted tiny">(${fmt(tot.totalTL)})</span>`:''}${t.splitId?' <span class="muted tiny">kalan</span>':''}</span>`}
         </div>`:''}
     </button>`;}).join('');
   return `<div class="page-head">

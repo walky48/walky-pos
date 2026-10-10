@@ -111,9 +111,15 @@ async function printReceipt(sale){
   }else if(t0.splitId){
     /* ayrı ödemesi alınmış masanın hesabı: yalnızca kalan kalemler */
     const pm=splitPaidMap(t0), rows=splitRows(t0,pm);
-    if(!rows.length){toast('Yazdırılacak ürün yok','err');return}
-    t={...t0, items:rows.map(r=>({name:r.name, qty:r.qty, unit:r.unit})), billNote:'KALAN HESAP (önceki ödemeler düşüldü)'};
-    tot=partTotals(t0,rows,pm);
+    if(rows.length){
+      t={...t0, items:rows.map(r=>({name:r.name, qty:r.qty, unit:r.unit})), billNote:'KALAN HESAP (önceki ödemeler düşüldü)'};
+      tot=partTotals(t0,rows,pm);
+    }else{
+      /* her şey ödenmiş (masa elle kapatılmadan önce): tüm adisyon, ödemelerin toplamıyla */
+      const ps=splitSales(t0), sum=k=>ps.reduce((a,x)=>a+(x[k]||0),0);
+      t={...t0, items:t0.items.map(i=>({name:i.name, qty:i.qty, unit:i.unit})), billNote:'ADİSYON (hesap ödendi)'};
+      tot={sub:sum('sub'), disc:sum('disc'), serv:sum('serv'), total:sum('total'), totalTL:sum('totalTL')};
+    }
   }else tot=calcTotals(t0);
   const lines=receiptLines(t, tot, s), html=receiptHTML(t, tot, s);
   if(remoteMode){ await remotePrintRequest('receipt', lines, html); return; }
