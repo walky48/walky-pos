@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE = 'walky-v12';
+const CACHE = 'walky-v13';
 const ASSETS = [
   './',
   './index.html',

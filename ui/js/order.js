@@ -530,7 +530,7 @@ function completePayment(){
     /* mid/variant, Genel Stok tüketim raporunun (bkz. backend/logic.js
        resolveSaleItemRecipe) satış anındaki reçeteyi doğru çözebilmesi için
        tutulur — isimden tahmin etmek yerine doğrudan menü kalemine bağlanır. */
-    items:tg.rows.map(r=>{ const o={name:r.name, cat:r.cat, qty:r.qty, unit:r.unit, mid:r.mid, variant:r.variant}; if(tg.split) o.lk=r.lk; if(r.ikram) o.ikram={...r.ikram}; return o; }),
+    items:tg.rows.map(r=>{ const o={name:r.name, cat:r.cat, qty:r.qty, unit:r.unit, mid:r.mid, variant:r.variant}; if(tg.split) o.lk=r.lk; if(r.ikram) o.ikram={...r.ikram}; const v=vatOfLine(r); if(v!==null) o.vat=v; return o; }),
     sub:tot.sub, disc:tot.disc, serv:tot.serv, total:tot.total, totalTL:tot.totalTL,
     discount:t.discount?(tg.split && t.discount.type==='amt' ? {type:'amt', value:tot.dsc} : {...t.discount}):null,
     service:tg.split && t.service?(t.service.type==='amt' ? {type:'amt', value:tot.serv} : {...t.service}):null,
