@@ -38,15 +38,6 @@ function usdFromEur(eur, rates){
 function recalcMenuUsdPrices(){
   db.menu.forEach(m=>{ m.price.USD = usdFromEur(m.price.EUR, db.rates); });
 }
-/* --- KDV: yazar kasa ve e-Adisyon için her kalemin KDV oranı gerekir ---
-   Oran kategori bazında db.settings.vatByCat[kategori] (yüzde) tutulur; menü kalemi
-   m.vat ile kategorinin oranını ezebilir. Tanımlı değilse null döner (varsayım yok).
-   Menü fiyatları KDV dahil kabul edilir. Satış kaydında kalem başına 'vat' olarak
-   saklanır (bkz. ui/js/order.js completePayment). */
-function vatOfCat(cat){ const v=((db.settings||{}).vatByCat||{})[cat]; return typeof v==='number' ? v : null; }
-function vatOfMenu(m){ return typeof m.vat==='number' ? m.vat : vatOfCat(m.cat); }
-function vatOfLine(i){ const m=i.mid ? db.menu.find(x=>x.id===i.mid) : null; return m ? vatOfMenu(m) : vatOfCat(i.cat); }
-
 /* Ürün bazlı ikram: satırın ikram alanı ({name, by}) doluysa o satır ücretsizdir.
    sub: tüm kalemler (ikramlılar dahil); ik: ikram edilen kalemlerin tutarı; dsc: masa
    indirimi (yalnızca ikramsız kalemler üzerinden, servis ücreti de öyle); disc =

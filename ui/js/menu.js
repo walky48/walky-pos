@@ -21,14 +21,13 @@ function menuSectionsHTML(){
       <td data-lbl="TL (₺)"><input class="inp" style="max-width:150px" value="${String(m.price.TL).replace('.',',')}" onchange="setPrice('${m.id}','TL',this.value)"></td>
       <td data-lbl="Dolar ($, otomatik)"><input class="inp" style="max-width:150px" value="${String(m.price.USD).replace('.',',')}" disabled title="Euro fiyatından ve güncel kurdan otomatik hesaplanır"></td>
       <td data-lbl="Euro (€)"><input class="inp" style="max-width:150px" value="${String(m.price.EUR).replace('.',',')}" onchange="setPrice('${m.id}','EUR',this.value)"></td>
-      <td data-lbl="KDV">${vatCellHTML(m)}</td>
       <td class="right tdact" style="white-space:nowrap"><button class="rowbtn" onclick="prodModal('${m.id}')">Düzenle</button>&nbsp;<button class="btn sm red" onclick="askDelProduct('${m.id}')">Sil</button></td>
     </tr>`).join('');
     return `<div class="sect"><div class="st" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:9px">
         <span>${esc(cat)}</span>
         <span class="icon-b" style="cursor:pointer;font-size:12px" title="${collapsed?'Genişlet':'Daralt'}" onclick="toggleMenuCat(decodeURIComponent('${encodeURIComponent(cat).replace(/'/g,'%27')}'))">${collapsed?'▸':'▾'}</span>
       </div>
-      ${collapsed?'':`<table class="dt"><thead><tr><th>Ürün</th><th>TL (₺)</th><th>Dolar ($)</th><th>Euro (€)</th><th>KDV</th><th></th></tr></thead>
+      ${collapsed?'':`<table class="dt"><thead><tr><th>Ürün</th><th>TL (₺)</th><th>Dolar ($)</th><th>Euro (€)</th><th></th></tr></thead>
       <tbody>${rows}</tbody></table>`}</div>`;
   }).join('');
   return sections || (q?'<div class="muted small mt12">Aramanızla eşleşen ürün bulunamadı.</div>':'');
@@ -42,7 +41,6 @@ function viewMenu(){
       </div>
     </div>
     ${menuCatChipsHTML()}
-    <div id="vatPanel">${menuVatPanelHTML()}</div>
     <div class="panel mb12" style="margin-bottom:20px">
       <div class="st" style="margin-bottom:12px">GÜNLÜK KUR (TCMB)</div>
       <div class="range-bar">
@@ -54,41 +52,6 @@ function viewMenu(){
     </div>
     <input id="mnQ" class="inp mb16" style="max-width:320px" placeholder="Ürün ara…" value="${esc(menuQuery)}" oninput="menuQuery=this.value;renderMenuBody()">
     <div id="menuBody">${menuSectionsHTML()}</div>`;
-}
-/* ---------- KDV oranları (yazar kasa / e-Adisyon hazırlığı) ----------
-   Kategori bazlı oran db.settings.vatByCat'te, ürüne özel oran m.vat'ta (bkz. backend/logic.js vatOfLine).
-   Hiçbir oran varsayılmaz: tanımsız olanlar uyarıyla gösterilir, muhasebeciyle teyit edilip girilir. */
-function vatCatList(){
-  const c=menuCatList();
-  return c.includes('İçecek') ? c : [...c,'İçecek']; /* Serbest Ürün > İçecek bu kategoriye yazılır */
-}
-function vatMissing(){
-  return {cats:vatCatList().filter(c=>vatOfCat(c)===null), items:db.menu.filter(m=>vatOfMenu(m)===null).length};
-}
-function vatCellHTML(m){
-  const v=vatOfMenu(m), own=typeof m.vat==='number';
-  if(v===null) return '<span class="badge low">Tanımsız</span>';
-  return `<b class="${own?'accent':'muted'}">%${v}</b>${own?' <span class="muted tiny">(özel)</span>':''}`;
-}
-function menuVatPanelHTML(){
-  const cats=vatCatList(), real=new Set(menuCatList()), miss=vatMissing();
-  const opts=cur=>'<option value="">Tanımsız</option>'+VAT_RATES.map(r=>`<option value="${r}" ${cur===r?'selected':''}>%${r}</option>`).join('');
-  return `<div class="panel mb12" style="margin-bottom:20px">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
-      <div class="st" style="margin:0">KDV ORANLARI</div>
-      ${miss.cats.length?`<span class="badge low">Tanımsız: ${miss.cats.length} kategori · ${miss.items} ürün</span>`:'<span class="badge ok">Tüm kategoriler tanımlı</span>'}
-    </div>
-    <p class="muted small" style="margin:0 0 12px">Yazar kasa ve e-Adisyon entegrasyonu için her ürünün KDV oranı gerekir. Oran kategoriye göre verilir; farklı oranlı bir ürün için ürünün Düzenle penceresinden ayrıca seçilebilir. Fiyatlar KDV dahil kabul edilir. Doğru oranları muhasebecinizle teyit edin.</p>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px 22px">
-      ${cats.map(c=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px"><span>${esc(c)}${real.has(c)?'':' <span class="muted tiny">(serbest ürün)</span>'}</span><select class="inp" style="max-width:120px" data-cat="${esc(c)}" onchange="setCatVat(this.dataset.cat,this.value)">${opts(vatOfCat(c))}</select></div>`).join('')}
-    </div></div>`;
-}
-function setCatVat(cat,val){
-  const st=db.settings; st.vatByCat=st.vatByCat||{};
-  if(val==='') delete st.vatByCat[cat]; else st.vatByCat[cat]=Number(val);
-  saveDB();
-  const p=$('#vatPanel'); if(p) p.innerHTML=menuVatPanelHTML();
-  renderMenuBody();
 }
 function setPrice(mid,cur,val){
   const m=db.menu.find(x=>x.id===mid); const v=num(val);
@@ -153,8 +116,6 @@ function prodModal(mid){
       <label class="fl">Yeni Kategori Adı</label>
       <input id="pCatNew" class="inp">
     </div>
-    <label class="fl">KDV Oranı</label>
-    <select id="pVat" class="inp">${'<option value="">Kategoriye göre</option>'+VAT_RATES.map(r=>`<option value="${r}" ${m&&m.vat===r?'selected':''}>%${r}</option>`).join('')}</select>
     <div class="range-bar">
       <div class="fld"><span>₺</span><input id="pTL" class="inp" style="width:110px" inputmode="decimal" value="${m?String(m.price.TL).replace('.',','):''}"></div>
       <div class="fld"><span>€</span><input id="pEUR" class="inp" style="width:110px" inputmode="decimal" value="${m?String(m.price.EUR).replace('.',','):''}" oninput="pModalUsdPreview()"></div>
@@ -205,15 +166,11 @@ function saveProduct(mid){
   if(eur<0){toast('Geçersiz fiyat','err');return}
   const usd=usdFromEur(eur,db.rates);
   const recipe=rcpTmp.filter(r=>r.s&&r.q>0).map(r=>({s:r.s,q:convStockUnit(r.q,r.u,recipeUnit(r.s))}));
-  const vv=$('#pVat').value, vat=vv===''?undefined:Number(vv); /* undefined: kategorinin oranı geçerli */
   if(mid){
     const m=db.menu.find(x=>x.id===mid);
     m.name=name; m.cat=cat; m.price={TL:tl,USD:usd,EUR:eur}; m.recipe=recipe;
-    if(vat===undefined) delete m.vat; else m.vat=vat;
   }else{
-    const np={id:uid(), name, cat, price:{TL:tl,USD:usd,EUR:eur}, recipe};
-    if(vat!==undefined) np.vat=vat;
-    db.menu.push(np);
+    db.menu.push({id:uid(), name, cat, price:{TL:tl,USD:usd,EUR:eur}, recipe});
   }
   saveDB(); closeModal(); render();
   toast(mid?'Ürün güncellendi':name+' menüye eklendi','ok');

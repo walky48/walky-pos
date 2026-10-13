@@ -11,8 +11,6 @@ const MENU_GROUPS = {
   'Alkollü İçecekler': ['Gin','Whiskey','Rom','Biralar','Vodka','İmza Kokteyller','Classic Kokteyl','Sangria','Şişe Kokteyl','Kadeh Şaraplar']
 };
 const KADEH_CL = 5;
-/* yazar kasa / e-Adisyon için kalem başına KDV oranları (yüzde) — bkz. backend/logic.js vatOfLine */
-const VAT_RATES = [0,1,10,20];
 const ROLES = {admin:'Yönetici', garson:'Garson', depo:'Depo', muhasebe:'Muhasebe'};
 const DB_KEY = 'walky_pos_v1';
 const STOCK_UNITS = ['gr','ml','cl','adet'];
