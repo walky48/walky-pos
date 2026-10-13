@@ -26,6 +26,7 @@ function viewTables(){
         <button class="chip ${tableFilter==='empty'?'on':''}" onclick="tableFilter='empty';render()">Boş <span class="cnt">${empty}</span></button>
         <button class="chip ${tableFilter==='open'?'on':''}" onclick="tableFilter='open';render()">Dolu <span class="cnt">${open.length}</span></button>
         ${!remoteViewOnly()?`<button class="btn accent sm" onclick="openNewTableModal()">+ Yeni Masa</button>`:''}
+        ${(user.role==='admin' && !remoteViewOnly())?`<button class="btn sm ghost" onclick="openDeleteTableModal()">Masa Sil</button>`:''}
       </div>
     </div>
     <div class="tgrid">${cards}</div>`;
@@ -48,6 +49,36 @@ function createNewTable(){
   db.tables.push({id:uid(), name, customName:null, status:'empty',
     currency:null, openedAt:null, openedBy:null, items:[], discount:null, service:null, complimentary:null, couvert:null, checkNo:null, splitId:null});
   saveDB(); closeModal(); render(); toast(name+' masası oluşturuldu','ok');
+}
+
+/* --- boş masayı silme (yalnızca yönetici; yanlışlıkla "Yeni Masa" olarak eklenenler için) ---
+   Açık/dolu masa silinemez. Geçmiş satış kayıtları masa adını kendi içinde taşıdığı için etkilenmez. */
+function openDeleteTableModal(){
+  if(!user || user.role!=='admin' || remoteViewOnly()) return;
+  const empties=db.tables.filter(x=>x.status==='empty');
+  if(!empties.length){toast('Silinebilecek boş masa yok','err');return}
+  const cards=empties.map(x=>`<button class="cur-card" onclick="askDeleteTable('${x.id}')">${esc(x.name)}</button>`).join('');
+  showModal(`<div class="m-head"><h3>Masa Sil <span class="muted small" style="font-weight:500">&nbsp;hangi masa?</span></h3>
+    <button class="icon-b" onclick="closeModal()">✕</button></div>
+    <p class="muted small">Yalnızca boş masalar silinebilir. Geçmiş satış kayıtları etkilenmez.</p>
+    <div class="cur-grid">${cards}</div>`,true);
+}
+function askDeleteTable(id){
+  if(!user || user.role!=='admin' || remoteViewOnly()) return;
+  const t=getTable(id); if(!t) return;
+  if(t.status!=='empty'){toast('Bu masa açık, silinemez','err');return}
+  showModal(`<div class="m-head"><h3>Masayı Sil</h3><button class="icon-b" onclick="closeModal()">✕</button></div>
+    <p><b>${esc(t.name)}</b> masası kalıcı olarak silinecek. Geçmiş satış kayıtları etkilenmez.</p>
+    <div class="m-actions"><button class="btn ghost" onclick="closeModal()">Vazgeç</button>
+    <button class="btn red" onclick="deleteTable('${id}')">Evet, Sil</button></div>`);
+}
+function deleteTable(id){
+  if(!user || user.role!=='admin' || remoteViewOnly()) return;
+  const i=db.tables.findIndex(x=>x.id===id); if(i<0) return;
+  const t=db.tables[i];
+  if(t.status!=='empty'){toast('Bu masa açık, silinemez','err');return}
+  db.tables.splice(i,1);
+  saveDB(); closeModal(); render(); toast(t.name+' masası silindi','ok');
 }
 
 /* --- masa açma: önce para birimi --- */
